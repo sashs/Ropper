@@ -99,11 +99,15 @@ Usage
 
 Planned features for future versions
 ------------------------------------
-  Architectures
-    - ARM-Support
-    - PowerPC-Support
+  Architectures:
+    ARM-Support
+    PowerPC-Support
 
   File formats
-    - Mach-O
+    Mach-O
 
-  
+  ropchain generator
+
+Project page
+------------------------------------
+http://scoding.de/ropper

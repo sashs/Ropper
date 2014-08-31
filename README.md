@@ -100,12 +100,14 @@ Usage
 Planned features for future versions
 ------------------------------------
   Architectures:
-  * ARM-Support
-  * PowerPC-Support
+- ARM-Support
+- PowerPC-Support
 
-  File formats
-  * Mach-O
 
+  File formats:
+- Mach-O
+
+    
   ropchain generator
 
 Project page

@@ -1,11 +1,11 @@
 import cmd
-from loaders.loader import Loader
-from printer.printer import FileDataPrinter
-from disasm.rop import Ropper
-from common.error import *
-from disasm.gadget import GadgetType
+from .loaders.loader import Loader
+from .printer.printer import FileDataPrinter
+from .disasm.rop import Ropper
+from .common.error import *
+from .disasm.gadget import GadgetType
 import ropperapp
-from common.utils import isHex
+from .common.utils import isHex
 
 
 class Console(cmd.Cmd):
@@ -39,9 +39,9 @@ class Console(cmd.Cmd):
         self.__printer.printData(self.__binary, data)
 
     def __printVersion(self):
-        print "Version: Ropper %s" % ropperapp.VERSION
-        print "Author: Sascha Schirra"
-        print "Website: http://scoding.de/ropper\n"
+        print("Version: Ropper %s" % ropperapp.VERSION)
+        print("Author: Sascha Schirra")
+        print("Website: http://scoding.de/ropper\n")
 
     def __printHelpText(self, cmd, desc):
         print('{}  -  {}\n'.format(cmd, desc))
@@ -330,10 +330,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_imagebase(self, text):
         if len(text) == 0:
             self.__options.I = None
-            self.__printInfo('Gadgets has to be reloaded')
+            self.__printInfo('Gadgets have to be reloaded')
         elif isHex(text):
             self.__options.I = int(text, 16)
-            self.__printInfo('Gadgets has to be reloaded')
+            self.__printInfo('Gadgets have to be reloaded')
         else:
             self.help_imagebase()
 
@@ -354,7 +354,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_jmp(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
-            return 
+            return
         if len(text) == 0:
             self.help_jmp()
             return

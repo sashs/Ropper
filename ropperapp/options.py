@@ -35,8 +35,8 @@ class Options(object):
 
     def _createArgParser(self):
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-description="""With ropper you can show informations about files in different file formats
-and you can search gadgets to build rop chains for different architectures.
+description="""With ropper you can show information about files in different file formats
+and you can search for gadgets to build rop chains for different architectures.
 
 supported filetypes:
   ELF
@@ -98,17 +98,17 @@ epilog="""example uses:
             '--unset', help='Unsets options. Available options: aslr nx', metavar='<option>')
         parser.add_argument('-I', metavar='<imagebase>', help='Uses this imagebase for gadgets')
         parser.add_argument(
-            '-p', '--ppr', help='Searchs \'pop reg; pop reg; ret\' instructions [only x86/x86_64]', action='store_true')
+            '-p', '--ppr', help='Searches for \'pop reg; pop reg; ret\' instructions [only x86/x86_64]', action='store_true')
         parser.add_argument(
-            '-j', '--jmp', help='Searchs \'jmp reg\' instructions (-j reg[,reg...]) [only x86/x86_64]', metavar='<reg>')
+            '-j', '--jmp', help='Searches for \'jmp reg\' instructions (-j reg[,reg...]) [only x86/x86_64]', metavar='<reg>')
         parser.add_argument(
-            '--depth', help='Specify the depth of search (default: 10)', metavar='<n bytes>', type=int)
+            '--depth', help='Specifies the depth of search (default: 10)', metavar='<n bytes>', type=int)
         parser.add_argument(
-            '--search', help='Searchs for gadgets', metavar='<regex>')
+            '--search', help='Searches for gadgets', metavar='<regex>')
         parser.add_argument(
             '--filter', help='Filters gadgets', metavar='<regex>')
         parser.add_argument(
-            '--opcode', help='Searchs opcodes', metavar='<opcode>')
+            '--opcode', help='Searches for opcodes', metavar='<opcode>')
         parser.add_argument(
             '--type', help='Sets the type of gadgets [rop, jop, all] (default: all)', metavar='<type>')
         return parser

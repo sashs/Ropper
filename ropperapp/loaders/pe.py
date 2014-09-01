@@ -1,7 +1,27 @@
+#!/usr/bin/env python2
+# coding=utf-8
+#
+# Copyright 2014 Sascha Schirra
+#
+# This file is part of Ropper.
+#
+# Ropper is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ropper is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from ctypes import *
-from loader import *
+from .loader import *
 from ropperapp.common.enum import Enum
-from pe_intern.pe_gen import *
+from .pe_intern.pe_gen import *
 import importlib
 import os
 import struct
@@ -20,7 +40,7 @@ class PE(Loader):
 
     def __init__(self, filename):
 
-        
+
 
         self.__pe_module = None
 
@@ -158,7 +178,7 @@ class PE(Loader):
         self.assertFileRange(p_tmp.value)
         self.imageNtHeaders = cast(
             p_tmp, POINTER(self.__pe_module.IMAGE_NT_HEADERS)).contents
-        
+
         if self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.IA64 or self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.AMD64:
             self.__pe_module = importlib.import_module(
                 'ropperapp.loaders.pe_intern.pe64')

@@ -6,8 +6,8 @@ version = "1.0.1"
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
-With ropper you can show informations about files in different file formats
-and you can search gadgets to build rop chains for different architectures.
+With ropper you can show information about files in different file formats
+and you can search for gadget to build rop chains for different architectures.
 """.strip()
 
 setup(
@@ -19,7 +19,7 @@ setup(
     author="Sascha Schirra",
     author_email="schirra@scoding.de",
     install_requires=['capstone'],
-    url="http://scoding.de/ropper",
+    url="https://github.com/sashs/ropper",
     scripts=['script/ropper'],
     classifiers=[
         'Topic :: Security',

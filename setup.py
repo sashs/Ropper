@@ -19,7 +19,7 @@ setup(
     author="Sascha Schirra",
     author_email="schirra@scoding.de",
     install_requires=['capstone'],
-    url="https://github.com/sashs/ropper",
+    url="http://scoding.de/ropper",
     scripts=['script/ropper'],
     classifiers=[
         'Topic :: Security',

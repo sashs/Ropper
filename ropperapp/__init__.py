@@ -1,8 +1,8 @@
-from console import Console
-from options import Options
-from common.error import RopperError
+from .console import Console
+from .options import Options
+from . common.error import RopperError
 
-VERSION='1.0'
+VERSION='1.0.1'
 
 def start(args):
     try:

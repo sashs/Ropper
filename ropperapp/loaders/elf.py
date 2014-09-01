@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 from ctypes import *
-from loader import *
-from elf_intern.elf_gen import *
+from .loader import *
+from .elf_intern.elf_gen import *
 from ropperapp.common.error import LoaderError
 import importlib
 import os
@@ -198,7 +198,7 @@ class ELF(Loader):
                 p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
                 execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
                 sections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
-        
+
         return sections
 
     @property
@@ -214,10 +214,10 @@ class ELF(Loader):
         return Type.ELF
 
     def setASLR(self, enable):
-        raise RuntimeError('Not available for elf files')
+        raise LoaderError('Not available for elf files')
 
     def setNX(self, enable):
-        perm = PF.READ | PF.WRITE | PF.EXEC if enable else PF.READ | PF.WRITE
+        perm = PF.READ | PF.WRITE  if enable else PF.READ | PF.WRITE | PF.EXEC
         phdrs = self.phdrs
 
         for phdr in phdrs:
@@ -238,4 +238,3 @@ class ELF(Loader):
                 return f.read(4) == '\x7fELF'
         except BaseException as e:
             raise LoaderError(e)
-

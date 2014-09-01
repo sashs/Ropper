@@ -8,9 +8,14 @@ awesome Capstone Framework.
 Install
 -------
 
-Install Capstone
+Download and Install Capstone
 
-    $ pip install capstone
+    $ wget http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2.tgz
+    $ cd capstone-2.1.2
+    $ ./make.sh
+    $ sudo ./make.sh install
+    $ cd ./bindings/python
+    $ sudo make install
 
 Install and execute Ropper
 
@@ -107,7 +112,7 @@ Planned features for future versions
   File formats:
 - Mach-O
 
-    
+
   ropchain generator
 
 Project page

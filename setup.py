@@ -15,7 +15,7 @@ setup(
     version=version,
     description=package_description,
     packages=find_packages(),
-    license="BSD-License",
+    license="GPLv2",
     author="Sascha Schirra",
     author_email="schirra@scoding.de",
     install_requires=['capstone'],

@@ -11,6 +11,7 @@ Install
 Download and Install Capstone
 
     $ wget http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2.tgz
+    $ tar xf capstone-2.1.2.tgz
     $ cd capstone-2.1.2
     $ ./make.sh
     $ sudo ./make.sh install

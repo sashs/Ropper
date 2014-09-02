@@ -137,10 +137,10 @@ class Console(cmd.Cmd):
         r = Ropper(self.__binary.arch)
         for section in self.__binary.executableSections:
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            gadgets = r.searchRopGadgets(
+            newGadgets = r.searchRopGadgets(
                 section.bytes, vaddr, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
 
-            gadgets.extend(gadgets)
+            gadgets.extend(newGadgets)
         return gadgets
 
     def __loadGadgets(self):

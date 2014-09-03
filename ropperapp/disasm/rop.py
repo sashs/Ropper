@@ -84,7 +84,7 @@ class Ropper(object):
         for index in xrange(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
                 ppr = Gadget()
-                for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), virtualAddress + index):
+                for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), virtualAddress + index -2):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
                     ppr.append(

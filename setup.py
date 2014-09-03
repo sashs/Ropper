@@ -2,12 +2,12 @@
 
 from setuptools import setup, find_packages
 
-version = "1.0.3"
+version = "1.1.0"
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
 With ropper you can show information about files in different file formats
-and you can search for gadget to build rop chains for different architectures.
+and you can find gadgets to build rop chains for different architectures.
 """.strip()
 
 setup(

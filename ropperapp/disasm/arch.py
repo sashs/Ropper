@@ -119,16 +119,30 @@ class ArchitectureMips(Architecture):
 class ArchitectureMips64(ArchitectureMips):
 
     def __init__(self):
-        ArchitectureMips.__init__()
+        ArchitectureMips.__init__(self)
 
         self._mode = CS_MODE_64
 
         self._addressLength = 8
 
     def _initGadgets(self):
+        ArchitectureMips._initGadgets(self)
+
+class ArchitectureArm(Architecture):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
+
+    def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
+        self._endings[gadget.GadgetType.JOP] = [('[\x10-\x19\x1e]\xff\x2f\xe1', 4), # bx <reg>
+                                                ('[\x30-\x39\x3e]\xff\x2f\xe1', 4), # blx <reg>
+                                                ('[\x01-\xff]\x80\xbd\xe8', 4),
+                                                ('\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
 
 x86 = ArchitectureX86()
 x86_64 = ArchitectureX86_64()
 MIPS = ArchitectureMips()
+MIPS64 = ArchitectureMips64()
+ARM = ArchitectureArm()

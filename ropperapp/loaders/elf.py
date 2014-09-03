@@ -206,7 +206,10 @@ class ELF(Loader):
 
     @property
     def arch(self):
-        return self.__elf_module.ARCH[(EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]])]
+        try:
+            return self.__elf_module.ARCH[(EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]])]
+        except:
+            raise LoaderError('Architecture not supported')
 
     @property
     def executableSections(self):

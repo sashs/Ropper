@@ -232,10 +232,10 @@ class Console(cmd.Cmd):
             return
         try:
             self.__loadFile(text)
+            self.__printInfo('File loaded.')
 
         except RopperError as e:
             self.__printError(e)
-        self.__printInfo('File loaded.')
 
     def help_file(self):
         self.__printHelpText('file <file>', 'loads a file')

@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-version = "1.0.2"
+version = "1.0.3"
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
@@ -19,7 +19,7 @@ setup(
     author="Sascha Schirra",
     author_email="schirra@scoding.de",
     install_requires=['capstone'],
-    url="https://github.com/sashs/ropper",
+    url="http://scoding.de/ropper/",
     scripts=['script/ropper'],
     classifiers=[
         'Topic :: Security',

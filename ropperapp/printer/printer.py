@@ -22,10 +22,9 @@ from ropperapp.common.abstract import *
 from sys import stdout
 from ropperapp.loaders.loader import Type
 from ropperapp.common.utils import *
+from ropperapp.common.error import PrinterError
 
 
-class PrinterError(BaseException):
-    pass
 
 
 class PrinterMeta(type):

@@ -23,6 +23,10 @@ Install and execute Ropper
     $ python setup.py install
     $ ropper
 
+You can also install Ropper with pip
+
+    $ pip install ropper
+
 If you want, you can use Ropper without installation
 
     $ ./ropper.py

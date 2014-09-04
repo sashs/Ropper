@@ -26,3 +26,7 @@ class LoaderError(RopperError):
 
 class ArgumentError(RopperError):
     pass
+
+
+class PrinterError(RopperError):
+    pass

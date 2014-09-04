@@ -111,6 +111,7 @@ class EM(Enum):
     ARC_A5 = 93
     XTENSA = 94
     NUM = 95
+    ARM64 = 183
 
 
 class EI(Enum):
@@ -270,4 +271,5 @@ ARCH = {(EM.INTEL_386 , ELFCLASS.BITS_32): x86,
         (EM.X86_64, ELFCLASS.BITS_64): x86_64,
         (EM.MIPS, ELFCLASS.BITS_32): MIPS,
         (EM.MIPS, ELFCLASS.BITS_64): MIPS64,
-        (EM.ARM, ELFCLASS.BITS_32) : ARM}
+        (EM.ARM, ELFCLASS.BITS_32) : ARM,
+        (EM.ARM64, ELFCLASS.BITS_64) : ARM64}

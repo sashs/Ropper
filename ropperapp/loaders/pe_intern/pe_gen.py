@@ -84,7 +84,6 @@ class ImageDllCharacteristics(Enum):
 
 ARCH = {int(IMAGE_FILE_MACHINE.AMD64):
         x86_64, int(IMAGE_FILE_MACHINE.I386): x86,
-        int(IMAGE_FILE_MACHINE.IA64) : x86_64,
         int(IMAGE_FILE_MACHINE.ARM) : ARM,
         int(IMAGE_FILE_MACHINE.ARMV) : ARM}
 

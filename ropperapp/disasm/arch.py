@@ -141,8 +141,24 @@ class ArchitectureArm(Architecture):
                                                 ('\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
 
+class ArchitectureArm64(Architecture):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
+
+    def _initGadgets(self):
+        self._endings[gadget.GadgetType.ROP] = [('[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
+                                                ('[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4),
+                                                ('\xc0\x03\x5f\xd6', 4)] # ret <reg>
+        self._endings[gadget.GadgetType.JOP] = [('[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # bx <reg>
+                                                ('[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # blx <reg>
+                                                ('[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4),
+                                                ('[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
+
+
 x86 = ArchitectureX86()
 x86_64 = ArchitectureX86_64()
 MIPS = ArchitectureMips()
 MIPS64 = ArchitectureMips64()
 ARM = ArchitectureArm()
+ARM64 = ArchitectureArm64()

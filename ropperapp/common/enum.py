@@ -140,7 +140,7 @@ class EnumMeta(type):
 
         def update(key, value):
             if value in values:
-                raise EnumError('Duplicate element')
+                raise EnumError('No aliases allowed: '+key+' and '+str(revData[value]))
             if isinstance(value, types.FunctionType):
                 dct[key] = classmethod(value)
                 return

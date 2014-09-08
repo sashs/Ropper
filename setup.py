@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-version = "1.1.0_dev"
+version = "1.1_dev"
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """

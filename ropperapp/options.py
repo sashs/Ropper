@@ -36,16 +36,19 @@ class Options(object):
     def _createArgParser(self):
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
 description="""With ropper you can show information about files in different file formats
-and you can search for gadgets to build rop chains for different architectures.
+and you can find gadgets to build rop chains for different architectures.
 
 supported filetypes:
   ELF
   PE
+  Mach-O
 
 supported architectures:
   x86
   x86_64
   MIPS
+  ARM
+  ARM64
 """,
 epilog="""example uses:
   [Generic]

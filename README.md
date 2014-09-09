@@ -42,16 +42,19 @@ Usage
                  [--opcode <opcode>] [--type <type>]
 
         With ropper you can show information about files in different file formats
-        and you can search for gadgets to build rop chains for different architectures.
+        and you can find gadgets to build rop chains for different architectures.
 
         supported filetypes:
           ELF
           PE
+          Mach-O
 
         supported architectures:
           x86
           x86_64
           MIPS
+          ARM
+          ARM64
 
         optional arguments:
           -h, --help            show this help message and exit
@@ -111,12 +114,11 @@ Usage
 Planned features for future versions
 ------------------------------------
   Architectures:
-- ARM-Support
 - PowerPC-Support
 
 
   File formats:
-- Mach-O
+- Raw
 
 
   ropchain generator

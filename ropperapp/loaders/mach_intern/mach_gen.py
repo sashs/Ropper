@@ -19,6 +19,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from ropperapp.common.enum import Enum
 from ctypes import *
+from ropperapp.disasm.arch import *
+
 
 
 class TypeFlags(Enum):
@@ -49,6 +51,7 @@ class SubTypeFlags(Enum):
 
 class CPU_SUBTYPE_X86(Enum):
     X86 = 3
+    X86_64 = X86 | SubTypeFlags.LIB64
     X86_64_H = 8
     I486 = 4
     I486SX = 0x84
@@ -118,6 +121,10 @@ class LC(Enum):
     LINKER_OPTIMIZATION_HINT = 0x0000002E
 
 
+class S_ATTR(Enum):
+    SOME_INSTRUCTIONS = 0x00000400
+    PURE_INSTRUCTIONS = 0x80000000
+
 class LoadCommand(LittleEndianStructure):
     _fields_ = [('cmd', c_uint),
                 ('cmdsize', c_uint)]
@@ -126,3 +133,7 @@ class UuidCommand(LittleEndianStructure):
     _fields_ = [('cmd', c_uint),
                 ('cmdsize', c_uint),
                 ('uuid', c_ubyte * 16)]
+
+
+ARCH = {int(CpuType.I386): x86,
+        int(CpuType.X86_64): x86_64}

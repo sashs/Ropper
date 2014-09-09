@@ -29,7 +29,8 @@ class MachHeader(LittleEndianStructure):
                 ('filetype', c_uint),
                 ('ncmds', c_uint),
                 ('sizeofcmds', c_uint),
-                ('flags', c_uint)
+                ('flags', c_uint),
+                ('reserved', c_uint),
                 ]
 
 
@@ -37,10 +38,10 @@ class SegmentCommand(LittleEndianStructure):
     _fields_ = [('cmd', c_uint),
                 ('cmdsize', c_uint),
                 ('segname', c_char * 16),
-                ('vmaddr', c_uint),
-                ('vmsize', c_uint),
-                ('fileoff', c_uint),
-                ('filesize', c_uint),
+                ('vmaddr', c_ulonglong),
+                ('vmsize', c_ulonglong),
+                ('fileoff', c_ulonglong),
+                ('filesize', c_ulonglong),
                 ('maxprot', c_uint),
                 ('initprot', c_uint),
                 ('nsects', c_uint),
@@ -50,8 +51,8 @@ class SegmentCommand(LittleEndianStructure):
 class Section(LittleEndianStructure):
     _fields_ = [('sectname', c_char * 16),
                 ('segname', c_char * 16),
-                ('addr', c_uint),
-                ('size', c_uint),
+                ('addr', c_ulonglong),
+                ('size', c_ulonglong),
                 ('offset', c_uint),
                 ('align', c_uint),
                 ('reloff', c_uint),

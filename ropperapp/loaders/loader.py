@@ -26,7 +26,7 @@ from ropperapp.common.error import *
 
 
 class Type(Enum):
-    _enum_ = 'ELF PE'
+    _enum_ = 'ELF PE MACH_O'
 
 
 class DataContainer(object):

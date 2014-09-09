@@ -117,10 +117,10 @@ class Console(cmd.Cmd):
     def __searchPopPopRet(self):
         r = Ropper(self.__binary.arch)
 
+        self.__printer.printTableHeader('POP;POP;REG Instructions')
         for section in self.__binary.executableSections:
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             pprs = r.searchPopPopRet(section.bytes, vaddr)
-            self.__printer.printTableHeader('POP;POP;REG Instructions')
             for ppr in pprs:
                 print(ppr)
                 print('')

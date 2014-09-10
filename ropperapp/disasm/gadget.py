@@ -49,6 +49,14 @@ class Gadget(object):
             return True
         return bool(re.search(filter, self._gadget))
 
+
+    def simpleString(self):
+        toReturn = '%s: ' % self.__lines[0][0]
+        for line in self.__lines:
+            toReturn += line[1] + '; '
+
+        return toReturn[:-2]
+
     def __len__(self):
         return len(self.__lines)
 
@@ -58,8 +66,8 @@ class Gadget(object):
         return -1
 
     def __str__(self):
-        toReturn = ''
+        toReturn = 'Gadget: %s\n' % self.__lines[0][0]
         for line in self.__lines:
-            toReturn += line[0] + ' ' + line[1] + '\n'
+            toReturn += line[0] +': '+ line[1] + '\n'
 
-        return toReturn[:-1]
+        return toReturn

@@ -122,15 +122,21 @@ class Console(cmd.Cmd):
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             pprs = r.searchPopPopRet(section.bytes, vaddr)
             for ppr in pprs:
-                print(ppr)
-                print('')
+                if self.__options.detail:
+                    print(ppr)
+                else:
+                    print(ppr.simpleString())
+        print('')
 
     def __printRopGadgets(self, gadgets):
         self.__printer.printTableHeader('Gadgets')
         for gadget in gadgets:
-            print(gadget)
-            print('')
-        print('%d gadgets found' % len(gadgets))
+            if self.__options.detail:
+                print(gadget)
+            else:
+                print(gadget.simpleString())
+            #print('')
+        print('\n%d gadgets found' % len(gadgets))
 
     def __searchGadgets(self):
         gadgets = []

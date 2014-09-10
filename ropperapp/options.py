@@ -66,9 +66,11 @@ epilog="""example uses:
   [Gadgets]
   ropper.py --file /bin/ls --depth 5
   ropper.py --file /bin/ls --search "sub eax"
+  ropper.py --file /bin/ls --search "sub eax" --detail
   ropper.py --file /bin/ls --filter "sub eax"
+  ropper.py --file /bin/ls --depth 5 --filter "sub eax"
   ropper.py --file /bin/ls --opcode ffe4
-  ropper.py --file /bin/ls --type jop
+  ropper.py --file /bin/ls --detail
   ropper.py --file /bin/ls --ppr
   ropper.py --file /bin/ls --jmp esp,eax
   ropper.py --file /bin/ls --type jop
@@ -114,6 +116,8 @@ epilog="""example uses:
             '--opcode', help='Searches for opcodes', metavar='<opcode>')
         parser.add_argument(
             '--type', help='Sets the type of gadgets [rop, jop, all] (default: all)', metavar='<type>')
+        parser.add_argument(
+            '--detail', help='Prints gadgets more detailed', action='store_true')
         return parser
 
     def _analyseArguments(self):

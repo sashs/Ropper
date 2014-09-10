@@ -390,6 +390,21 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_jmp(self):
         self.__printHelpText('jmp <reg[,reg...]>', 'searchs jmp reg instructions')
 
+    def do_detailed(self, text):
+        if text:
+            if text == 'on':
+                self.__options.detail = True
+            elif text == 'off':
+                self.__options.detail = False
+        else:
+            print('on' if self.__options.detail else 'off')
+
+    def help_detailed(self):
+        self.__printHelpText('detailed [on|off]', 'sets detailed gadget output')
+
+    def complete_detailed(self, text, line, begidx, endidx):
+        return [i for i in ['on', 'off'] if i.startswith(text)]
+
     def do_quit(self, text):
         exit(0)
 

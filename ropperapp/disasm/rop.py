@@ -43,16 +43,15 @@ class Ropper(object):
             raise EnvironmentError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
         toReturn = []
-        insts = [0xe0, 0xd0]
 
         Register = Enum('Register', 'ax cx dx bx sp bp si di')
-
         regs = regs.split(',')
         for reg in regs:
             reg = reg.strip()[1:]
+            insts = ['\xff' + chr(0xe0 | Register[reg]), '\xff' + chr(0xd0 | Register[reg]),  chr(0x50 | Register[reg]) + '\xc3']
             for inst in insts:
 
-                toReturn.extend(self.searchOpcode(code, '\xff'+chr(inst | Register[reg]), virtualAddress, True))
+                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True))
 
         return sorted(toReturn)
 

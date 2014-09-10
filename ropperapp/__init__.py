@@ -20,9 +20,9 @@
 
 from .console import Console
 from .options import Options
-from . common.error import RopperError
+from .common.error import RopperError
 
-VERSION='1.1_dev'
+VERSION='1.1.0'
 
 def start(args):
     try:

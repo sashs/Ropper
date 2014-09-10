@@ -84,15 +84,15 @@ epilog="""example uses:
         parser.add_argument(
             '-f', '--file', metavar="<file>", help='The file to load')
         parser.add_argument(
-            '-i', '--info', help='Shows file header [ELF/PE]', action='store_true')
+            '-i', '--info', help='Shows file header [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument('-e', help='Shows EntryPoint', action='store_true')
-        parser.add_argument('--imagebase', help='Shows ImageBase [ELF/PE]', action='store_true')
+        parser.add_argument('--imagebase', help='Shows ImageBase [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument(
             '-c', '--dllcharacteristics',help='Shows DllCharacteristics [PE]', action='store_true')
         parser.add_argument(
-            '-s', '--sections', help='Shows file sections [ELF/PE]', action='store_true')
+            '-s', '--sections', help='Shows file sections [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument(
-            '-S', '--segments', help='Shows file segments [ELF]', action='store_true')
+            '-S', '--segments', help='Shows file segments [ELF/Mach-O]', action='store_true')
         parser.add_argument(
             '--imports', help='Shows imports [ELF/PE]', action='store_true')
         parser.add_argument(

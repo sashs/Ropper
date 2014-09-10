@@ -22,6 +22,19 @@ from ctypes import *
 from ropperapp.disasm.arch import *
 
 
+class VM_PROT(Enum):
+    READ = 0x1
+    WRITE = 0x2
+    EXEC = 0x4
+
+    def shortString(self, perm):
+        toReturn = ''
+        toReturn += 'R' if perm & int(self.READ) > 0 else ' '
+        toReturn += 'W' if perm & int(self.WRITE) > 0 else ' '
+        toReturn += 'E' if perm & int(self.EXEC) > 0 else ' '
+
+        return toReturn
+
 
 class TypeFlags(Enum):
     MASK = 0xff000000
@@ -125,9 +138,11 @@ class S_ATTR(Enum):
     SOME_INSTRUCTIONS = 0x00000400
     PURE_INSTRUCTIONS = 0x80000000
 
+
 class LoadCommand(LittleEndianStructure):
     _fields_ = [('cmd', c_uint),
                 ('cmdsize', c_uint)]
+
 
 class UuidCommand(LittleEndianStructure):
     _fields_ = [('cmd', c_uint),

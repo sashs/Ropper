@@ -24,14 +24,20 @@ import importlib
 
 class SegmentData(DataContainer):
     """
-    struct = SectionHeader
+    struct = SegmentCommand
     name = string (section name)
     bytes = c_byte_array (section bytes)
     """
 
 class LoaderData(DataContainer):
     """
-    struct = SectionHeader
+    struct = LoaderCommand
+
+    """
+
+class SectionData(DataContainer):
+    """
+    struct = Section
 
     """
 
@@ -79,6 +85,7 @@ class MachO(Loader):
         for loaderCommand in self.loaderCommands:
             if loaderCommand.struct.cmd == LC.SEGMENT or loaderCommand.struct.cmd == LC.SEGMENT_64:
                 for section in loaderCommand.sections:
+                    section = section.struct
                     if section.flags & S_ATTR.SOME_INSTRUCTIONS > 0 or section.flags & S_ATTR.PURE_INSTRUCTIONS:
                         sectbytes_p = c_void_p(self._bytes_p.value + section.offset)
                         sectbytes = cast(sectbytes_p, POINTER(c_ubyte * section.size)).contents
@@ -104,7 +111,7 @@ class MachO(Loader):
 
 
             p_tmp.value += sizeof(self.__module.Section)
-            sections.append(sec)
+            sections.append(SectionData(struct=sec))
 
         return sections
 

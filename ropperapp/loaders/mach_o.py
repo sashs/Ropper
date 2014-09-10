@@ -139,10 +139,10 @@ class MachO(Loader):
         self.__parseCommands()
 
     def setNX(self, enable):
-        pass
+        raise LoaderError('Not available for mach-o files')
 
     def setASLR(self, enable):
-        pass
+        raise LoaderError('Not available for mach-o files')
 
 
     @classmethod

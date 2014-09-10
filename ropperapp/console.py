@@ -55,6 +55,13 @@ class Console(cmd.Cmd):
         self.__binary = Loader.open(file)
         self.__printer = FileDataPrinter.create(self.__binary.type)
 
+
+    def __printGadget(self, gadget):
+        if self.__options.detail:
+            print(gadget)
+        else:
+            print(gadget.simpleString())
+
     def __printData(self, data):
         self.__printer.printData(self.__binary, data)
 
@@ -96,7 +103,7 @@ class Console(cmd.Cmd):
 
         self.__printer.printTableHeader('JMP Instructions')
         for gadget in gadgets:
-            print(gadget)
+            print(gadget.simpleString())
         print('')
         print('%d times opcode found' % len(gadgets))
 
@@ -110,7 +117,7 @@ class Console(cmd.Cmd):
 
         self.__printer.printTableHeader('Opcode')
         for gadget in gadgets:
-            print(gadget)
+            print(gadget.simpleString())
         print('')
         print('%d times opcode found' % len(gadgets))
 
@@ -122,19 +129,13 @@ class Console(cmd.Cmd):
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             pprs = r.searchPopPopRet(section.bytes, vaddr)
             for ppr in pprs:
-                if self.__options.detail:
-                    print(ppr)
-                else:
-                    print(ppr.simpleString())
+                self.__printGadget(ppr)
         print('')
 
     def __printRopGadgets(self, gadgets):
         self.__printer.printTableHeader('Gadgets')
         for gadget in gadgets:
-            if self.__options.detail:
-                print(gadget)
-            else:
-                print(gadget.simpleString())
+            self.__printGadget(gadget)
             #print('')
         print('\n%d gadgets found' % len(gadgets))
 

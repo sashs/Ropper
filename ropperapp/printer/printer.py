@@ -76,20 +76,23 @@ class FileDataPrinter(DataPrinter):
         self._printLine('=' * len(string))
         self._printLine('\n')
 
-    def __createFmtString(self, rows, ccount, space):
-        scount = [0] * ccount
+    def __createFmtString(self, rows, cnames, space):
+        scount = []
+
+        for cname in cnames:
+            scount.append(len(cname)+space)
 
         for row in rows:
-            for idx in range(ccount):
+            for idx in range(len(scount)):
                 scount[idx] = max(scount[idx], len(str(row[idx])) + space)
 
-        return str('%-{}s' * ccount).format(*scount)
+        return str('%-{}s' * len(scount)).format(*scount)
 
     def _printTable(self, header, cnames, data, space=2, fmt=None):
         ccount = len(cnames)
 
         if not fmt:
-            fmt = self.__createFmtString(data, ccount, space)
+            fmt = self.__createFmtString(data, cnames,  space)
 
         self.printTableHeader(header)
 
@@ -107,7 +110,7 @@ class FileDataPrinter(DataPrinter):
 
         self._printLine('')
 
-    def _toHex(self, number, length=4):
+    def _toHex(self, number, length=0):
         return toHex(number, length)
 
     def _printLine(self, line):

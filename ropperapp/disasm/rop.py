@@ -20,6 +20,7 @@
 
 from capstone import *
 from ropperapp.common.utils import *
+from ropperapp.common.error import *
 from ropperapp.common.enum import Enum
 from .gadget import Gadget, GadgetType
 import re
@@ -40,7 +41,7 @@ class Ropper(object):
 
     def searchJmpReg(self, code, regs, virtualAddress=0x0):
         if self.__arch.arch != CS_ARCH_X86:
-            raise EnvironmentError(
+            raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
         toReturn = []
 
@@ -75,7 +76,7 @@ class Ropper(object):
 
     def searchPopPopRet(self, code, virtualAddress=0x0):
         if self.__arch.arch != CS_ARCH_X86:
-            raise EnvironmentError(
+            raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
 
         toReturn = []

@@ -193,7 +193,7 @@ class EnumMeta(type):
         return cls.__name__ + '='+toReturn
 
     def __contains__(cls, item):
-        return item in cls.__revData
+        return item in cls._revData
 
     def __getitem__(cls, key):
         if isinstance(key, str):

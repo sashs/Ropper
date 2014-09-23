@@ -22,7 +22,7 @@ from .console import Console
 from .options import Options
 from .common.error import RopperError
 
-VERSION='1.2_dev'
+VERSION='1.2.0'
 
 def start(args):
     try:

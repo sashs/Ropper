@@ -214,7 +214,7 @@ class Console(cmd.Cmd):
 
         generator = RopChain.get(self.__binary,split[0], gadgetlist, vaddr)
 
-        self.__printInfo('Generator ropchain')
+        self.__printInfo('generating rop chain')
         self.__printSeparator(behind='\n\n')
 
         if len(split) == 2:
@@ -223,7 +223,7 @@ class Console(cmd.Cmd):
             generator.create()
 
         self.__printSeparator(before='\n\n')
-        self.__printInfo('Ropchain generated!')
+        self.__printInfo('rop chain generated!')
 
 
     def __handleOptions(self, options):

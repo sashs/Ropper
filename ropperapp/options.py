@@ -49,6 +49,10 @@ supported architectures:
   MIPS
   ARM
   ARM64
+
+available rop chain generators:
+  execve (execve[=<cmd>], default /bin/sh) [Linux]
+  mprotect  (mprotect=<address>:<size>) [Linux]
 """,
 epilog="""example uses:
   [Generic]
@@ -75,6 +79,7 @@ epilog="""example uses:
   ropper.py --file /bin/ls --jmp esp,eax
   ropper.py --file /bin/ls --type jop
   ropper.py --file /bin/ls --chain execve=/bin/sh
+  ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
   \n""")
 
 

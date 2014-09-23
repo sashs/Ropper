@@ -17,22 +17,4 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-class RopperError(BaseException):
-    pass
-
-class LoaderError(RopperError):
-    pass
-
-class ArgumentError(RopperError):
-    pass
-
-
-class PrinterError(RopperError):
-    pass
-
-class NotSupportedError(RopperError):
-    pass
-
-class RopChainError(RopperError):
-    pass
+from ropchainx86 import *

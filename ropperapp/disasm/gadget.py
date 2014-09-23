@@ -22,6 +22,10 @@ import re
 import ropperapp.common.enum as enum
 from ropperapp.common.utils import toHex
 
+class Category(enum.Enum):
+    _enum_ = 'STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE'
+
+
 
 class GadgetType(enum.Enum):
     _enum_ = 'ROP JOP ALL'
@@ -29,12 +33,26 @@ class GadgetType(enum.Enum):
 
 class Gadget(object):
 
-    def __init__(self):
+    def __init__(self, arch):
         super(Gadget, self).__init__()
-
+        self.__arch = arch
         self.__lines = []
         self._gadget = ''
         self._vaddr = 0x0
+        self.__category = None
+        self.__imageBase = 0x0
+
+    @property
+    def lines(self):
+        return self.__lines
+
+    @property
+    def imageBase(self):
+        return self.__imageBase
+
+    @imageBase.setter
+    def imageBase(self, base):
+        self.__imageBase = base
 
     @property
     def vaddr(self):
@@ -49,13 +67,36 @@ class Gadget(object):
             return True
         return bool(re.search(filter, self._gadget))
 
-
-    def simpleString(self):
-        toReturn = '%s: ' % self.__lines[0][0]
+    def simpleInstructionString(self):
+        toReturn = ''
         for line in self.__lines:
             toReturn += line[1] + '; '
 
         return toReturn[:-2]
+
+    def simpleString(self):
+        toReturn = '%s: ' % toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength)
+        toReturn += self.simpleInstructionString()
+        return toReturn
+
+    @property
+    def category(self):
+        if not self.__category:
+            line = self.__lines[0][1]
+            for cat, regexs in self.__arch._categories.items():
+                for regex in regexs[0]:
+                    match = re.match(regex, line)
+                    if match:
+                        for invalid in regexs[1]:
+                            for l in self.__lines[1:]:
+                                if l[1].startswith(invalid):
+                                    self.__category = (Category.NONE,)
+                                    return self.__category
+                        self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
+                        return self.__category
+            self.__category = (Category.NONE,)
+
+        return self.__category
 
     def __len__(self):
         return len(self.__lines)
@@ -66,8 +107,8 @@ class Gadget(object):
         return -1
 
     def __str__(self):
-        toReturn = 'Gadget: %s\n' % self.__lines[0][0]
+        toReturn = 'Gadget: %s\n' % (self.__lines[0][0] + self.__imageBase)
         for line in self.__lines:
-            toReturn += line[0] +': '+ line[1] + '\n'
+            toReturn += toHex(line[0] + self.__imageBase, self.__arch.addressLength) +': '+ line[1] + '\n'
 
         return toReturn

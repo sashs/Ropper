@@ -62,14 +62,14 @@ class Ropper(object):
         code = bytearray(code)
         for index in xrange(len(code)):
             if code[index:index + len(opcode)] == opcode:
-                ppr = Gadget()
+                ppr = Gadget(self.__arch)
                 if disass:
                     for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[index:index + len(opcode)]), virtualAddress + index):
                         ppr.append(
-                            toHex(i.address, self.__arch.mode), i.mnemonic + ' ' + i.op_str)
+                            i.address, i.mnemonic + ' ' + i.op_str)
                 else:
                     ppr.append(
-                        toHex(virtualAddress + index, self.__arch.mode), opcode.encode('hex'))
+                        virtualAddress + index, opcode.encode('hex'))
 
                 toReturn.append(ppr)
         return toReturn
@@ -83,12 +83,12 @@ class Ropper(object):
 
         for index in xrange(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
-                ppr = Gadget()
+                ppr = Gadget(self.__arch)
                 for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), virtualAddress + index -2):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
                     ppr.append(
-                        toHex(address, self.__arch.mode), mnemonic + ' ' + op_str)
+                        address, mnemonic + ' ' + op_str)
                 if len(ppr) == 3:
                     toReturn.append(ppr)
         return toReturn
@@ -99,12 +99,12 @@ class Ropper(object):
         code = str(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
-            gadget = Gadget()
+            gadget = Gadget(self.__arch)
             hasret = False
             for i in self.__disassembler.disasm(code_str, codeStartAddress):
                 if i.mnemonic not in self.__arch.badInstructions:
                     gadget.append(
-                        toHex(i.address, self.__arch.mode), i.mnemonic + ' ' + i.op_str)
+                        i.address, i.mnemonic + ' ' + i.op_str)
                 elif len(gadget) > 0:
                     break
 
@@ -112,7 +112,7 @@ class Ropper(object):
                     hasret = True
                     break
 
-            if hasret and len(gadget) > 1:
+            if hasret and len(gadget) > 0:
                 return gadget
 
         for index in xrange(0, len(code), self.__arch.align):

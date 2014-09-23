@@ -441,7 +441,8 @@ class RopChainX86System(RopChainX86):
         return self._createWriteStringWhere(what,where)
 
     def create(self, cmd='/bin/sh'):
-        self._printHeader()
+        if len(cmd.split(' ')) > 1:
+            raise RopChainError('No argument support for execve commands')
 
         section = self._binary.getSection('.data')
         length = math.ceil(float(len(cmd))/4) * 4
@@ -517,7 +518,6 @@ class RopChainX86Mprotect(RopChainX86):
 
         address, size = self.__extract(param)
 
-        self._printHeader()
 
         chain = self._printHeader()
         chain += '\n\nshellcode = \'\\xcc\'*100\n\n'

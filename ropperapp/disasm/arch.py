@@ -37,9 +37,11 @@ class Architecture(AbstractSingleton):
 
         self._endings = {}
         self._badInstructions = []
+        self._categories = {}
 
         self._initGadgets()
         self._initBadInstructions()
+        self._initCategories()
 
         self._endings[gadget.GadgetType.ALL] = self._endings[
             gadget.GadgetType.ROP] + self._endings[gadget.GadgetType.JOP]
@@ -48,6 +50,9 @@ class Architecture(AbstractSingleton):
         pass
 
     def _initBadInstructions(self):
+        pass
+
+    def _initCategories(self):
         pass
 
     @property
@@ -91,7 +96,22 @@ class ArchitectureX86(Architecture):
             ('\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['int3']
+        self._badInstructions = ['int3', 'db']
+
+    def _initCategories(self):
+        self._categories = {
+                gadget.Category.LOAD_MEM : (('mov (?P<dst>...), .+ ptr \[(?P<src>...)\]',),('mov','call','jmp')),
+                gadget.Category.WRITE_MEM : (('^mov .+ ptr \[(?P<dst>...)\], (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.LOAD_REG : (('pop (?P<dst>...)',),('mov','call','jmp')),
+                gadget.Category.JMP : (('^jmp (?P<dst>...)$',),()),
+                gadget.Category.CALL : (('^call (?P<dst>...)$',),('mov','call','jmp')),
+                gadget.Category.INC_REG : (('^inc (?P<dst>...)$',),('mov','call','jmp')),
+                gadget.Category.CLEAR_REG : (('^xor (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.SUB_REG : (('^sub (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.XCHG_REG : (('^xchg (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.SYSCALL : (('^int (?P<dst>0x80)$',),('mov','call','jmp'))}
+
 
 
 class ArchitectureX86_64(ArchitectureX86):
@@ -102,6 +122,7 @@ class ArchitectureX86_64(ArchitectureX86):
         self._mode = CS_MODE_64
 
         self._addressLength = 8
+
 
 
 class ArchitectureMips(Architecture):

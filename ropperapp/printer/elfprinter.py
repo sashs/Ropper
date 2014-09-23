@@ -71,7 +71,10 @@ class ELFPrinter(FileDataPrinter):
 
         data = []
         for phdr in phdrs:
-            data.append((PT[phdr.p_type], self._toHex(phdr.p_offset, int(elffile.arch.addressLength)), self._toHex(phdr.p_paddr, int(elffile.arch.addressLength)), self._toHex(
+            ptype = 'Not available'
+            if phdr.p_type in PT:
+                ptype = PT[phdr.p_type]
+            data.append((ptype, self._toHex(phdr.p_offset, int(elffile.arch.addressLength)), self._toHex(phdr.p_paddr, int(elffile.arch.addressLength)), self._toHex(
                 phdr.p_filesz, int(elffile.arch.addressLength)), self._toHex(phdr.p_memsz, int(elffile.arch.addressLength)), PF.shortString(phdr.p_flags)))
 
         self._printTable(
@@ -94,3 +97,6 @@ class ELFPrinter(FileDataPrinter):
                             reloc.type], reloc.symbol.name))
             self._printTable('Relocation section: %s' % section, ('Offset', 'Type',
                                                             'Name'), data)
+
+        if elffile.relocations.items():
+            self._printLine('no imorts!')

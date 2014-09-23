@@ -26,6 +26,7 @@ from .common.error import *
 from .disasm.gadget import GadgetType
 import ropperapp
 from .common.utils import isHex
+from ropperapp.disasm.chain.ropchain import *
 
 
 class Console(cmd.Cmd):
@@ -79,6 +80,9 @@ class Console(cmd.Cmd):
     def __printInfo(self, error):
         print('INFO: {}'.format(error))
 
+    def __printSeparator(self,before='', behind=''):
+        print(before + '-'*40 + behind)
+
     def __setASLR(self, enable):
         self.__binary.setASLR(enable)
 
@@ -95,59 +99,76 @@ class Console(cmd.Cmd):
 
     def __searchJmpReg(self, regs):
         r = Ropper(self.__binary.arch)
-        gadgets = []
+        gadgets = {}
         for section in self.__binary.executableSections:
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            gadgets.extend(
-                r.searchJmpReg(section.bytes, regs, vaddr))
+
+            gadgets[section] = (
+                r.searchJmpReg(section.bytes, regs, section.offset))
 
         self.__printer.printTableHeader('JMP Instructions')
-        for gadget in gadgets:
-            print(gadget.simpleString())
+        counter = 0
+        for section, gadget in gadgets.items():
+            for g in gadget:
+                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+                g.imageBase = vaddr
+                print(g.simpleString())
+                counter += 1
         print('')
-        print('%d times opcode found' % len(gadgets))
+        print('%d times opcode found' % counter)
 
     def __searchOpcode(self, opcode):
         r = Ropper(self.__binary.arch)
-        gadgets = []
+        gadgets = {}
         for section in self.__binary.executableSections:
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            gadgets.extend(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), vaddr))
+            gadgets[section]=(
+                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset))
 
         self.__printer.printTableHeader('Opcode')
-        for gadget in gadgets:
-            print(gadget.simpleString())
+        counter = 0
+        for section, gadget in gadgets.items():
+            for g in gadget:
+                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+                g.imageBase = vaddr
+                print(g.simpleString())
+                counter += 1
         print('')
-        print('%d times opcode found' % len(gadgets))
+        print('%d times opcode found' % counter)
 
     def __searchPopPopRet(self):
         r = Ropper(self.__binary.arch)
 
         self.__printer.printTableHeader('POP;POP;REG Instructions')
         for section in self.__binary.executableSections:
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+
             pprs = r.searchPopPopRet(section.bytes, vaddr)
             for ppr in pprs:
+                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+                ppr.imageBase = vaddr
                 self.__printGadget(ppr)
         print('')
 
     def __printRopGadgets(self, gadgets):
         self.__printer.printTableHeader('Gadgets')
-        for gadget in gadgets:
-            self.__printGadget(gadget)
+        counter = 0
+        print gadgets
+        for section, gadget in gadgets.items():
+            for g in gadget:
+                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+                g.imageBase = vaddr
+                self.__printGadget(g)
+                counter +=1
             #print('')
-        print('\n%d gadgets found' % len(gadgets))
+        print('\n%d gadgets found' % counter)
 
     def __searchGadgets(self):
-        gadgets = []
+        gadgets = {}
         r = Ropper(self.__binary.arch)
         for section in self.__binary.executableSections:
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             newGadgets = r.searchRopGadgets(
-                section.bytes, vaddr, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+                section.bytes, section.offset, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
 
-            gadgets.extend(newGadgets)
+            gadgets[section] = (newGadgets)
         return gadgets
 
     def __loadGadgets(self):
@@ -163,18 +184,47 @@ class Console(cmd.Cmd):
         self.__printRopGadgets(gadgets)
 
     def __filter(self, gadgets, filter):
-        filtered = []
-        for gadget in gadgets:
-            if not gadget.match(filter):
-                filtered.append(gadget)
+        filtered = {}
+        for items, gadget in gadgets:
+            fg = []
+            for g in gadget:
+                if not gadget.match(filter):
+                    fg.append(gadget)
+            filtered[section] = fg
         return filtered
 
     def __search(self, gadgets, filter):
-        filtered = []
-        for gadget in gadgets:
-            if gadget.match(filter):
-                filtered.append(gadget)
+        filtered = {}
+        for section, gadget in gadgets:
+            fg = []
+            for g in gadget:
+                if g.match(filter):
+                    fg.append(g)
+            filtered[section] = fg
         return filtered
+
+    def __generateChain(self, gadgets, command):
+        split = command.split('=')
+
+
+        gadgetlist = []
+        for section, gadget in gadgets.items():
+            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+            gadgetlist.extend(gadget)
+
+        generator = RopChain.get(self.__binary,split[0], gadgetlist, vaddr)
+
+        self.__printInfo('generating rop chain')
+        self.__printSeparator(behind='\n\n')
+
+        if len(split) == 2:
+            generator.create(split[1])
+        else:
+            generator.create()
+
+        self.__printSeparator(before='\n\n')
+        self.__printInfo('rop chain generated!')
+
 
     def __handleOptions(self, options):
         if options.sections:
@@ -203,6 +253,9 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
+        elif options.chain:
+            self.__loadGadgets()
+            self.__generateChain(self.__gadgets, options.chain)
         else:
             self.__searchAndPrintGadgets()
 
@@ -357,10 +410,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_imagebase(self, text):
         if len(text) == 0:
             self.__options.I = None
-            self.__printInfo('Gadgets have to be reloaded')
         elif isHex(text):
             self.__options.I = int(text, 16)
-            self.__printInfo('Gadgets have to be reloaded')
         else:
             self.help_imagebase()
 
@@ -405,6 +456,19 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def complete_detailed(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
+
+    def do_ropchain(self, text):
+        if len(text) == 0:
+            self.help_ropchain()
+        if not self.__gadgets:
+            self.do_load(text)
+        try:
+            self.__generateChain(self.__gadgets, text)
+        except RopperError as e:
+            self.__printError(str(e))
+
+    def help_ropchain(self):
+        self.__printHelpText('ropchain <generator>[=args]','uses the given generator and create a ropchain with args')
 
     def do_quit(self, text):
         exit(0)

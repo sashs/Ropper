@@ -36,56 +36,89 @@ Usage
 -----
 
     usage: ropper.py [-h] [-v] [--console] [-f <file>] [-i] [-e] [--imagebase]
-                       [-c] [-s] [-S] [--imports] [--symbols] [--set <option>]
-                       [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
-                       [--depth <n bytes>] [--search <regex>] [--filter <regex>]
-                       [--opcode <opcode>] [--type <type>] [--detail]
+                 [-c] [-s] [-S] [--imports] [--symbols] [--set <option>]
+                 [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
+                 [--depth <n bytes>] [--search <regex>] [--filter <regex>]
+                 [--opcode <opcode>] [--type <type>] [--detail]
+                 [--chain <generator>]
 
-          With ropper you can show information about files in different file formats
-          and you can find gadgets to build rop chains for different architectures.
+    With ropper you can show information about files in different file formats
+    and you can find gadgets to build rop chains for different architectures.
 
-          supported filetypes:
-            ELF
-            PE
-            Mach-O
+    supported filetypes:
+      ELF
+      PE
+      Mach-O
 
-          supported architectures:
-            x86
-            x86_64
-            MIPS
-            ARM
-            ARM64
+    supported architectures:
+      x86
+      x86_64
+      MIPS
+      ARM
+      ARM64
 
-          optional arguments:
-            -h, --help            show this help message and exit
-            -v, --version         Print version
-            --console             Starts interactive commandline
-            -f <file>, --file <file>
-                                  The file to load
-            -i, --info            Shows file header [ELF/PE/Mach-O]
-            -e                    Shows EntryPoint
-            --imagebase           Shows ImageBase [ELF/PE/Mach-O]
-            -c, --dllcharacteristics
-                                  Shows DllCharacteristics [PE]
-            -s, --sections        Shows file sections [ELF/PE/Mach-O]
-            -S, --segments        Shows file segments [ELF/Mach-O]
-            --imports             Shows imports [ELF/PE]
-            --symbols             Shows symbols [ELF]
-            --set <option>        Sets options. Available options: aslr nx
-            --unset <option>      Unsets options. Available options: aslr nx
-            -I <imagebase>        Uses this imagebase for gadgets
-            -p, --ppr             Searches for 'pop reg; pop reg; ret' instructions
-                                  [only x86/x86_64]
-            -j <reg>, --jmp <reg>
-                                  Searches for 'jmp reg' instructions (-j reg[,reg...])
-                                  [only x86/x86_64]
-            --depth <n bytes>     Specifies the depth of search (default: 10)
-            --search <regex>      Searches for gadgets
-            --filter <regex>      Filters gadgets
-            --opcode <opcode>     Searches for opcodes
-            --type <type>         Sets the type of gadgets [rop, jop, all] (default:
-                                  all)
-            --detail              Prints gadgets more detailed
+    available rop chain generators:
+      execve (execve[=<cmd>], default /bin/sh) [Linux x86]
+      mprotect  (mprotect=<address>:<size>) [Linux x86]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -v, --version         Print version
+      --console             Starts interactive commandline
+      -f <file>, --file <file>
+                            The file to load
+      -i, --info            Shows file header [ELF/PE/Mach-O]
+      -e                    Shows EntryPoint
+      --imagebase           Shows ImageBase [ELF/PE/Mach-O]
+      -c, --dllcharacteristics
+                            Shows DllCharacteristics [PE]
+      -s, --sections        Shows file sections [ELF/PE/Mach-O]
+      -S, --segments        Shows file segments [ELF/Mach-O]
+      --imports             Shows imports [ELF/PE]
+      --symbols             Shows symbols [ELF]
+      --set <option>        Sets options. Available options: aslr nx
+      --unset <option>      Unsets options. Available options: aslr nx
+      -I <imagebase>        Uses this imagebase for gadgets
+      -p, --ppr             Searches for 'pop reg; pop reg; ret' instructions
+                            [only x86/x86_64]
+      -j <reg>, --jmp <reg>
+                            Searches for 'jmp reg' instructions (-j reg[,reg...])
+                            [only x86/x86_64]
+      --depth <n bytes>     Specifies the depth of search (default: 10)
+      --search <regex>      Searches for gadgets
+      --filter <regex>      Filters gadgets
+      --opcode <opcode>     Searches for opcodes
+      --type <type>         Sets the type of gadgets [rop, jop, all] (default:
+                            all)
+      --detail              Prints gadgets more detailed
+      --chain <generator>   Generates a ropchain [generator=parameter]
+
+    example uses:
+      [Generic]
+      ropper.py
+      ropper.py --file /bin/ls --console
+
+      [Informations]
+      ropper.py --file /bin/ls --info
+      ropper.py --file /bin/ls --imports
+      ropper.py --file /bin/ls --sections
+      ropper.py --file /bin/ls --segments
+      ropper.py --file /bin/ls --set nx
+      ropper.py --file /bin/ls --unset nx
+
+      [Gadgets]
+      ropper.py --file /bin/ls --depth 5
+      ropper.py --file /bin/ls --search "sub eax"
+      ropper.py --file /bin/ls --search "sub eax" --detail
+      ropper.py --file /bin/ls --filter "sub eax"
+      ropper.py --file /bin/ls --depth 5 --filter "sub eax"
+      ropper.py --file /bin/ls --opcode ffe4
+      ropper.py --file /bin/ls --detail
+      ropper.py --file /bin/ls --ppr
+      ropper.py --file /bin/ls --jmp esp,eax
+      ropper.py --file /bin/ls --type jop
+      ropper.py --file /bin/ls --chain execve=/bin/sh
+      ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
 
 
 
@@ -98,8 +131,6 @@ Planned features for future versions
   File formats:
 - Raw
 
-
-  ropchain generator
 
 Project page
 ------------------------------------

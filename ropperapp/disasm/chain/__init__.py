@@ -17,15 +17,4 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from .console import Console
-from .options import Options
-from .common.error import RopperError
-
-VERSION='1.2.0'
-
-def start(args):
-    try:
-        Console(Options(args)).start()
-    except RopperError as e:
-        print(e)
+from arch import *

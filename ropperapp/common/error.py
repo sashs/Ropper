@@ -30,3 +30,9 @@ class ArgumentError(RopperError):
 
 class PrinterError(RopperError):
     pass
+
+class NotSupportedError(RopperError):
+    pass
+
+class RopChainError(RopperError):
+    pass

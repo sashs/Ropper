@@ -69,7 +69,7 @@ epilog="""example uses:
 
   [Gadgets]
   ropper.py --file /bin/ls --depth 5
-  ropper.py --file /bin/ls --search "sub eax"
+  ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
   ropper.py --file /bin/ls --search "sub eax" --detail
   ropper.py --file /bin/ls --filter "sub eax"
   ropper.py --file /bin/ls --depth 5 --filter "sub eax"
@@ -79,6 +79,7 @@ epilog="""example uses:
   ropper.py --file /bin/ls --jmp esp,eax
   ropper.py --file /bin/ls --type jop
   ropper.py --file /bin/ls --chain execve=/bin/sh
+  ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
   ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
   \n""")
 
@@ -126,6 +127,8 @@ epilog="""example uses:
             '--detail', help='Prints gadgets more detailed', action='store_true')
         parser.add_argument(
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
+        parser.add_argument(
+            '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
         return parser
 
     def _analyseArguments(self):
@@ -147,6 +150,9 @@ epilog="""example uses:
                 raise ArgumentError('Imagebase should be in hex (0x.....)')
             else:
                 self.__args.I = int(self.__args.I, 16)
+
+
+
 
 
     def __missingArgument(self, arg):

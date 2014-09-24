@@ -36,7 +36,9 @@ class Console(cmd.Cmd):
         self.__options = options
         self.__binary = None
         self.__printer = None
-        self.__gadgets = []
+        self.__gadgets = {}
+        self.__allGadgets = {}
+        self.__badBytes = []
         self.prompt = '(ropper) '
 
     def start(self):
@@ -140,9 +142,9 @@ class Console(cmd.Cmd):
         self.__printer.printTableHeader('POP;POP;REG Instructions')
         for section in self.__binary.executableSections:
 
+            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             pprs = r.searchPopPopRet(section.bytes, vaddr)
             for ppr in pprs:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)
         print('')
@@ -151,8 +153,8 @@ class Console(cmd.Cmd):
         self.__printer.printTableHeader('Gadgets')
         counter = 0
         for section, gadget in gadgets.items():
+            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             for g in gadget:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
                 g.imageBase = vaddr
                 self.__printGadget(g)
                 counter +=1
@@ -163,15 +165,29 @@ class Console(cmd.Cmd):
         gadgets = {}
         r = Ropper(self.__binary.arch)
         for section in self.__binary.executableSections:
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             newGadgets = r.searchRopGadgets(
                 section.bytes, section.offset, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+
+            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+            for gadget in newGadgets:
+                gadget.imageBase = vaddr
 
             gadgets[section] = (newGadgets)
         return gadgets
 
     def __loadGadgets(self):
-        self.__gadgets = self.__searchGadgets()
+        self.__allGadgets = self.__searchGadgets()
+        self.__filterBadBytes()
+
+
+    def __filterBadBytes(self):
+        self.__gadgets = {}
+        for section, gadget in self.__allGadgets.items():
+            l = []
+            for g in gadget:
+                if not g.addressesContainsBytes(self.__badBytes):
+                    l.append(g)
+            self.__gadgets[section] = l
 
     def __searchAndPrintGadgets(self):
         self.__loadGadgets()
@@ -184,11 +200,11 @@ class Console(cmd.Cmd):
 
     def __filter(self, gadgets, filter):
         filtered = {}
-        for items, gadget in gadgets.items():
+        for section, gadget in gadgets.items():
             fg = []
             for g in gadget:
-                if not gadget.match(filter):
-                    fg.append(gadget)
+                if not g.match(filter):
+                    fg.append(g)
             filtered[section] = fg
         return filtered
 

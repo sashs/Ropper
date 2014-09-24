@@ -87,8 +87,11 @@ class Ropper(object):
                 for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), virtualAddress + index -2):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
+
                     ppr.append(
                         address, mnemonic + ' ' + op_str)
+                    if mnemonic == 'ret':
+                        break
                 if len(ppr) == 3:
                     toReturn.append(ppr)
         return toReturn

@@ -67,6 +67,9 @@ class Gadget(object):
             return True
         return bool(re.search(filter, self._gadget))
 
+    def addressesContainsBytes(self, bytes):
+        return False
+
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:

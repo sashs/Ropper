@@ -150,7 +150,6 @@ class Console(cmd.Cmd):
     def __printRopGadgets(self, gadgets):
         self.__printer.printTableHeader('Gadgets')
         counter = 0
-        print gadgets
         for section, gadget in gadgets.items():
             for g in gadget:
                 vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
@@ -185,7 +184,7 @@ class Console(cmd.Cmd):
 
     def __filter(self, gadgets, filter):
         filtered = {}
-        for items, gadget in gadgets:
+        for items, gadget in gadgets.items():
             fg = []
             for g in gadget:
                 if not gadget.match(filter):
@@ -195,7 +194,7 @@ class Console(cmd.Cmd):
 
     def __search(self, gadgets, filter):
         filtered = {}
-        for section, gadget in gadgets:
+        for section, gadget in gadgets.items():
             fg = []
             for g in gadget:
                 if g.match(filter):

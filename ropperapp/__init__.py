@@ -23,9 +23,11 @@ from .options import Options
 from .common.error import RopperError
 
 VERSION='1.2.1'
-
+app_options = None
 def start(args):
     try:
-        Console(Options(args)).start()
+        global app_options
+        app_options = Options(args)
+        Console(app_options).start()
     except RopperError as e:
         print(e)

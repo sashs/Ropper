@@ -27,6 +27,7 @@ from .disasm.gadget import GadgetType
 import ropperapp
 from .common.utils import isHex
 from ropperapp.disasm.chain.ropchain import *
+from binascii import unhexlify
 
 
 class Console(cmd.Cmd):
@@ -36,7 +37,9 @@ class Console(cmd.Cmd):
         self.__options = options
         self.__binary = None
         self.__printer = None
-        self.__gadgets = []
+        self.__gadgets = {}
+        self.__allGadgets = {}
+
         self.prompt = '(ropper) '
 
     def start(self):
@@ -140,9 +143,9 @@ class Console(cmd.Cmd):
         self.__printer.printTableHeader('POP;POP;REG Instructions')
         for section in self.__binary.executableSections:
 
+            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             pprs = r.searchPopPopRet(section.bytes, vaddr)
             for ppr in pprs:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)
         print('')
@@ -151,8 +154,8 @@ class Console(cmd.Cmd):
         self.__printer.printTableHeader('Gadgets')
         counter = 0
         for section, gadget in gadgets.items():
+            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             for g in gadget:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
                 g.imageBase = vaddr
                 self.__printGadget(g)
                 counter +=1
@@ -165,13 +168,19 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             newGadgets = r.searchRopGadgets(
-                section.bytes, section.offset, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+
 
             gadgets[section] = (newGadgets)
         return gadgets
 
     def __loadGadgets(self):
-        self.__gadgets = self.__searchGadgets()
+        self.__allGadgets = self.__searchGadgets()
+        self.__filterBadBytes()
+
+
+    def __filterBadBytes(self):
+        self.__gadgets = self.__allGadgets
 
     def __searchAndPrintGadgets(self):
         self.__loadGadgets()
@@ -184,11 +193,11 @@ class Console(cmd.Cmd):
 
     def __filter(self, gadgets, filter):
         filtered = {}
-        for items, gadget in gadgets.items():
+        for section, gadget in gadgets.items():
             fg = []
             for g in gadget:
-                if not gadget.match(filter):
-                    fg.append(gadget)
+                if not g.match(filter):
+                    fg.append(g)
             filtered[section] = fg
         return filtered
 
@@ -207,8 +216,10 @@ class Console(cmd.Cmd):
 
 
         gadgetlist = []
+        vaddr = 0
         for section, gadget in gadgets.items():
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+            if len(gadget) != 0:
+                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             gadgetlist.extend(gadget)
 
         generator = RopChain.get(self.__binary,split[0], gadgetlist, vaddr)
@@ -456,9 +467,18 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_detailed(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
 
+    def do_badbytes(self, text):
+
+        self.__options.badbytes =text
+        self.__printInfo('Gadgets have to be reloaded')
+
+    def help_badbytes(self):
+        self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes')
+
     def do_ropchain(self, text):
         if len(text) == 0:
             self.help_ropchain()
+            return
         if not self.__gadgets:
             self.do_load(text)
         try:

@@ -40,7 +40,7 @@ Usage
                  [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
                  [--depth <n bytes>] [--search <regex>] [--filter <regex>]
                  [--opcode <opcode>] [--type <type>] [--detail]
-                 [--chain <generator>]
+                 [--chain <generator>] [-b <badbytes>]
 
     With ropper you can show information about files in different file formats
     and you can find gadgets to build rop chains for different architectures.
@@ -92,6 +92,8 @@ Usage
                             all)
       --detail              Prints gadgets more detailed
       --chain <generator>   Generates a ropchain [generator=parameter]
+      -b <badbytes>, --badbytes <badbytes>
+                            Set bytes which should not contains in gadgets
 
     example uses:
       [Generic]
@@ -108,7 +110,7 @@ Usage
 
       [Gadgets]
       ropper.py --file /bin/ls --depth 5
-      ropper.py --file /bin/ls --search "sub eax"
+      ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
       ropper.py --file /bin/ls --search "sub eax" --detail
       ropper.py --file /bin/ls --filter "sub eax"
       ropper.py --file /bin/ls --depth 5 --filter "sub eax"
@@ -118,7 +120,9 @@ Usage
       ropper.py --file /bin/ls --jmp esp,eax
       ropper.py --file /bin/ls --type jop
       ropper.py --file /bin/ls --chain execve=/bin/sh
+      ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
       ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+
 
 
 

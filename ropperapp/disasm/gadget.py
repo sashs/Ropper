@@ -67,6 +67,21 @@ class Gadget(object):
             return True
         return bool(re.search(filter, self._gadget))
 
+    def addressesContainsBytes(self, bytes):
+        line =  self.__lines[0]
+        for b in bytes:
+
+            address = line[0] + self.__imageBase
+
+            b = ord(b)
+            for i in range(4):
+                if (address & 0xff) == b:
+
+                    return True
+                address >>= 8
+
+
+
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:

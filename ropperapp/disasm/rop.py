@@ -87,24 +87,32 @@ class Ropper(object):
                 for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), virtualAddress + index -2):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
+
                     ppr.append(
                         address, mnemonic + ' ' + op_str)
+                    if mnemonic == 'ret':
+                        break
                 if len(ppr) == 3:
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, code, virtualAddress=0x0, depth=10, gtype=GadgetType.ALL):
+    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL):
         toReturn = []
 
         code = str(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
             gadget = Gadget(self.__arch)
+            gadget.imageBase = virtualAddress
             hasret = False
+            c = 0
             for i in self.__disassembler.disasm(code_str, codeStartAddress):
                 if i.mnemonic not in self.__arch.badInstructions:
                     gadget.append(
                         i.address, i.mnemonic + ' ' + i.op_str)
+                    if c == 0 and gadget.addressesContainsBytes(badbytes):
+                        return None
+                    c += 1
                 elif len(gadget) > 0:
                     break
 
@@ -113,6 +121,7 @@ class Ropper(object):
                     break
 
             if hasret and len(gadget) > 0:
+
                 return gadget
 
         for index in xrange(0, len(code), self.__arch.align):
@@ -123,7 +132,7 @@ class Ropper(object):
                         code_part = code[index - x:index + ending[1]]
 
                         gadget = createGadget(
-                            code_part, virtualAddress + index - x, ending)
+                            code_part, offset + index - x, ending)
 
                         if gadget:
                             toReturn.append(gadget)

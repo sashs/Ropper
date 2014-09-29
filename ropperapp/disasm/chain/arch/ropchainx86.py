@@ -161,7 +161,7 @@ class RopChainX86(RopChain):
                         continue
                     if badDst and gadget.category[2]['dst'] in badDst:
                         continue
-                    if not gadget.simpleString().strip().endswith('ret') or 'esp' in gadget.simpleString():
+                    if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString():
                         continue
                     if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
                         continue

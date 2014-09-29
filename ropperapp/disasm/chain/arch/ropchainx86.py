@@ -424,6 +424,19 @@ class RopChainX86(RopChain):
 
         return (toReturn,)
 
+    def _createOpcode(self, opcode):
+        r = Ropper(self._binary.arch)
+        gadgets = []
+        for section in self._binary.executableSections:
+            vaddr = section.virtualAddress
+            gadgets.extend(
+                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset, True))
+
+        if len(gadgets) > 0:
+            return self._printRopInstruction(gadgets[0])
+        else:
+            raise RopChainError('Cannot create gadget for opcode: %x' % opcode)
+
     def create(self):
         pass
 
@@ -468,7 +481,13 @@ class RopChainX86System(RopChainX86):
 
 
         chain += self._createDependenceChain(gadgets)
-        chain += self._createSyscall()[0]
+        try:
+            chain += self._createSyscall()[0]
+        except RopChainError:
+            try:
+                chain += self._createOpcode('cd80')
+            except:
+                chain += self._createOpcode('65ff1510000000')
         print chain
 
 

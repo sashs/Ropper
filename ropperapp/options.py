@@ -21,6 +21,7 @@
 import argparse
 from common.error import *
 from common.utils import isHex
+import sys
 
 
 class Options(object):
@@ -130,7 +131,7 @@ epilog="""example uses:
         parser.add_argument(
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
         parser.add_argument(
-            '--nocolor', help='Disable colored output', action='store_true')
+            '--nocolor', help='Disables colored output', action='store_true')
         return parser
 
     def _analyseArguments(self):
@@ -147,6 +148,8 @@ epilog="""example uses:
         if not self.__args.type:
             self.__args.type = 'all'
 
+        self.__args.nocolor = self.__args.nocolor and not self.isWindows()
+
         if self.__args.I:
             if not isHex(self.__args.I):
                 raise ArgumentError('Imagebase should be in hex (0x.....)')
@@ -162,6 +165,9 @@ epilog="""example uses:
             return super(Options, self).__getattr__(key)
         else:
             return vars(self.__args)[key]
+
+    def isWindows(self):
+      return sys.platform.startswith('win')
 
     def __setattr__(self, key, value):
         if key.startswith('_'):

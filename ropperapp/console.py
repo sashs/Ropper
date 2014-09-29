@@ -214,7 +214,8 @@ class Console(cmd.Cmd):
     def __generateChain(self, gadgets, command):
         split = command.split('=')
 
-
+        old = self.__options.nocolor
+        self.__options.nocolor = True
         gadgetlist = []
         vaddr = 0
         for section, gadget in gadgets.items():
@@ -234,6 +235,7 @@ class Console(cmd.Cmd):
 
         self.__printSeparator(before='\n\n')
         self.__printInfo('rop chain generated!')
+        self.__options.nocolor = old
 
 
     def __handleOptions(self, options):
@@ -474,6 +476,24 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_badbytes(self):
         self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes')
+
+    def do_nocolor(self, text):
+        if self.__options.isWindows():
+            self.__printInfo('No color support for windows')
+            return
+        if text:
+            if text == 'on':
+                self.__options.nocolor = True
+            elif text == 'off':
+                self.__options.nocolor = False
+        else:
+            print('on' if self.__options.nocolor else 'off')
+
+    def help_nocolor(self):
+        self.__printHelpText('nocolor [on|off]', 'sets no colorized output')
+
+    def complete_nocolor(self, text, line, begidx, endidx):
+        return [i for i in ['on', 'off'] if i.startswith(text)]
 
     def do_ropchain(self, text):
         if len(text) == 0:

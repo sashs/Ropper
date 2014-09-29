@@ -129,7 +129,7 @@ class FileDataPrinter(DataPrinter):
 
         self._printLine('')
 
-    def _toHex(self, number, length=1):
+    def _toHex(self, number, length=4):
         return toHex(number, length)
 
     def _printLine(self, line):

@@ -25,7 +25,7 @@ def isHex(num):
     return re.match('^0x[0-9A-Fa-f]+$', num) != None
 
 
-def toHex(number, length=1):
+def toHex(number, length=4):
 
     t = 0xff
     for i in range(length-1):

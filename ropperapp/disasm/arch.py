@@ -177,9 +177,28 @@ class ArchitectureArm64(Architecture):
                                                 ('[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
 
 
+
+class ArchitecturePPC(Architecture):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
+
+    def _initGadgets(self):
+        self._endings[gadget.GadgetType.ROP] = [('\x4e\x80\x00\x20', 4)] #blr
+        self._endings[gadget.GadgetType.JOP] = []
+
+class ArchitecturePPC64(ArchitecturePPC):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
+
+
+
 x86 = ArchitectureX86()
 x86_64 = ArchitectureX86_64()
 MIPS = ArchitectureMips()
 MIPS64 = ArchitectureMips64()
 ARM = ArchitectureArm()
 ARM64 = ArchitectureArm64()
+PPC = ArchitecturePPC()
+PPC64 = ArchitecturePPC64()

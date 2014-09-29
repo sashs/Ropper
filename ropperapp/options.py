@@ -126,6 +126,8 @@ epilog="""example uses:
             '--detail', help='Prints gadgets more detailed', action='store_true')
         parser.add_argument(
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
+        parser.add_argument(
+            '--nocolor', help='Disable colored output', action='store_true')
         return parser
 
     def _analyseArguments(self):

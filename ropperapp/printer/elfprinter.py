@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from printer import FileDataPrinter
+from printer import *
 from ropperapp.loaders.elf import *
 
 
@@ -30,22 +30,21 @@ class ELFPrinter(FileDataPrinter):
 
     def printInformations(self, binary):
         ehdr = binary.ehdr
-        data = [('Class', ELFCLASS[ehdr.e_ident[EI.CLASS]]),
-                ('Machine', EM[ehdr.e_machine]),
-                ('Version', ehdr.e_version),
-                ('EntryPoint', self._toHex(
-                    ehdr.e_entry, int(binary.arch.addressLength) / 8)),
-                ('ProgramHeader Offset', ehdr.e_phoff),
-                ('SectionHeader Offset', ehdr.e_shoff),
-                ('Flags', self._toHex(ehdr.e_flags, int(binary.arch.addressLength) / 8)),
-                ('ELF Header Size', ehdr.e_ehsize),
-                ('ProgramHeader Size', ehdr.e_phentsize),
-                ('ProgramHeader Number', ehdr.e_phnum),
-                ('SectionHeader Size', ehdr.e_shentsize),
-                ('SectionHeader Number', ehdr.e_shnum)
-                ]
+        data = [(cstr('Class', Color.BLUE), cstr(ELFCLASS[ehdr.e_ident[EI.CLASS]], Color.WHITE)),
+                (cstr('Machine', Color.BLUE), cstr(EM[ehdr.e_machine], Color.WHITE)),
+                (cstr('Version', Color.BLUE), cstr(ehdr.e_version, Color.WHITE)),
+                (cstr('EntryPoint', Color.BLUE), cstr(self._toHex(
+                    ehdr.e_entry,binary.arch.addressLength), Color.WHITE)),
+                (cstr('ProgramHeader Offset', Color.BLUE), cstr(ehdr.e_phoff, Color.WHITE)),
+                (cstr('SectionHeader Offset', Color.BLUE), cstr(ehdr.e_shoff, Color.WHITE)),
+                (cstr('Flags', Color.BLUE), cstr(self._toHex(ehdr.e_flags, int(binary.arch.addressLength)), Color.WHITE)),
+                (cstr('ELF Header Size', Color.BLUE), cstr(ehdr.e_ehsize, Color.WHITE)),
+                (cstr('ProgramHeader Size', Color.BLUE), cstr(ehdr.e_phentsize, Color.WHITE)),
+                (cstr('ProgramHeader Number', Color.BLUE), cstr(ehdr.e_phnum, Color.WHITE)),
+                (cstr('SectionHeader Size', Color.BLUE), cstr(ehdr.e_shentsize, Color.WHITE)),
+                (cstr('SectionHeader Number', Color.BLUE), cstr(ehdr.e_shnum, Color.WHITE))]
 
-        self._printTable('ELF Header', ('Name', 'Value'), data)
+        self._printTable('ELF Header', (cstr('Name', Color.LIGHT_GRAY), cstr('Value',Color.LIGHT_GRAY)), data)
 
     def printSymbols(self, binary):
 
@@ -53,18 +52,29 @@ class ELFPrinter(FileDataPrinter):
             data = []
             for idx in range(len(symbols)):
                 symbol = symbols[idx]
-                data.append(
-                    (str(idx), STT[symbol.type], STB[symbol.bind], symbol.name))
-            self._printTable('Symbols from %s' %
-                             section, ('Nr', 'Type', 'Bind', 'Name'), data)
+                data.append((cstr(idx, Color.BLUE),
+                            cstr(STT[symbol.type], Color.GREEN),
+                            cstr(STB[symbol.bind], Color.LIGHT_GRAY),
+                            cstr(symbol.name, Color.WHITE)))
+            self._printTable('Symbols from %s' % section,
+                            (cstr('Nr', Color.LIGHT_GRAY),
+                                cstr('Type', Color.LIGHT_GRAY),
+                                cstr('Bind', Color.LIGHT_GRAY),
+                                cstr('Name', Color.LIGHT_GRAY)),
+                            data)
 
     def printSections(self, binary):
         data = []
         for index in range(len(binary.shdrs)):
-            data.append(('[%.2d]' % index, binary.shdrs[index].name, SHT[
-                        binary.shdrs[index].struct.sh_type]))
+            data.append((cstr('[%.2d]' % index, Color.BLUE),
+                        cstr(binary.shdrs[index].name, Color.WHITE),
+                        cstr(SHT[binary.shdrs[index].struct.sh_type], Color.YELLOW)))
 
-        self._printTable('Sections', ('Nr', 'Name', 'Type'), data)
+        self._printTable('Sections',
+                        (cstr('Nr', Color.LIGHT_GRAY),
+                            cstr('Name', Color.LIGHT_GRAY),
+                            cstr('Type', Color.LIGHT_GRAY)),
+                        data)
 
     def printSegments(self, elffile):
         phdrs = elffile.phdrs
@@ -74,12 +84,21 @@ class ELFPrinter(FileDataPrinter):
             ptype = 'Not available'
             if phdr.p_type in PT:
                 ptype = PT[phdr.p_type]
-            data.append((ptype, self._toHex(phdr.p_offset, int(elffile.arch.addressLength)), self._toHex(phdr.p_paddr, int(elffile.arch.addressLength)), self._toHex(
-                phdr.p_filesz, int(elffile.arch.addressLength)), self._toHex(phdr.p_memsz, int(elffile.arch.addressLength)), PF.shortString(phdr.p_flags)))
+            data.append((cstr(ptype, Color.BLUE),
+                        cstr(self._toHex(phdr.p_offset), Color.WHITE),
+                        cstr(self._toHex(phdr.p_paddr, int(elffile.arch.addressLength)), Color.LIGHT_GRAY),
+                        cstr(self._toHex(phdr.p_filesz), Color.WHITE),
+                        cstr(self._toHex(phdr.p_memsz), Color.LIGHT_GRAY),
+                        cstr(PF.shortString(phdr.p_flags), (Color.GREEN if phdr.p_flags & PF.EXEC == 0 else Color.RED) )))
 
-        self._printTable(
-            'Segments', ('Type', 'Offset', 'VAddress', 'FileSize', 'MemSize',
-                         'Flags'), data)
+        self._printTable('Segments',
+                        (cstr('Type', Color.LIGHT_GRAY),
+                            cstr('Offset', Color.LIGHT_GRAY),
+                            cstr('VAddress', Color.LIGHT_GRAY),
+                            cstr('FileSize', Color.LIGHT_GRAY),
+                            cstr('MemSize', Color.LIGHT_GRAY),
+                            cstr('Flags', Color.LIGHT_GRAY)),
+                        data)
 
     def printEntryPoint(self, binary):
         self._printLine(self._toHex(binary.entryPoint, binary.arch.addressLength))
@@ -92,11 +111,17 @@ class ELFPrinter(FileDataPrinter):
 
         for section, relocs in elffile.relocations.items():
             data = []
-            for reloc in relocs:
-                data.append((self._toHex(reloc.struct.r_offset, elffile.arch.addressLength), R_386[
-                            reloc.type], reloc.symbol.name))
-            self._printTable('Relocation section: %s' % section, ('Offset', 'Type',
-                                                            'Name'), data)
 
-        if elffile.relocations.items():
+            for reloc in relocs:
+                data.append((cstr(self._toHex(reloc.struct.r_offset, elffile.arch.addressLength), Color.BLUE),
+                            cstr(R_386[reloc.type], Color.YELLOW),
+                            cstr(reloc.symbol.name, Color.WHITE)))
+
+            self._printTable('Relocation section: %s' % section,
+                            (cstr('Offset', Color.LIGHT_GRAY),
+                                cstr('Type', Color.LIGHT_GRAY),
+                                cstr('Name', Color.LIGHT_GRAY)),
+                            data)
+
+        if len(elffile.relocations.items()) ==0:
             self._printLine('no imorts!')

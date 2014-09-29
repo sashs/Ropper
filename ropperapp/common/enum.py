@@ -204,13 +204,13 @@ class EnumMeta(type):
         return item in cls._revData
 
     def __getitem__(cls, key):
-        if isinstance(key, str) and isinstance(key, IntEnumElement):
+        if isinstance(key, str):
             return cls.__search(key)
         elif isinstance(key, EnumElement):
             return cls.__search(str(key))
         elif isinstance(key, int) or isinstance(key, long):
             return cls._revData[key]
-        raise TypeError('key has to be an instance of int/long or str:' + key.__class__)
+        raise TypeError('key has to be an instance of int/long or str:' + key.__class__.__name__)
 
     def __search(self, key):
         for elem in self._enumData:

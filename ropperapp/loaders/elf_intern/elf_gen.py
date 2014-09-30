@@ -265,6 +265,13 @@ class PF(Enum):
 
         return toReturn
 
+def getArch(*params):
+    arch = ARCH[params[0]]
+    if arch==ARM and (params[1] & 1) == 1:
+        return ARMTHUMB
+    return arch
+
+
 ARCH = {(EM.INTEL_386 , ELFCLASS.BITS_32): x86,
         (EM.INTEL_80860, ELFCLASS.BITS_32): x86,
         (EM.IA_64, ELFCLASS.BITS_64): x86_64,

@@ -79,6 +79,9 @@ class Architecture(AbstractSingleton):
     def badInstructions(self):
         return self._badInstructions
 
+    def __str__(self):
+        return self.__class__.__name__
+
 
 class ArchitectureX86(Architecture):
 
@@ -161,6 +164,19 @@ class ArchitectureArm(Architecture):
                                                 ('[\x01-\xff]\x80\xbd\xe8', 4),
                                                 ('\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
+class ArchitectureArmThumb(Architecture):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
+
+    def _initGadgets(self):
+        self._endings[gadget.GadgetType.ROP] = []
+        self._endings[gadget.GadgetType.JOP] = [('[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x70]\x47', 2),
+                                                ('[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xf0]\x47', 2),
+                                                ('[\x00-\xff]\xbd', 2)]
+
+
+
 
 class ArchitectureArm64(Architecture):
 
@@ -199,6 +215,7 @@ x86_64 = ArchitectureX86_64()
 MIPS = ArchitectureMips()
 MIPS64 = ArchitectureMips64()
 ARM = ArchitectureArm()
+ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
 PPC = ArchitecturePPC()
 PPC64 = ArchitecturePPC64()

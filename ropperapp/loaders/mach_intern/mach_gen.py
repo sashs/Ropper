@@ -151,4 +151,8 @@ class UuidCommand(LittleEndianStructure):
 
 
 ARCH = {int(CpuType.I386): x86,
-        int(CpuType.X86_64): x86_64}
+        int(CpuType.X86_64): x86_64,
+        int(CpuType.POWERPC) : PPC,
+        int(CpuType.POWERPC64) : PPC64,
+        int(CpuType.ARM) : ARM,
+        int(CpuType.ARM64) : ARM64}

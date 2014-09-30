@@ -57,7 +57,7 @@ class PE(Loader):
     @property
     def arch(self):
         try:
-            return self.__pe_module.ARCH[self.imageNtHeaders.FileHeader.Machine]
+            return self.__pe_module.getArch(self.imageNtHeaders.FileHeader.Machine)
         except:
             raise LoaderError('Architecture not supported')
 

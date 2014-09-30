@@ -48,8 +48,9 @@ supported architectures:
   x86
   x86_64
   MIPS
-  ARM
+  ARM/Thumb
   ARM64
+  PowerPC
 
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -76,7 +77,7 @@ epilog="""example uses:
   ropper.py --file /bin/ls --depth 5 --filter "sub eax"
   ropper.py --file /bin/ls --opcode ffe4
   ropper.py --file /bin/ls --detail
-  ropper.py --file /bin/ls --ppr
+  ropper.py --file /bin/ls --ppr --nocolor
   ropper.py --file /bin/ls --jmp esp,eax
   ropper.py --file /bin/ls --type jop
   ropper.py --file /bin/ls --chain execve=/bin/sh

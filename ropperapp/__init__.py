@@ -23,7 +23,7 @@ from .options import Options
 from .common.error import RopperError
 
 app_options = None
-VERSION='1.2.3'
+VERSION='1.3_dev'
 
 def start(args):
     try:

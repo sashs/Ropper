@@ -132,12 +132,12 @@ Usage
 Planned features for future versions
 ------------------------------------
   File formats:
-  - Raw
+    - Raw
 
-  Edit Headerfields
+  Edit header fields
   Print more informations
 
-  For any other ideas please contact me 
+  For any other ideas please contact me
 
 
 

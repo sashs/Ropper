@@ -40,7 +40,7 @@ Usage
                  [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
                  [--depth <n bytes>] [--search <regex>] [--filter <regex>]
                  [--opcode <opcode>] [--type <type>] [--detail]
-                 [--chain <generator>] [-b <badbytes>]
+                 [--chain <generator>] [-b <badbytes>] [--nocolor]
 
     With ropper you can show information about files in different file formats
     and you can find gadgets to build rop chains for different architectures.
@@ -54,8 +54,9 @@ Usage
       x86
       x86_64
       MIPS
-      ARM
+      ARM/Thumb
       ARM64
+      PowerPC
 
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -94,6 +95,7 @@ Usage
       --chain <generator>   Generates a ropchain [generator=parameter]
       -b <badbytes>, --badbytes <badbytes>
                             Set bytes which should not contains in gadgets
+      --nocolor             Disables colored output
 
     example uses:
       [Generic]
@@ -116,7 +118,7 @@ Usage
       ropper.py --file /bin/ls --depth 5 --filter "sub eax"
       ropper.py --file /bin/ls --opcode ffe4
       ropper.py --file /bin/ls --detail
-      ropper.py --file /bin/ls --ppr
+      ropper.py --file /bin/ls --ppr --nocolor
       ropper.py --file /bin/ls --jmp esp,eax
       ropper.py --file /bin/ls --type jop
       ropper.py --file /bin/ls --chain execve=/bin/sh
@@ -126,14 +128,17 @@ Usage
 
 
 
+
 Planned features for future versions
 ------------------------------------
-  Architectures:
-- PowerPC-Support
-- ARM Thumb Support
-
   File formats:
-- Raw
+  - Raw
+
+  Edit Headerfields
+  Print more informations
+
+  For any other ideas please contact me 
+
 
 
 Project page

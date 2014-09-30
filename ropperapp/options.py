@@ -135,9 +135,12 @@ epilog="""example uses:
         return parser
 
     def _analyseArguments(self):
-        if len(self.__argv) == 0:
+
+        if len(self.__argv) == 0 or (len(self.__argv) == 1 and self.__argv[0] == '--nocolor'):
             self.__argv.append('--console')
         self.__args = self.__parser.parse_args(self.__argv)
+
+        self.__args.nocolor = self.__args.nocolor and not self.isWindows()
 
         if not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
@@ -147,8 +150,6 @@ epilog="""example uses:
 
         if not self.__args.type:
             self.__args.type = 'all'
-
-        self.__args.nocolor = self.__args.nocolor and not self.isWindows()
 
         if self.__args.I:
             if not isHex(self.__args.I):

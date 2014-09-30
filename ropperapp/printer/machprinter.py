@@ -108,3 +108,9 @@ class MachOPrinter(FileDataPrinter):
     def printImageBase(self, binary):
         self._printLine(
             self._toHex(binary.imageBase, binary.arch.addressLength))
+
+    def printArchitecture(self, binary):
+        self._printLine(str(binary.arch))
+
+    def printFileType(self, binary):
+        self._printLine(str(binary.type))

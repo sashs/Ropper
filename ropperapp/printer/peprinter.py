@@ -162,3 +162,9 @@ class PEPrinter(FileDataPrinter):
                 'Imports', (cstr('DLL', Color.LIGHT_GRAY), cstr('Address', Color.LIGHT_GRAY), cstr('Hint', Color.LIGHT_GRAY), cstr('Function', Color.LIGHT_GRAY)), data)
         else:
             print('No imports!')
+
+    def printArchitecture(self, binary):
+        self._printLine(str(binary.arch))
+
+    def printFileType(self, binary):
+        self._printLine(str(binary.type))

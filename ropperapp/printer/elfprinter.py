@@ -107,6 +107,12 @@ class ELFPrinter(FileDataPrinter):
         self._printLine(
             self._toHex(binary.imageBase, binary.arch.addressLength))
 
+    def printArchitecture(self, binary):
+        self._printLine(str(binary.arch))
+
+    def printFileType(self, binary):
+        self._printLine(str(binary.type))
+
     def printImports(self, elffile):
 
         for section, relocs in elffile.relocations.items():

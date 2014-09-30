@@ -117,7 +117,7 @@ class PEPrinter(FileDataPrinter):
 
     def printDllCharacteristics(self, pefile):
         dllc = pefile.imageNtHeaders.OptionalHeader.DllCharacteristics
-        yes = cstr('Yes', Color.BLUE)
+        yes = cstr('Yes', Color.YELLOW)
         no = cstr('NO', Color.GREEN)
         data = [
             (cstr('DynamicBase', Color.BLUE), yes if (
@@ -162,6 +162,21 @@ class PEPrinter(FileDataPrinter):
                 'Imports', (cstr('DLL', Color.LIGHT_GRAY), cstr('Address', Color.LIGHT_GRAY), cstr('Hint', Color.LIGHT_GRAY), cstr('Function', Color.LIGHT_GRAY)), data)
         else:
             print('No imports!')
+
+    def printSections(self, pefile):
+
+        data = []
+        for section in pefile.sectionHeader:
+            data.append((cstr(section.Name, Color.BLUE),
+                        cstr(self._toHex(section.VirtualAddress,pefile.arch.addressLength), Color.CYAN),
+                        cstr(self._toHex(section.SizeOfRawData), Color.LIGHT_GRAY),
+                        cstr(self._toHex(section.PointerToRawData,pefile.arch.addressLength), Color.WHITE),
+                        cstr(self._toHex(section.PointerToRelocations,pefile.arch.addressLength), Color.LIGHT_GRAY),
+                        cstr(self._toHex(section.NumberOfRelocations), Color.WHITE),))
+
+        self._printTable(
+            'Section Header', (cstr('Name', Color.LIGHT_GRAY), cstr('VAddr', Color.LIGHT_GRAY), cstr('RawDataSize', Color.LIGHT_GRAY), cstr('RawDataPtr', Color.LIGHT_GRAY), cstr('RelocPtr', Color.LIGHT_GRAY), cstr('NrOfReloc', Color.LIGHT_GRAY)), data)
+
 
     def printArchitecture(self, binary):
         self._printLine(str(binary.arch))

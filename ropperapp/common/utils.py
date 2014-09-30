@@ -18,14 +18,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from .coloredstring import *
 import re
+
 
 
 def isHex(num):
     return re.match('^0x[0-9A-Fa-f]+$', num) != None
 
 
-def toHex(number, length=0):
+def toHex(number, length=4):
 
     t = 0xff
     for i in range(length-1):
@@ -33,3 +35,50 @@ def toHex(number, length=0):
         t |= 0xff
     number = int(number) & t
     return ('0x%.' + str(length * 2) + 'x') % number
+
+def printTableHeader( string):
+    print('\n')
+    print(string)
+    print('=' * len(string))
+    print('')
+
+def createFmtString(rows, cnames, space):
+    scount = []
+
+    for cname in cnames:
+        scount.append(len(cname)+space)
+
+    for row in rows:
+        for idx in range(len(scount)):
+            new = len(cstr(row[idx])) + space
+
+            scount[idx] = max(scount[idx], new)
+
+    return str('%-{}s' * len(scount)).format(*scount)
+
+def printTable(header, cnames, data, space=2, fmt=None):
+    ccount = len(cnames)
+
+    if not fmt:
+        fmt = createFmtString(data, cnames,  space)
+
+    printTableHeader(header)
+
+    cnamelines = []
+    for cname in cnames:
+        if isinstance(cname, cstr):
+            cnamelines.append(cstr('-' * cname.rawlength(), cname.color))
+        else:
+            cnamelines.append('-' * len(cname))
+
+    print(fmt % cnames)
+    print(fmt % tuple(cnamelines))
+
+
+    for row in data:
+        line = fmt % row
+
+
+        print(line.strip())
+
+    print('')

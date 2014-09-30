@@ -21,6 +21,7 @@
 import re
 import ropperapp.common.enum as enum
 from ropperapp.common.utils import toHex
+from ropperapp.common.coloredstring import *
 
 class Category(enum.Enum):
     _enum_ = 'STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE'
@@ -85,12 +86,12 @@ class Gadget(object):
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:
-            toReturn += line[1] + '; '
+            toReturn += cstr(line[1], Color.LIGHT_GRAY) + cstr('; ', Color.LIGHT_BLUE)
 
-        return toReturn[:-2]
+        return toReturn
 
     def simpleString(self):
-        toReturn = '%s: ' % toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength)
+        toReturn = '%s: ' % cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.RED)
         toReturn += self.simpleInstructionString()
         return toReturn
 
@@ -122,8 +123,8 @@ class Gadget(object):
         return -1
 
     def __str__(self):
-        toReturn = 'Gadget: %s\n' % (self.__lines[0][0] + self.__imageBase)
+        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.RED))
         for line in self.__lines:
-            toReturn += toHex(line[0] + self.__imageBase, self.__arch.addressLength) +': '+ line[1] + '\n'
+            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.BLUE) +': '+ cstr(line[1], Color.WHITE) + '\n'
 
         return toReturn

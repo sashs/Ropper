@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from printer import FileDataPrinter
+from printer import  *
 from ropperapp.loaders.mach_o import *
 
 
@@ -30,14 +30,14 @@ class MachOPrinter(FileDataPrinter):
 
     def printInformations(self, binary):
         hdr = binary.header
-        data = [('CPU', CpuType[hdr.cputype]),
-                ('Subtype', CPU_SUBTYPE_X86[hdr.cpusubtype]),
-                ('Filetype', self._toHex(hdr.filetype)),
-                ('Number Of Commands', self._toHex(hdr.ncmds)),
-                ('Size of Commands', self._toHex(hdr.sizeofcmds)),
-                ('Flags', self._toHex(hdr.flags))]
+        data = [(cstr('CPU', Color.BLUE), cstr(CpuType[hdr.cputype], Color.WHITE)),
+                (cstr('Subtype', Color.BLUE), cstr(CPU_SUBTYPE_X86[hdr.cpusubtype], Color.WHITE)),
+                (cstr('Filetype', Color.BLUE), cstr(self._toHex(hdr.filetype), Color.WHITE)),
+                (cstr('Number Of Commands', Color.BLUE), cstr(self._toHex(hdr.ncmds), Color.WHITE)),
+                (cstr('Size of Commands', Color.BLUE), cstr(self._toHex(hdr.sizeofcmds), Color.WHITE)),
+                (cstr('Flags', Color.BLUE), cstr(self._toHex(hdr.flags), Color.WHITE))]
 
-        self._printTable('Mach-O Header', ('Name', 'Value'), data)
+        self._printTable('Mach-O Header', (cstr('Name', Color.LIGHT_GRAY), cstr('Value', Color.LIGHT_GRAY)), data)
 
     def printSegments(self, binary):
         lcs = binary.loaderCommands
@@ -46,16 +46,22 @@ class MachOPrinter(FileDataPrinter):
         for lc in lcs:
             lc = lc.struct
             if lc.cmd == LC.SEGMENT or lc.cmd == LC.SEGMENT_64:
-                data.append((lc.segname,
-                self._toHex(lc.vmaddr, binary.arch.addressLength),
-                self._toHex(lc.vmsize),
-                self._toHex(lc.fileoff),
-                self._toHex(lc.filesize),
-                VM_PROT.shortString(lc.maxprot),
-                VM_PROT.shortString(lc.initprot)))
+                data.append((cstr(lc.segname, Color.BLUE),
+                cstr(self._toHex(lc.vmaddr, binary.arch.addressLength), Color.WHITE),
+                cstr(self._toHex(lc.vmsize), Color.LIGHT_GRAY),
+                cstr(self._toHex(lc.fileoff), Color.WHITE),
+                cstr(self._toHex(lc.filesize), Color.LIGHT_GRAY),
+                cstr(VM_PROT.shortString(lc.maxprot), Color.YELLOW),
+                cstr(VM_PROT.shortString(lc.initprot), Color.YELLOW)))
 
 
-        self._printTable('Segment Commands',('Name', 'VAddr', 'VSize', 'FOffset', 'FSize','Maxprot', 'Initprot'), data)
+        self._printTable('Segment Commands',(cstr('Name', Color.LIGHT_GRAY),
+                                            cstr('VAddr', Color.LIGHT_GRAY),
+                                            cstr('VSize', Color.LIGHT_GRAY),
+                                            cstr('FOffset', Color.LIGHT_GRAY),
+                                            cstr('FSize', Color.LIGHT_GRAY),
+                                            cstr('Maxprot', Color.LIGHT_GRAY),
+                                            cstr('Initprot', Color.LIGHT_GRAY)), data)
 
     def printSections(self, binary):
         lcs = binary.loaderCommands
@@ -65,16 +71,25 @@ class MachOPrinter(FileDataPrinter):
             if lc.struct.cmd == LC.SEGMENT or lc.struct.cmd == LC.SEGMENT_64:
                 for section in lc.sections:
                     section = section.struct
-                    data.append((section.sectname,
-                    section.segname,
-                    self._toHex(section.addr, binary.arch.addressLength),
-                    self._toHex(section.size),
-                    self._toHex(section.offset),
-                    self._toHex(section.align),
-                    self._toHex(section.nreloc),
-                    self._toHex(section.reloff)))
+                    data.append((cstr(section.sectname, Color.BLUE),
+                    cstr(section.segname, Color.WHITE),
+                    cstr(self._toHex(section.addr, binary.arch.addressLength), Color.LIGHT_GRAY),
+                    cstr(self._toHex(section.size), Color.WHITE),
+                    cstr(self._toHex(section.offset), Color.LIGHT_GRAY),
+                    cstr(self._toHex(section.align), Color.WHITE),
+                    cstr(self._toHex(section.nreloc), Color.LIGHT_GRAY),
+                    cstr(self._toHex(section.reloff), Color.WHITE)))
 
-        self._printTable('Sections', ('Name','Segment', 'Address','Size','Offset','Align','Nr. of Relocs','RelocOffset'), data)
+        self._printTable('Sections', (cstr('Name', Color.LIGHT_GRAY),
+                                    cstr('Segment', Color.LIGHT_GRAY),
+                                    cstr('Address', Color.LIGHT_GRAY),
+                                    cstr('Size', Color.LIGHT_GRAY),
+                                    cstr('Offset', Color.LIGHT_GRAY),
+                                    cstr('Align', Color.LIGHT_GRAY),
+                                    cstr('Nr. of Relocs', Color.LIGHT_GRAY),
+                                    cstr('RelocOffset', Color.LIGHT_GRAY)),
+                                    data)
+
 
 
     def printLoaderCommands(self, binary):
@@ -83,9 +98,9 @@ class MachOPrinter(FileDataPrinter):
 
         for lc in lcs:
             lc = lc.struct
-            data.append((LC[lc.cmd], self._toHex(lc.cmdsize)))
+            data.append((cstr(LC[lc.cmd], Color.BLUE), cstr(self._toHex(lc.cmdsize), Color.WHITE)))
 
-        self._printTable('Loader Commands', ('Type', 'Size'), data)
+        self._printTable('Loader Commands', (cstr('Type', Color.LIGHT_GRAY), cstr('Size', Color.LIGHT_GRAY)), data)
 
     def printEntryPoint(self, binary):
         self._printLine(self._toHex(binary.entryPoint, binary.arch.addressLength))
@@ -93,3 +108,9 @@ class MachOPrinter(FileDataPrinter):
     def printImageBase(self, binary):
         self._printLine(
             self._toHex(binary.imageBase, binary.arch.addressLength))
+
+    def printArchitecture(self, binary):
+        self._printLine(str(binary.arch))
+
+    def printFileType(self, binary):
+        self._printLine(str(binary.type))

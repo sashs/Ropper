@@ -22,10 +22,22 @@ from ropperapp.common.abstract import *
 from sys import stdout
 from ropperapp.loaders.loader import Type
 from ropperapp.common.utils import *
+from ropperapp.common.enum import Enum
 from ropperapp.common.error import PrinterError
+from ropperapp.common.coloredstring import *
+import ropperapp
 
 
+class Printer(object):
 
+    def __init__(self, colored=False, out=stdout):
+        self._out = out
+
+    def printLine(self, line):
+        self._printString(line + '\n')
+
+    def printString(self, string):
+        return self._out.write(string)
 
 class PrinterMeta(type):
 
@@ -84,7 +96,9 @@ class FileDataPrinter(DataPrinter):
 
         for row in rows:
             for idx in range(len(scount)):
-                scount[idx] = max(scount[idx], len(str(row[idx])) + space)
+                new = len(cstr(row[idx])) + space
+
+                scount[idx] = max(scount[idx], new)
 
         return str('%-{}s' * len(scount)).format(*scount)
 
@@ -98,19 +112,24 @@ class FileDataPrinter(DataPrinter):
 
         cnamelines = []
         for cname in cnames:
-            cnamelines.append('-' * len(cname))
+            if isinstance(cname, cstr):
+                cnamelines.append(cstr('-' * cname.rawlength(), cname.color))
+            else:
+                cnamelines.append('-' * len(cname))
 
         self._printLine(fmt % cnames)
         self._printLine(fmt % tuple(cnamelines))
 
+
         for row in data:
             line = fmt % row
+
 
             self._printLine(line.strip())
 
         self._printLine('')
 
-    def _toHex(self, number, length=0):
+    def _toHex(self, number, length=4):
         return toHex(number, length)
 
     def _printLine(self, line):

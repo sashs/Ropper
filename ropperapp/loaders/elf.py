@@ -207,7 +207,7 @@ class ELF(Loader):
     @property
     def arch(self):
         try:
-            return self.__elf_module.ARCH[(EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]])]
+            return self.__elf_module.getArch( (EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]]),self.ehdr.e_entry)
         except:
             raise LoaderError('Architecture not supported')
 

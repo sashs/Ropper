@@ -79,6 +79,9 @@ class Architecture(AbstractSingleton):
     def badInstructions(self):
         return self._badInstructions
 
+    def __str__(self):
+        return self.__class__.__name__
+
 
 class ArchitectureX86(Architecture):
 
@@ -161,6 +164,19 @@ class ArchitectureArm(Architecture):
                                                 ('[\x01-\xff]\x80\xbd\xe8', 4),
                                                 ('\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
+class ArchitectureArmThumb(Architecture):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
+
+    def _initGadgets(self):
+        self._endings[gadget.GadgetType.ROP] = []
+        self._endings[gadget.GadgetType.JOP] = [('[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x70]\x47', 2),
+                                                ('[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xf0]\x47', 2),
+                                                ('[\x00-\xff]\xbd', 2)]
+
+
+
 
 class ArchitectureArm64(Architecture):
 
@@ -177,9 +193,29 @@ class ArchitectureArm64(Architecture):
                                                 ('[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
 
 
+
+class ArchitecturePPC(Architecture):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
+
+    def _initGadgets(self):
+        self._endings[gadget.GadgetType.ROP] = [('\x4e\x80\x00\x20', 4)] #blr
+        self._endings[gadget.GadgetType.JOP] = []
+
+class ArchitecturePPC64(ArchitecturePPC):
+
+    def __init__(self):
+        Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
+
+
+
 x86 = ArchitectureX86()
 x86_64 = ArchitectureX86_64()
 MIPS = ArchitectureMips()
 MIPS64 = ArchitectureMips64()
 ARM = ArchitectureArm()
+ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
+PPC = ArchitecturePPC()
+PPC64 = ArchitecturePPC64()

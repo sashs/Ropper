@@ -21,6 +21,7 @@
 import argparse
 from common.error import *
 from common.utils import isHex
+import sys
 
 
 class Options(object):
@@ -47,8 +48,9 @@ supported architectures:
   x86
   x86_64
   MIPS
-  ARM
+  ARM/Thumb
   ARM64
+  PowerPC
 
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -75,7 +77,7 @@ epilog="""example uses:
   ropper.py --file /bin/ls --depth 5 --filter "sub eax"
   ropper.py --file /bin/ls --opcode ffe4
   ropper.py --file /bin/ls --detail
-  ropper.py --file /bin/ls --ppr
+  ropper.py --file /bin/ls --ppr --nocolor
   ropper.py --file /bin/ls --jmp esp,eax
   ropper.py --file /bin/ls --type jop
   ropper.py --file /bin/ls --chain execve=/bin/sh
@@ -129,12 +131,17 @@ epilog="""example uses:
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
         parser.add_argument(
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
+        parser.add_argument(
+            '--nocolor', help='Disables colored output', action='store_true')
         return parser
 
     def _analyseArguments(self):
-        if len(self.__argv) == 0:
+
+        if len(self.__argv) == 0 or (len(self.__argv) == 1 and self.__argv[0] == '--nocolor'):
             self.__argv.append('--console')
         self.__args = self.__parser.parse_args(self.__argv)
+
+        self.__args.nocolor = self.__args.nocolor and not self.isWindows()
 
         if not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
@@ -152,9 +159,6 @@ epilog="""example uses:
                 self.__args.I = int(self.__args.I, 16)
 
 
-
-
-
     def __missingArgument(self, arg):
         raise ArgumentError('Missing argument: %s' % arg)
 
@@ -163,6 +167,9 @@ epilog="""example uses:
             return super(Options, self).__getattr__(key)
         else:
             return vars(self.__args)[key]
+
+    def isWindows(self):
+      return sys.platform.startswith('win')
 
     def __setattr__(self, key, value):
         if key.startswith('_'):

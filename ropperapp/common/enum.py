@@ -52,11 +52,24 @@ class EnumElement(object):
     def __str__(self):
         return self.__name
 
+    def __index__(self):
+        return self.__value
+
+    @property
+    def value(self):
+        return self.__value
+
+    @property
+    def name(self):
+        return self.__name
+
+class IntEnumElement(EnumElement):
+
     def __cmp__(self, other):
         if isinstance(other, EnumElement):
-            return self.__value - other.__value
+            return self.value - other.value
         else:
-            return self.__value - other
+            return self.value - other
 
     def __lt__(self, other):
         return self.__cmp__(other) < 0
@@ -73,51 +86,43 @@ class EnumElement(object):
     def __gt__(self, other):
         return self.__cmp__(other) > 0
 
-    def __index__(self):
-        return self.__value
-
     def __and__(self, other):
         if isinstance(other, int) or isinstance(other, long):
-            return self.__value & other
+            return self.value & other
         elif isinstance(other, EnumElement):
-            return self.__value & other.__value
+            return self.value & other.value
         raise TypeError('This operation is not supported for type ' % type(other))
 
     def __rand__(self, other):
         if isinstance(other, int) or isinstance(other, long):
-            return self.__value & other
+            return self.value & other
         elif isinstance(other, EnumElement):
-            return self.__value & other.__value
+            return self.value & other.value
         raise TypeError('This operation is not supported for type ' % type(other))
 
     def __or__(self, other):
         if isinstance(other, int) or isinstance(other, long):
-            return self.__value | other
+            return self.value | other
         elif isinstance(other, EnumElement) :
-            return self.__value | other.__value
+            return self.value | other.value
         raise TypeError('This operation is not supported for type ' % type(other))
 
     def __ror__(self, other):
         if isinstance(other, int) or isinstance(other, long):
-            return self.__value | other
+            return self.value | other
         elif isinstance(other, EnumElement):
-            return self.__value | other.__value
+            return self.value | other.value
         raise TypeError('This operation is not supported for type ' % type(other))
 
 
-    def __invert__(self):        return ~self.__value
+    def __invert__(self):
+        return ~self.value
 
     def __int__(self):
-        return self.__value
+        return self.value
 
 
-    @property
-    def value(self):
-        return self.__value
 
-    @property
-    def name(self):
-        return self.__name
 
 class EnumIterator(object):
 
@@ -145,7 +150,10 @@ class EnumMeta(type):
                 dct[key] = classmethod(value)
                 return
             values.append(value)
-            element = EnumElement(key, value, name)
+            if isinstance(value, int) or isinstance(value, long):
+                element = IntEnumElement(key, value, name)
+            else:
+                element = EnumElement(key, value, name)
             revData[value] = element
             valueData.append(element)
             dct[key] = element
@@ -202,7 +210,7 @@ class EnumMeta(type):
             return cls.__search(str(key))
         elif isinstance(key, int) or isinstance(key, long):
             return cls._revData[key]
-        raise TypeError('key has to be an instance of int/long or str:' + key.__class__)
+        raise TypeError('key has to be an instance of int/long or str:' + key.__class__.__name__)
 
     def __search(self, key):
         for elem in self._enumData:

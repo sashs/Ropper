@@ -82,10 +82,13 @@ class ImageDllCharacteristics(Enum):
     WDM_DRIVER = 0x2000
     TERMINAL_SERVER_AWARE = 0x8000
 
+def getArch(*params):
+    return ARCH[params[0]] 
+
 ARCH = {int(IMAGE_FILE_MACHINE.AMD64):
         x86_64, int(IMAGE_FILE_MACHINE.I386): x86,
         int(IMAGE_FILE_MACHINE.ARM) : ARM,
-        int(IMAGE_FILE_MACHINE.ARMV) : ARM}
+        int(IMAGE_FILE_MACHINE.ARMV) : ARMTHUMB}
 
 
 class ImageDirectoryEntry(Enum):

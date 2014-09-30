@@ -18,16 +18,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import cmd
 from .loaders.loader import Loader
 from .printer.printer import FileDataPrinter
 from .disasm.rop import Ropper
 from .common.error import *
 from .disasm.gadget import GadgetType
-import ropperapp
 from .common.utils import isHex
+from ropperapp.common.coloredstring import *
+from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
 from binascii import unhexlify
+import ropperapp
+import cmd
 
 
 class Console(cmd.Cmd):
@@ -39,8 +41,8 @@ class Console(cmd.Cmd):
         self.__printer = None
         self.__gadgets = {}
         self.__allGadgets = {}
-
-        self.prompt = '(ropper) '
+        self.__loaded = False
+        self.prompt = cstr('(ropper) ', Color.YELLOW)
 
     def start(self):
         if self.__options.version:
@@ -56,6 +58,7 @@ class Console(cmd.Cmd):
         self.__handleOptions(self.__options)
 
     def __loadFile(self, file):
+        self.__loaded = False
         self.__binary = Loader.open(file)
         self.__printer = FileDataPrinter.create(self.__binary.type)
 
@@ -78,10 +81,10 @@ class Console(cmd.Cmd):
         print('{}  -  {}\n'.format(cmd, desc))
 
     def __printError(self, error):
-        print('ERROR: {}\n'.format(error))
+        print(cstr('[ERROR]', Color.RED)+' {}\n'.format(error))
 
     def __printInfo(self, error):
-        print('INFO: {}'.format(error))
+        print(cstr('[INFO]', Color.BLUE)+' {}'.format(error))
 
     def __printSeparator(self,before='', behind=''):
         print(before + '-'*40 + behind)
@@ -106,7 +109,7 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, section.offset))
+                r.searchJmpReg(section.bytes, regs, section.offset, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('JMP Instructions')
         counter = 0
@@ -124,7 +127,7 @@ class Console(cmd.Cmd):
         gadgets = {}
         for section in self.__binary.executableSections:
             gadgets[section]=(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset))
+                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('Opcode')
         counter = 0
@@ -144,7 +147,7 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            pprs = r.searchPopPopRet(section.bytes, vaddr)
+            pprs = r.searchPopPopRet(section.bytes, vaddr, badbytes=unhexlify(self.__options.badbytes))
             for ppr in pprs:
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)
@@ -175,6 +178,7 @@ class Console(cmd.Cmd):
         return gadgets
 
     def __loadGadgets(self):
+        self.__loaded = True
         self.__allGadgets = self.__searchGadgets()
         self.__filterBadBytes()
 
@@ -214,7 +218,8 @@ class Console(cmd.Cmd):
     def __generateChain(self, gadgets, command):
         split = command.split('=')
 
-
+        old = self.__options.nocolor
+        self.__options.nocolor = True
         gadgetlist = []
         vaddr = 0
         for section, gadget in gadgets.items():
@@ -234,6 +239,7 @@ class Console(cmd.Cmd):
 
         self.__printSeparator(before='\n\n')
         self.__printInfo('rop chain generated!')
+        self.__options.nocolor = old
 
 
     def __handleOptions(self, options):
@@ -358,6 +364,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if not self.__binary:
             self.__printError('No file loaded')
             return
+        if not self.__loaded:
+            self.__printInfo('Gadgets have to be loaded with load')
+            return
         self.__printRopGadgets(self.__gadgets)
 
     def help_gadgets(self):
@@ -467,13 +476,45 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_detailed(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
 
-    def do_badbytes(self, text):
 
+    def do_settings(self, text):
+        data = [
+            (cstr('badbytes') , cstr(self.__options.badbytes)),
+            (cstr('color') , cstr('off' if self.__options.nocolor else 'on')),
+            (cstr('detailed') , cstr('on' if self.__options.detail else 'off')),
+            (cstr('type') , cstr(self.__options.type))]
+
+        printTable('Settings',(cstr('Name'), cstr('Value')), data)
+
+    def help_settings(self):
+        self.__printHelpText('settings','shows the current settings')
+
+    def do_badbytes(self, text):
+        if len(text) ==0:
+            self.__printInfo('badbytes cleared')
         self.__options.badbytes =text
         self.__printInfo('Gadgets have to be reloaded')
 
     def help_badbytes(self):
         self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes')
+
+    def do_color(self, text):
+        if self.__options.isWindows():
+            self.__printInfo('No color support for windows')
+            return
+        if text:
+            if text == 'on':
+                self.__options.nocolor = False
+            elif text == 'off':
+                self.__options.nocolor = True
+        else:
+            print('off' if self.__options.nocolor else 'on')
+
+    def help_color(self):
+        self.__printHelpText('color [on|off]', 'sets colorized output')
+
+    def complete_color(self, text, line, begidx, endidx):
+        return [i for i in ['on', 'off'] if i.startswith(text)]
 
     def do_ropchain(self, text):
         if len(text) == 0:

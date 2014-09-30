@@ -109,7 +109,7 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, section.offset))
+                r.searchJmpReg(section.bytes, regs, section.offset, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('JMP Instructions')
         counter = 0
@@ -127,7 +127,7 @@ class Console(cmd.Cmd):
         gadgets = {}
         for section in self.__binary.executableSections:
             gadgets[section]=(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset))
+                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('Opcode')
         counter = 0
@@ -147,7 +147,7 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            pprs = r.searchPopPopRet(section.bytes, vaddr)
+            pprs = r.searchPopPopRet(section.bytes, vaddr, badbytes=unhexlify(self.__options.badbytes))
             for ppr in pprs:
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)

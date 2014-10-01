@@ -89,6 +89,10 @@ class Loader(Abstract):
     @abstractmethod
     def setASLR(self, enable):
         pass
+        
+    @abstractmethod
+    def checksec(self):
+        pass
 
     @property
     def fileName(self):

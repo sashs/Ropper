@@ -145,6 +145,9 @@ class MachO(Loader):
         raise LoaderError('Not available for mach-o files')
 
 
+    def checksec(self):
+        return {}
+
     @classmethod
     def isSupportedFile(cls, fileName):
         try:

@@ -182,7 +182,7 @@ class PE(Loader):
         self.imageNtHeaders = cast(
             p_tmp, POINTER(self.__pe_module.IMAGE_NT_HEADERS)).contents
 
-        if self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.IA64 or self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.AMD64:
+        if self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.AMD64:
             self.__pe_module = importlib.import_module(
                 'ropperapp.loaders.pe_intern.pe64')
             self.imageNtHeaders = cast(
@@ -205,6 +205,12 @@ class PE(Loader):
     def _parseFile(self):
         self.__pe_module = importlib.import_module('ropperapp.loaders.pe_intern.pe32')
         self.__parse(self._bytes_p)
+
+    def checksec(self):
+
+        return {'SafeSEH' : self.imageNtHeaders.OptionalHeader.DataDirectory[ImageDirectoryEntry.LOAD_CONFIG].Size != 0,
+                'ASLR' : self.imageNtHeaders.OptionalHeader.DllCharacteristics & ImageDllCharacteristics.DYNAMIC_BASE != 0,
+                'DEP' : self.imageNtHeaders.OptionalHeader.DllCharacteristics & ImageDllCharacteristics.NX_COMPAT != 0}
 
     @classmethod
     def isSupportedFile(cls, fileName):

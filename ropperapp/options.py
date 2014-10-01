@@ -103,6 +103,8 @@ epilog="""example uses:
         parser.add_argument(
             '-S', '--segments', help='Shows file segments [ELF/Mach-O]', action='store_true')
         parser.add_argument(
+            '--checksec', help='Shows the security mechanisms used in the file [ELF/PE/Mach-O]', action='store_true')
+        parser.add_argument(
             '--imports', help='Shows imports [ELF/PE]', action='store_true')
         parser.add_argument(
             '--symbols', help='Shows symbols [ELF]', action='store_true')

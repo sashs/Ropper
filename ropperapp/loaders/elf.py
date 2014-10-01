@@ -252,6 +252,9 @@ class ELF(Loader):
             if hdr.name == name:
                 return hdr
 
+    def checksec(self):
+        return {}
+
     @classmethod
     def isSupportedFile(cls, fileName):
         try:

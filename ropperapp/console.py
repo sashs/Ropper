@@ -242,6 +242,16 @@ class Console(cmd.Cmd):
         self.__options.nocolor = old
 
 
+    def __checksec(self):
+        sec = self.__binary.checksec()
+        data = []
+        yes = cstr('Yes', Color.RED)
+        no = cstr('No', Color.GREEN)
+        for item, value in sec.items():
+            data.append((cstr(item, Color.BLUE), yes if value else no))
+        printTable('Security',(cstr('Name'), cstr('value')), data)
+
+
     def __handleOptions(self, options):
         if options.sections:
             self.__printData('sections')
@@ -269,6 +279,8 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
+        elif options.checksec:
+            self.__checksec()
         elif options.chain:
             self.__loadGadgets()
             self.__generateChain(self.__gadgets, options.chain)

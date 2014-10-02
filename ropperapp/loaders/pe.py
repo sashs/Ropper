@@ -120,6 +120,11 @@ class PE(Loader):
         contents = []
         tmpRVA = thunkRVA
         for thunk in thunks:
+            print hex(thunk.AddressOfData)
+            if 0xf0000000 & thunk.AddressOfData == 0x80000000:
+                contents.append((thunk.AddressOfData & 0x0fffffff,'', tmpRVA))
+                tmpRVA += sizeof(self.__pe_module.IMAGE_THUNK_DATA)
+                continue
             p_thunk_address_of_data = c_void_p(thunk.AddressOfData - diff)
 
             ibn = cast(
@@ -150,6 +155,7 @@ class PE(Loader):
         s.header = section
 
         while True:
+
             self.assertFileRange(p_bytes.value)
             importDescriptor = cast(
                 p_bytes, POINTER(self.__pe_module.IMAGE_IMPORT_DESCRIPTOR)).contents
@@ -165,7 +171,6 @@ class PE(Loader):
                     importDescriptor.OriginalFirstThunk - idataRVA + idataFAddr)
                 importAddressTable = self.__loadThunks(
                     importDescriptor.FirstThunk - idataRVA + idataFAddr)
-
                 functions = self.__parseThunkContent(
                     importNameTable, idataRVA - idataFAddr, importDescriptor.FirstThunk)
                 s.importDescriptorTable.append(ImageImportDescriptorData(
@@ -182,25 +187,27 @@ class PE(Loader):
         self.imageNtHeaders = cast(
             p_tmp, POINTER(self.__pe_module.IMAGE_NT_HEADERS)).contents
 
-        if self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.IA64 or self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.AMD64:
+        if self.imageNtHeaders.FileHeader.Machine == IMAGE_FILE_MACHINE.AMD64:
             self.__pe_module = importlib.import_module(
                 'ropperapp.loaders.pe_intern.pe64')
             self.imageNtHeaders = cast(
                 p_tmp, POINTER(self.__pe_module.IMAGE_NT_HEADERS)).contents
         p_tmp.value += sizeof(self.__pe_module.IMAGE_NT_HEADERS)
         self.__parseSections(p_tmp)
-
+        importVaddr = self.imageNtHeaders.OptionalHeader.DataDirectory[ImageDirectoryEntry.IMPORT].VirtualAddress
         for section in self.sectionHeader:
-            if section.Name == '.idata':
-                p_tmp.value = p_bytes.value + (self.imageNtHeaders.OptionalHeader.DataDirectory[
-                                               ImageDirectoryEntry.IMPORT].VirtualAddress - section.VirtualAddress + section.PointerToRawData)
+            if importVaddr > section.VirtualAddress and importVaddr < (section.VirtualAddress + section.SizeOfRawData) :
+                p_tmp.value = p_bytes.value + (importVaddr - section.VirtualAddress + section.PointerToRawData)
                 size = self.imageNtHeaders.OptionalHeader.DataDirectory[
                     ImageDirectoryEntry.IMPORT].Size
                 self.__parseImports(section, p_tmp, size)
-            elif section.Name == '.text':
+                idata = True
+            if section.Name == '.text':
                 p_tmp.value = p_bytes.value + section.PointerToRawData
                 size = section.PhysicalAddress_or_VirtualSize
                 self.__parseCode(section, p_tmp, size)
+                textsection = section
+
 
     def _parseFile(self):
         self.__pe_module = importlib.import_module('ropperapp.loaders.pe_intern.pe32')

@@ -120,7 +120,6 @@ class PE(Loader):
         contents = []
         tmpRVA = thunkRVA
         for thunk in thunks:
-            print hex(thunk.AddressOfData)
             if 0xf0000000 & thunk.AddressOfData == 0x80000000:
                 contents.append((thunk.AddressOfData & 0x0fffffff,'', tmpRVA))
                 tmpRVA += sizeof(self.__pe_module.IMAGE_THUNK_DATA)

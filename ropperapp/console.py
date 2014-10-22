@@ -109,7 +109,7 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, section.offset, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchJmpReg(section.bytes, regs, 0x0, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('JMP Instructions')
         counter = 0
@@ -127,7 +127,7 @@ class Console(cmd.Cmd):
         gadgets = {}
         for section in self.__binary.executableSections:
             gadgets[section]=(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, opcode.decode('hex'), 0x0, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('Opcode')
         counter = 0

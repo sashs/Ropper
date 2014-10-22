@@ -67,10 +67,10 @@ class PE(Loader):
 
     @property
     def executableSections(self):
-        toReturn = []
-        for value in self.sectionHeader:
-            if value.Characteristics & IMAGE_SCN.CNT_CODE > 0:
-                toReturn.append(self.sections[value.Name])
+        toReturn = [self.sections['.text']]
+        #for value in self.sectionHeader:
+         #   if value.Characteristics & IMAGE_SCN.CNT_CODE > 0:
+          #      toReturn.append(self.sections[value.Name])
         return toReturn
 
 

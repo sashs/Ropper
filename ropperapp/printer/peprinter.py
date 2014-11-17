@@ -159,7 +159,7 @@ class PEPrinter(FileDataPrinter):
                                 cstr(function[1], Color.WHITE)))
 
             self._printTable(
-                'Imports', (cstr('DLL', Color.LIGHT_GRAY), cstr('Address', Color.LIGHT_GRAY), cstr('Hint', Color.LIGHT_GRAY), cstr('Function', Color.LIGHT_GRAY)), data)
+                'Imports', (cstr('DLL', Color.LIGHT_GRAY), cstr('Address', Color.LIGHT_GRAY), cstr('Hint/Ordinal', Color.LIGHT_GRAY), cstr('Function', Color.LIGHT_GRAY)), data)
         else:
             print('No imports!')
 

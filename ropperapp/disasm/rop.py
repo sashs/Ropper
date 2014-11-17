@@ -138,7 +138,7 @@ class Ropper(object):
                         code_part = code[index - x:index + ending[1]]
 
                         gadget = createGadget(
-                            code_part, offset + index - x, ending)
+                            code_part, index - x, ending)
 
                         if gadget:
                             toReturn.append(gadget)

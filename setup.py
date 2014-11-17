@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
+import ropperapp
 
-version = "1.3.0"
+version = ropperapp.VERSION
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """

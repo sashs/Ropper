@@ -54,9 +54,11 @@ class Loader(Abstract):
         self._fileName = filename
         self._bytes = None
         self._bytes_p = None
+        self._arch = None
 
         self._loadFile()
         self._parseFile()
+        self._arch = self._loadDefaultArch()
 
     @abstractproperty
     def entryPoint(self):
@@ -66,9 +68,13 @@ class Loader(Abstract):
     def imageBase(self):
         return None
 
-    @abstractproperty
+    @property
     def arch(self):
-        return None
+        return self._arch
+
+    @arch.setter
+    def arch(self, arch):
+        self._arch = arch
 
     @abstractproperty
     def type(self):
@@ -80,6 +86,10 @@ class Loader(Abstract):
 
     @abstractmethod
     def _parseFile(self):
+        pass
+
+    @abstractmethod
+    def _loadDefaultArch(self):
         pass
 
     @abstractmethod

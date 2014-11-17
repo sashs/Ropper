@@ -35,12 +35,13 @@ If you want, you can use Ropper without installation
 Usage
 -----
 
-    usage: ropper.py [-h] [-v] [--console] [-f <file>] [-i] [-e] [--imagebase]
-                 [-c] [-s] [-S] [--imports] [--symbols] [--set <option>]
-                 [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
-                 [--depth <n bytes>] [--search <regex>] [--filter <regex>]
-                 [--opcode <opcode>] [--type <type>] [--detail]
-                 [--chain <generator>] [-b <badbytes>] [--nocolor]
+    usage: ropper.py [-h] [-v] [--console] [-f <file>] [-a <arch>] [-i] [-e]
+                 [--imagebase] [-c] [-s] [-S] [--checksec] [--imports]
+                 [--symbols] [--set <option>] [--unset <option>]
+                 [-I <imagebase>] [-p] [-j <reg>] [--depth <n bytes>]
+                 [--search <regex>] [--filter <regex>] [--opcode <opcode>]
+                 [--type <type>] [--detail] [--chain <generator>]
+                 [-b <badbytes>] [--nocolor]
 
     With ropper you can show information about files in different file formats
     and you can find gadgets to build rop chains for different architectures.
@@ -51,12 +52,12 @@ Usage
       Mach-O
 
     supported architectures:
-      x86
-      x86_64
-      MIPS
-      ARM/Thumb
-      ARM64
-      PowerPC
+      x86 [x86]
+      x86_64 [x86_64]
+      MIPS [MIPS, MIPS64]
+      ARM/Thumb [ARM, ARMTHUMB]
+      ARM64 [ARM64]
+      PowerPC [PPC, PPC64]
 
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -68,6 +69,8 @@ Usage
       --console             Starts interactive commandline
       -f <file>, --file <file>
                             The file to load
+      -a <arch>, --arch <arch>
+                            The architecture of the loaded file
       -i, --info            Shows file header [ELF/PE/Mach-O]
       -e                    Shows EntryPoint
       --imagebase           Shows ImageBase [ELF/PE/Mach-O]
@@ -75,6 +78,8 @@ Usage
                             Shows DllCharacteristics [PE]
       -s, --sections        Shows file sections [ELF/PE/Mach-O]
       -S, --segments        Shows file segments [ELF/Mach-O]
+      --checksec            Shows the security mechanisms used in the file
+                            [ELF/PE/Mach-O]
       --imports             Shows imports [ELF/PE]
       --symbols             Shows symbols [ELF]
       --set <option>        Sets options. Available options: aslr nx
@@ -121,9 +126,11 @@ Usage
       ropper.py --file /bin/ls --ppr --nocolor
       ropper.py --file /bin/ls --jmp esp,eax
       ropper.py --file /bin/ls --type jop
+      ropper.py --file /bin/ls --arch x86_64
       ropper.py --file /bin/ls --chain execve=/bin/sh
       ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
       ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+
 
 
 

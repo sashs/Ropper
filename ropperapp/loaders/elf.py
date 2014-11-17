@@ -204,8 +204,8 @@ class ELF(Loader):
     def imageBase(self):
         return self.phdrs[0].p_vaddr - self.phdrs[0].p_offset
 
-    @property
-    def arch(self):
+    
+    def _loadDefaultArch(self):
         try:
             return self.__elf_module.getArch( (EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]]),self.ehdr.e_entry)
         except:

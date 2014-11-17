@@ -19,6 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ropperapp.common.abstract import *
+from ropperapp.common.error import NotSupportedError
 from re import compile
 from capstone import *
 from . import gadget
@@ -219,3 +220,11 @@ ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
 PPC = ArchitecturePPC()
 PPC64 = ArchitecturePPC64()
+
+def getArchitecture(archString):
+    arch = globals().get(archString, None)
+
+    if isinstance(arch, Architecture):
+        return arch
+
+    raise NotSupportedError('Architecture is not supported: ' + archString)

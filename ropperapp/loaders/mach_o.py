@@ -68,8 +68,8 @@ class MachO(Loader):
                 self.__imageBase = 0x0
         return self.__imageBase
 
-    @property
-    def arch(self):
+    
+    def _loadDefaultArch(self):
         try:
             return ARCH[self.header.cputype]
         except:

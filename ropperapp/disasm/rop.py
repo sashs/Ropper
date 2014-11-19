@@ -23,6 +23,7 @@ from ropperapp.common.utils import *
 from ropperapp.common.error import *
 from ropperapp.common.enum import Enum
 from .gadget import Gadget, GadgetType
+from binascii import hexlify
 import re
 import struct
 import sys
@@ -49,18 +50,18 @@ class Ropper(object):
         regs = regs.split(',')
         for reg in regs:
             reg = reg.strip()[1:]
-            insts = ['\xff' + chr(0xe0 | Register[reg]), '\xff' + chr(0xd0 | Register[reg]),  chr(0x50 | Register[reg]) + '\xc3']
+            insts = [toBytes(0xff , 0xe0 | Register[reg]), toBytes(0xff, 0xd0 | Register[reg]),  toBytes(0x50 | Register[reg] , 0xc3)]
             for inst in insts:
 
                 toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True, badbytes=badbytes))
 
-        return sorted(toReturn)
+        return sorted(toReturn, key=lambda x: str(x))
 
     def searchOpcode(self, code, opcode, virtualAddress=0x0, disass=False, badbytes=''):
 
         toReturn = []
         code = bytearray(code)
-        for index in xrange(len(code)):
+        for index in range(len(code)):
             c = 0
             if code[index:index + len(opcode)] == opcode:
                 opcodeGadget = Gadget(self.__arch)
@@ -70,7 +71,7 @@ class Ropper(object):
                             i.address, i.mnemonic + ' ' + i.op_str)
                 else:
                     opcodeGadget.append(
-                        virtualAddress + index, opcode.encode('hex'))
+                        virtualAddress + index, hexlify(opcode).decode('utf-8'))
                 if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
                     continue
                 c += 1
@@ -84,7 +85,7 @@ class Ropper(object):
 
         toReturn = []
 
-        for index in xrange(len(code)):
+        for index in range(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
                 ppr = Gadget(self.__arch)
                 c = 0
@@ -105,7 +106,7 @@ class Ropper(object):
     def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL):
         toReturn = []
 
-        code = str(bytearray(code))
+        code = bytes(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
             gadget = Gadget(self.__arch)
@@ -130,10 +131,10 @@ class Ropper(object):
 
                 return gadget
 
-        for index in xrange(0, len(code), self.__arch.align):
+        for index in range(0, len(code), self.__arch.align):
             for ending in self.__arch.endings[gtype]:
-
                 if re.match(ending[0], code[index:index + ending[1]]):
+
                     for x in range(1, (depth + 1) * self.__arch.align):
                         code_part = code[index - x:index + ending[1]]
 
@@ -154,3 +155,7 @@ class Ropper(object):
                 inst.append(gadgetString)
                 toReturn.append(gadget)
         return toReturn
+
+
+def toBytes(*b):
+    return bytes(bytearray(b))

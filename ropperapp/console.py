@@ -130,7 +130,7 @@ class Console(cmd.Cmd):
         gadgets = {}
         for section in self.__binary.executableSections:
             gadgets[section]=(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), 0x0, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('Opcode')
         counter = 0

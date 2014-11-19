@@ -19,9 +19,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ctypes import *
-from .loader import *
+from ropperapp.loaders.loader import *
 from ropperapp.common.enum import Enum
-from .pe_intern.pe_gen import *
+from ropperapp.loaders.pe_intern.pe_gen import *
 import importlib
 import os
 import struct
@@ -200,7 +200,7 @@ class PE(Loader):
                     ImageDirectoryEntry.IMPORT].Size
                 self.__parseImports(section, p_tmp, size)
                 idata = True
-            if section.Name == '.text':
+            if section.Name == b'.text':
                 p_tmp.value = p_bytes.value + section.PointerToRawData
                 size = section.PhysicalAddress_or_VirtualSize
                 self.__parseCode(section, p_tmp, size)
@@ -220,4 +220,4 @@ class PE(Loader):
     @classmethod
     def isSupportedFile(cls, fileName):
         with open(fileName, 'rb') as f:
-            return f.read(2) == 'MZ'
+            return f.read(2) == b'MZ'

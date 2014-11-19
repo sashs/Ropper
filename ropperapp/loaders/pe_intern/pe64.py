@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from pe_gen import *
+from ropperapp.loaders.pe_intern.pe_gen import *
 
 
 

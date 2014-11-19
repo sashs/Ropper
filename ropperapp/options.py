@@ -19,8 +19,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from common.error import *
-from common.utils import isHex
+from ropperapp.common.error import *
+from ropperapp.common.utils import isHex
 import sys
 
 

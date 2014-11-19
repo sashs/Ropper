@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ctypes import *
-from elf_gen import *
+from ropperapp.loaders.elf_intern.elf_gen import *
 from ropperapp.disasm.arch import x86
 
 

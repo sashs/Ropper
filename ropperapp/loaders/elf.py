@@ -19,8 +19,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ctypes import *
-from .loader import *
-from .elf_intern.elf_gen import *
+from ropperapp.loaders.loader import *
+from ropperapp.loaders.elf_intern.elf_gen import *
 from ropperapp.common.error import LoaderError
 import importlib
 import os
@@ -146,7 +146,7 @@ class ELF(Loader):
         entries = []
         bytes_p = cast(pointer(shdr.bytes), c_void_p)
 
-        for i in range(shdr.struct.sh_size / sizeof(self.__elf_module.Sym)):
+        for i in range(int(shdr.struct.sh_size / sizeof(self.__elf_module.Sym))):
             self.assertFileRange(bytes_p.value)
             entry = cast(bytes_p, POINTER(self.__elf_module.Sym)).contents
             name = self.__getName(strtab, entry.st_name)
@@ -173,7 +173,7 @@ class ELF(Loader):
         bytes_p = cast(pointer(shdr.bytes), c_void_p)
         entries = []
 
-        for i in range(shdr.struct.sh_size / sizeof(struct)):
+        for i in range(int(shdr.struct.sh_size / sizeof(struct))):
             self.assertFileRange(bytes_p.value)
             entry = cast(bytes_p, POINTER(struct)).contents
             sym = symbols[self.__elf_module.R_SYM(entry.r_info)]
@@ -259,6 +259,6 @@ class ELF(Loader):
     def isSupportedFile(cls, fileName):
         try:
             with open(fileName, 'rb') as f:
-                return f.read(4) == '\x7fELF'
+                return f.read(4) == b'\x7fELF'
         except BaseException as e:
             raise LoaderError(e)

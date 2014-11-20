@@ -150,7 +150,7 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            pprs = r.searchPopPopRet(section.bytes, vaddr, badbytes=unhexlify(self.__options.badbytes))
+            pprs = r.searchPopPopRet(section.bytes, 0x0, badbytes=unhexlify(self.__options.badbytes))
             for ppr in pprs:
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)

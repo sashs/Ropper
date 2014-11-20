@@ -18,7 +18,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from ropperapp.common.enum import Enum
+from sys import version_info
 import ropperapp
+
 
 class Color(Enum):
 	RED = '0;31'
@@ -41,6 +43,8 @@ class cstr(str):
 	def __new__(cls, data='', color=Color.LIGHT_GRAY):
 		if isinstance(data, cstr):
 			return data
+		if version_info.major > 2 and type(data) is not str:
+			data = data.decode('utf-8')
 		new = str.__new__(cls, data)
 		new._color = color
 		return new

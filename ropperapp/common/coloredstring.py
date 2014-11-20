@@ -43,7 +43,7 @@ class cstr(str):
 	def __new__(cls, data='', color=Color.LIGHT_GRAY):
 		if isinstance(data, cstr):
 			return data
-		if version_info.major > 2 and type(data) is not str:
+		if version_info.major > 2 and type(data) is bytes:
 			data = data.decode('utf-8')
 		new = str.__new__(cls, data)
 		new._color = color

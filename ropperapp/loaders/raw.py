@@ -38,6 +38,7 @@ class Raw(Loader):
     def type(self):
         return Type.RAW
 
+    @property
     def executableSections(self):
         return [self.__codeSection]
 

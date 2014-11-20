@@ -292,8 +292,8 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
-        elif options.checksec:
-            self.__checksec()
+        #elif options.checksec:
+         #   self.__checksec()
         elif options.chain:
             self.__loadGadgets()
             self.__generateChain(self.__gadgets, options.chain)

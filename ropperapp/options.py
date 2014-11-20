@@ -45,12 +45,12 @@ supported filetypes:
   Mach-O
 
 supported architectures:
-  x86
-  x86_64
-  MIPS
-  ARM/Thumb
-  ARM64
-  PowerPC
+  x86 [x86]
+  x86_64 [x86_64]
+  MIPS [MIPS, MIPS64]
+  ARM/Thumb [ARM, ARMTHUMB]
+  ARM64 [ARM64]
+  PowerPC [PPC, PPC64]
 
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -104,8 +104,8 @@ epilog="""example uses:
             '-s', '--sections', help='Shows file sections [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument(
             '-S', '--segments', help='Shows file segments [ELF/Mach-O]', action='store_true')
-        parser.add_argument(
-            '--checksec', help='Shows the security mechanisms used in the file [ELF/PE/Mach-O]', action='store_true')
+        #parser.add_argument(
+        #    '--checksec', help='Shows the security mechanisms used in the file [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument(
             '--imports', help='Shows imports [ELF/PE]', action='store_true')
         parser.add_argument(

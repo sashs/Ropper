@@ -21,3 +21,4 @@
 from . import elf
 from . import pe
 from . import mach_o
+from . import raw

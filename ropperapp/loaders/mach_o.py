@@ -73,8 +73,7 @@ class MachO(Loader):
         try:
             return ARCH[self.header.cputype]
         except:
-            raise LoaderError('Architecture not supported')
-
+            return None
     @property
     def type(self):
         return Type.MACH_O

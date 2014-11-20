@@ -63,6 +63,8 @@ class Console(cmd.Cmd):
         self.__binary = Loader.open(file)
         if self.__options.arch:
             self.__setarch(self.__options.arch)
+        if not self.__binary.arch:
+            raise RopperError('An architecture have to be set')
         self.__printer = FileDataPrinter.create(self.__binary.type)
 
 

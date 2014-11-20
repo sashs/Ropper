@@ -19,6 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ropperapp.common.abstract import *
+from ropperapp.common.error import NotSupportedError
 from re import compile
 from capstone import *
 from . import gadget
@@ -89,14 +90,14 @@ class ArchitectureX86(Architecture):
         Architecture.__init__(self, CS_ARCH_X86, CS_MODE_32, 4, 1)
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = [('\xc3', 1),
-                                                ('\xc2[\x00-\xff]{2}', 3)]
+        self._endings[gadget.GadgetType.ROP] = [(b'\xc3', 1),
+                                                (b'\xc2[\x00-\xff]{2}', 3)]
 
         self._endings[gadget.GadgetType.JOP] = [(
-            '\xff[\x20\x21\x22\x23\x26\x27]', 2),
-            ('\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),
-            ('\xff[\x10\x11\x12\x13\x16\x17]', 2),
-            ('\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2)]
+            b'\xff[\x20\x21\x22\x23\x26\x27]', 2),
+            (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),
+            (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),
+            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2)]
 
     def _initBadInstructions(self):
         self._badInstructions = ['int3', 'db']
@@ -135,9 +136,9 @@ class ArchitectureMips(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [('\x09\xf8\x20\x03', 4),
-                                                ('\x08\x00\x20\x03', 4),
-                                                ('\x08\x00\xe0\x03', 4)]
+        self._endings[gadget.GadgetType.JOP] = [(b'\x09\xf8\x20\x03', 4),
+                                                (b'\x08\x00\x20\x03', 4),
+                                                (b'\x08\x00\xe0\x03', 4)]
 
 
 class ArchitectureMips64(ArchitectureMips):
@@ -159,10 +160,10 @@ class ArchitectureArm(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [('[\x10-\x19\x1e]\xff\x2f\xe1', 4), # bx <reg>
-                                                ('[\x30-\x39\x3e]\xff\x2f\xe1', 4), # blx <reg>
-                                                ('[\x01-\xff]\x80\xbd\xe8', 4),
-                                                ('\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x19\x1e]\xff\x2f\xe1', 4), # bx <reg>
+                                                (b'[\x30-\x39\x3e]\xff\x2f\xe1', 4), # blx <reg>
+                                                (b'[\x01-\xff]\x80\xbd\xe8', 4),
+                                                (b'\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
 class ArchitectureArmThumb(Architecture):
 
@@ -171,9 +172,9 @@ class ArchitectureArmThumb(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [('[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x70]\x47', 2),
-                                                ('[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xf0]\x47', 2),
-                                                ('[\x00-\xff]\xbd', 2)]
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x70]\x47', 2),
+                                                (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xf0]\x47', 2),
+                                                (b'[\x00-\xff]\xbd', 2)]
 
 
 
@@ -184,13 +185,13 @@ class ArchitectureArm64(Architecture):
         Architecture.__init__(self, CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = [('[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
-                                                ('[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4),
-                                                ('\xc0\x03\x5f\xd6', 4)] # ret <reg>
-        self._endings[gadget.GadgetType.JOP] = [('[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # bx <reg>
-                                                ('[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # blx <reg>
-                                                ('[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4),
-                                                ('[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
+        self._endings[gadget.GadgetType.ROP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4),
+                                                (b'\xc0\x03\x5f\xd6', 4)] # ret <reg>
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # bx <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # blx <reg>
+                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4),
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
 
 
 
@@ -200,7 +201,7 @@ class ArchitecturePPC(Architecture):
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = [('\x4e\x80\x00\x20', 4)] #blr
+        self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] #blr
         self._endings[gadget.GadgetType.JOP] = []
 
 class ArchitecturePPC64(ArchitecturePPC):
@@ -219,3 +220,11 @@ ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
 PPC = ArchitecturePPC()
 PPC64 = ArchitecturePPC64()
+
+def getArchitecture(archString):
+    arch = globals().get(archString, None)
+
+    if isinstance(arch, Architecture):
+        return arch
+
+    raise NotSupportedError('Architecture is not supported: ' + archString)

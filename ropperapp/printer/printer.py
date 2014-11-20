@@ -80,7 +80,7 @@ class FileDataPrinter(DataPrinter):
 
     @classmethod
     def validType(cls):
-        return None
+        return Type.NONE
 
     def printTableHeader(self, string):
         self._printLine('\n\n')

@@ -17,8 +17,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from loader import *
-from mach_intern.mach_gen import *
+from ropperapp.loaders.loader import *
+from ropperapp.loaders.mach_intern.mach_gen import *
 from struct import pack as p
 import importlib
 
@@ -68,13 +68,12 @@ class MachO(Loader):
                 self.__imageBase = 0x0
         return self.__imageBase
 
-    @property
-    def arch(self):
+    
+    def _loadDefaultArch(self):
         try:
             return ARCH[self.header.cputype]
         except:
-            raise LoaderError('Architecture not supported')
-
+            return None
     @property
     def type(self):
         return Type.MACH_O
@@ -144,6 +143,9 @@ class MachO(Loader):
     def setASLR(self, enable):
         raise LoaderError('Not available for mach-o files')
 
+
+    def checksec(self):
+        return {}
 
     @classmethod
     def isSupportedFile(cls, fileName):

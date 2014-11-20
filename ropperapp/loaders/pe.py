@@ -19,9 +19,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ctypes import *
-from .loader import *
+from ropperapp.loaders.loader import *
 from ropperapp.common.enum import Enum
-from .pe_intern.pe_gen import *
+from ropperapp.loaders.pe_intern.pe_gen import *
 import importlib
 import os
 import struct
@@ -54,12 +54,11 @@ class PE(Loader):
     def entryPoint(self):
         return self.imageNtHeaders.OptionalHeader.ImageBase + self.imageNtHeaders.OptionalHeader.AddressOfEntryPoint
 
-    @property
-    def arch(self):
+    def _loadDefaultArch(self):
         try:
             return self.__pe_module.getArch(self.imageNtHeaders.FileHeader.Machine)
         except:
-            raise LoaderError('Architecture not supported')
+            return None
 
     @property
     def type(self):
@@ -201,7 +200,7 @@ class PE(Loader):
                     ImageDirectoryEntry.IMPORT].Size
                 self.__parseImports(section, p_tmp, size)
                 idata = True
-            if section.Name == '.text':
+            if section.Name == b'.text':
                 p_tmp.value = p_bytes.value + section.PointerToRawData
                 size = section.PhysicalAddress_or_VirtualSize
                 self.__parseCode(section, p_tmp, size)
@@ -212,7 +211,13 @@ class PE(Loader):
         self.__pe_module = importlib.import_module('ropperapp.loaders.pe_intern.pe32')
         self.__parse(self._bytes_p)
 
+    def checksec(self):
+
+        return {'SafeSEH' : self.imageNtHeaders.OptionalHeader.DataDirectory[ImageDirectoryEntry.LOAD_CONFIG].Size != 0,
+                'ASLR' : self.imageNtHeaders.OptionalHeader.DllCharacteristics & ImageDllCharacteristics.DYNAMIC_BASE != 0,
+                'DEP' : self.imageNtHeaders.OptionalHeader.DllCharacteristics & ImageDllCharacteristics.NX_COMPAT != 0}
+
     @classmethod
     def isSupportedFile(cls, fileName):
         with open(fileName, 'rb') as f:
-            return f.read(2) == 'MZ'
+            return f.read(2) == b'MZ'

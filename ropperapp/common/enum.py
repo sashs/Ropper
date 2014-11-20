@@ -19,7 +19,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from re import match
+from sys import version_info
 import types
+
+if version_info.major > 2:
+    long = int
 
 class EnumError(BaseException):
 
@@ -55,6 +59,9 @@ class EnumElement(object):
     def __index__(self):
         return self.__value
 
+    def __hash__(self):
+        return hash((self,))
+
     @property
     def value(self):
         return self.__value
@@ -64,6 +71,10 @@ class EnumElement(object):
         return self.__name
 
 class IntEnumElement(EnumElement):
+
+
+    def __hash__(self):
+        return hash(self.value)
 
     def __cmp__(self, other):
         if isinstance(other, EnumElement):
@@ -179,7 +190,7 @@ class EnumMeta(type):
                 count += 1
 
         dct['_revData'] = revData
-        dct['_enumData'] = sorted(valueData)
+        dct['_enumData'] = sorted(valueData, key=lambda x: x.value)
 
         return super(EnumMeta, cls).__new__(cls, name, bases, dct)
 

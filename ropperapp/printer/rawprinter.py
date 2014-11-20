@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # coding=utf-8
 #
 # Copyright 2014 Sascha Schirra
@@ -18,7 +18,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import ropperapp.printer.elfprinter
-import ropperapp.printer.peprinter
-import ropperapp.printer.machprinter
-import ropperapp.printer.rawprinter
+from ropperapp.printer.printer import *
+from ropperapp.loaders.elf import *
+
+
+class RAWPrinter(FileDataPrinter):
+
+    @classmethod
+    def validType(cls):
+        return Type.RAW
+
+    def printEntryPoint(self, binary):
+        self._printLine(self._toHex(binary.entryPoint, binary.arch.addressLength))
+
+    def printImageBase(self, binary):
+        self._printLine(
+            self._toHex(binary.imageBase, binary.arch.addressLength))
+
+    def printArchitecture(self, binary):
+        self._printLine(str(binary.arch))
+
+    def printFileType(self, binary):
+        self._printLine(str(binary.type))

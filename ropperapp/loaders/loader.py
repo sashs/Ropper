@@ -26,7 +26,7 @@ from ropperapp.common.error import *
 
 
 class Type(Enum):
-    _enum_ = 'ELF PE MACH_O'
+    _enum_ = 'ELF PE MACH_O RAW NONE'
 
 
 class DataContainer(object):
@@ -54,9 +54,11 @@ class Loader(Abstract):
         self._fileName = filename
         self._bytes = None
         self._bytes_p = None
+        self._arch = None
 
         self._loadFile()
         self._parseFile()
+        self._arch = self._loadDefaultArch()
 
     @abstractproperty
     def entryPoint(self):
@@ -66,9 +68,13 @@ class Loader(Abstract):
     def imageBase(self):
         return None
 
-    @abstractproperty
+    @property
     def arch(self):
-        return None
+        return self._arch
+
+    @arch.setter
+    def arch(self, arch):
+        self._arch = arch
 
     @abstractproperty
     def type(self):
@@ -83,11 +89,19 @@ class Loader(Abstract):
         pass
 
     @abstractmethod
+    def _loadDefaultArch(self):
+        pass
+
+    @abstractmethod
     def setNX(self, enable):
         pass
 
     @abstractmethod
     def setASLR(self, enable):
+        pass
+        
+    @abstractmethod
+    def checksec(self):
         pass
 
     @property
@@ -101,11 +115,19 @@ class Loader(Abstract):
     @classmethod
     def open(cls, fileName):
         sc = Loader.__subclasses__()
+        Raw = None
         for subclass in sc:
-            if subclass.isSupportedFile(fileName):
-                return subclass(fileName)
+            if subclass.__name__ != 'Raw':
+                if subclass.isSupportedFile(fileName):
+                    return subclass(fileName)
+            else:
+                Raw = subclass
 
-        raise LoaderError('Filetype not supported')
+        if Raw:
+            return Raw(fileName)
+        else:
+            raise LoaderError('Not supported file type')
+
 
     def _loadFile(self):
         with open(self.fileName, 'rb') as binFile:

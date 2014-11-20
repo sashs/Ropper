@@ -27,6 +27,7 @@ from .common.utils import isHex
 from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
+from ropperapp.disasm.arch import getArchitecture
 from binascii import unhexlify
 import ropperapp
 import cmd
@@ -60,6 +61,10 @@ class Console(cmd.Cmd):
     def __loadFile(self, file):
         self.__loaded = False
         self.__binary = Loader.open(file)
+        if self.__options.arch:
+            self.__setarch(self.__options.arch)
+        if not self.__binary.arch:
+            raise RopperError('An architecture have to be set')
         self.__printer = FileDataPrinter.create(self.__binary.type)
 
 
@@ -127,7 +132,7 @@ class Console(cmd.Cmd):
         gadgets = {}
         for section in self.__binary.executableSections:
             gadgets[section]=(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), 0x0, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, badbytes=unhexlify(self.__options.badbytes)))
 
         self.__printer.printTableHeader('Opcode')
         counter = 0
@@ -147,11 +152,12 @@ class Console(cmd.Cmd):
         for section in self.__binary.executableSections:
 
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            pprs = r.searchPopPopRet(section.bytes, vaddr, badbytes=unhexlify(self.__options.badbytes))
+            pprs = r.searchPopPopRet(section.bytes, 0x0, badbytes=unhexlify(self.__options.badbytes))
             for ppr in pprs:
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)
         print('')
+
 
     def __printRopGadgets(self, gadgets):
         self.__printer.printTableHeader('Gadgets')
@@ -242,6 +248,23 @@ class Console(cmd.Cmd):
         self.__options.nocolor = old
 
 
+    def __checksec(self):
+        sec = self.__binary.checksec()
+        data = []
+        yes = cstr('Yes', Color.RED)
+        no = cstr('No', Color.GREEN)
+        for item, value in sec.items():
+            data.append((cstr(item, Color.BLUE), yes if value else no))
+        printTable('Security',(cstr('Name'), cstr('value')), data)
+
+
+    def __setarch(self, arch):
+        if self.__binary:
+            self.__binary.arch = getArchitecture(arch)
+            self.__options.arch = arch
+        else:
+            self.__printError('No file loaded')
+
     def __handleOptions(self, options):
         if options.sections:
             self.__printData('sections')
@@ -269,6 +292,8 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
+        #elif options.checksec:
+         #   self.__checksec()
         elif options.chain:
             self.__loadGadgets()
             self.__generateChain(self.__gadgets, options.chain)
@@ -455,7 +480,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_jmp()
             return
-        self.__searchJmpReg(text)
+        try:
+            self.__searchJmpReg(text)
+        except RopperError as e:
+            self.__printError(e)
 
 
     def help_jmp(self):
@@ -535,3 +563,14 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_quit(self):
         self.__printHelpText('quit', 'quits the application')
+
+    def do_arch(self, text):
+        try:
+            if not text:
+                self.help_arch()
+            self.__setarch(text)
+        except RopperError as e:
+            self.__printError(e)
+
+    def help_arch(self):
+        self.__printHelpText('arch', 'sets the architecture for the loaded file')

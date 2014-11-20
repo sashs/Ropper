@@ -10,9 +10,9 @@ Install
 
 Download and Install Capstone
 
-    $ wget http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2.tgz
-    $ tar xf capstone-2.1.2.tgz
-    $ cd capstone-2.1.2
+    $ wget http://capstone-engine.org/download/3.0/capstone-3.0.tgz
+    $ tar xf capstone-3.0.tgz
+    $ cd capstone-3.0
     $ ./make.sh
     $ sudo ./make.sh install
     $ cd ./bindings/python
@@ -35,12 +35,13 @@ If you want, you can use Ropper without installation
 Usage
 -----
 
-    usage: ropper.py [-h] [-v] [--console] [-f <file>] [-i] [-e] [--imagebase]
-                 [-c] [-s] [-S] [--imports] [--symbols] [--set <option>]
-                 [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
-                 [--depth <n bytes>] [--search <regex>] [--filter <regex>]
-                 [--opcode <opcode>] [--type <type>] [--detail]
-                 [--chain <generator>] [-b <badbytes>] [--nocolor]
+    usage: ropper.py [-h] [-v] [--console] [-f <file>] [-a <arch>] [-i] [-e]
+                 [--imagebase] [-c] [-s] [-S] [--checksec] [--imports]
+                 [--symbols] [--set <option>] [--unset <option>]
+                 [-I <imagebase>] [-p] [-j <reg>] [--depth <n bytes>]
+                 [--search <regex>] [--filter <regex>] [--opcode <opcode>]
+                 [--type <type>] [--detail] [--chain <generator>]
+                 [-b <badbytes>] [--nocolor]
 
     With ropper you can show information about files in different file formats
     and you can find gadgets to build rop chains for different architectures.
@@ -49,14 +50,15 @@ Usage
       ELF
       PE
       Mach-O
+      Raw
 
     supported architectures:
-      x86
-      x86_64
-      MIPS
-      ARM/Thumb
-      ARM64
-      PowerPC
+      x86 [x86]
+      x86_64 [x86_64]
+      MIPS [MIPS, MIPS64]
+      ARM/Thumb [ARM, ARMTHUMB]
+      ARM64 [ARM64]
+      PowerPC [PPC, PPC64]
 
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -68,6 +70,8 @@ Usage
       --console             Starts interactive commandline
       -f <file>, --file <file>
                             The file to load
+      -a <arch>, --arch <arch>
+                            The architecture of the loaded file
       -i, --info            Shows file header [ELF/PE/Mach-O]
       -e                    Shows EntryPoint
       --imagebase           Shows ImageBase [ELF/PE/Mach-O]
@@ -121,6 +125,7 @@ Usage
       ropper.py --file /bin/ls --ppr --nocolor
       ropper.py --file /bin/ls --jmp esp,eax
       ropper.py --file /bin/ls --type jop
+      ropper.py --file /bin/ls --arch x86_64
       ropper.py --file /bin/ls --chain execve=/bin/sh
       ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
       ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
@@ -129,13 +134,12 @@ Usage
 
 
 
+
 Planned features for future versions
 ------------------------------------
-  File formats:
-    - Raw
 
-  Edit header fields
-  Print more informations
+  Edit header fields;
+  Print more informations;
 
   For any other ideas please contact me
 

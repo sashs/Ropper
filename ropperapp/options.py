@@ -19,8 +19,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from common.error import *
-from common.utils import isHex
+from ropperapp.common.error import *
+from ropperapp.common.utils import isHex
 import sys
 
 
@@ -43,14 +43,15 @@ supported filetypes:
   ELF
   PE
   Mach-O
+  Raw
 
 supported architectures:
-  x86
-  x86_64
-  MIPS
-  ARM/Thumb
-  ARM64
-  PowerPC
+  x86 [x86]
+  x86_64 [x86_64]
+  MIPS [MIPS, MIPS64]
+  ARM/Thumb [ARM, ARMTHUMB]
+  ARM64 [ARM64]
+  PowerPC [PPC, PPC64]
 
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86]
@@ -93,6 +94,8 @@ epilog="""example uses:
         parser.add_argument(
             '-f', '--file', metavar="<file>", help='The file to load')
         parser.add_argument(
+            '-a', '--arch', metavar="<arch>", help='The architecture of the loaded file')
+        parser.add_argument(
             '-i', '--info', help='Shows file header [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument('-e', help='Shows EntryPoint', action='store_true')
         parser.add_argument('--imagebase', help='Shows ImageBase [ELF/PE/Mach-O]', action='store_true')
@@ -102,6 +105,8 @@ epilog="""example uses:
             '-s', '--sections', help='Shows file sections [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument(
             '-S', '--segments', help='Shows file segments [ELF/Mach-O]', action='store_true')
+        #parser.add_argument(
+        #    '--checksec', help='Shows the security mechanisms used in the file [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument(
             '--imports', help='Shows imports [ELF/PE]', action='store_true')
         parser.add_argument(

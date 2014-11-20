@@ -43,6 +43,7 @@ supported filetypes:
   ELF
   PE
   Mach-O
+  Raw
 
 supported architectures:
   x86 [x86]

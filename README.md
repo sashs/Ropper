@@ -50,6 +50,7 @@ Usage
       ELF
       PE
       Mach-O
+      Raw
 
     supported architectures:
       x86 [x86]
@@ -78,8 +79,6 @@ Usage
                             Shows DllCharacteristics [PE]
       -s, --sections        Shows file sections [ELF/PE/Mach-O]
       -S, --segments        Shows file segments [ELF/Mach-O]
-      --checksec            Shows the security mechanisms used in the file
-                            [ELF/PE/Mach-O]
       --imports             Shows imports [ELF/PE]
       --symbols             Shows symbols [ELF]
       --set <option>        Sets options. Available options: aslr nx
@@ -138,11 +137,9 @@ Usage
 
 Planned features for future versions
 ------------------------------------
-  File formats:
-    - Raw
 
-  Edit header fields
-  Print more informations
+  Edit header fields;
+  Print more informations;
 
   For any other ideas please contact me
 

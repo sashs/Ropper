@@ -17,8 +17,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from loader import *
-from mach_intern.mach_gen import *
+from ropperapp.loaders.loader import *
+from ropperapp.loaders.mach_intern.mach_gen import *
 from struct import pack as p
 import importlib
 

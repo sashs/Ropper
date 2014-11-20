@@ -10,9 +10,9 @@ Install
 
 Download and Install Capstone
 
-    $ wget http://www.capstone-engine.org/download/2.1.2/capstone-2.1.2.tgz
-    $ tar xf capstone-2.1.2.tgz
-    $ cd capstone-2.1.2
+    $ wget http://capstone-engine.org/download/3.0/capstone-3.0.tgz
+    $ tar xf capstone-3.0.tgz
+    $ cd capstone-3.0
     $ ./make.sh
     $ sudo ./make.sh install
     $ cd ./bindings/python

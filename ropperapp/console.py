@@ -18,12 +18,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from .loaders.loader import Loader
-from .printer.printer import FileDataPrinter
-from .disasm.rop import Ropper
-from .common.error import *
-from .disasm.gadget import GadgetType
-from .common.utils import isHex
+from ropperapp.loaders.loader import Loader
+from ropperapp.printer.printer import FileDataPrinter
+from ropperapp.disasm.rop import Ropper
+from ropperapp.common.error import *
+from ropperapp.disasm.gadget import GadgetType
+from ropperapp.common.utils import isHex
 from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
@@ -466,6 +466,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_type()
             return
+        if text not in ['rop','jop','all']:
+            self.__printError('invalid type: %s' % text)
+            return
         self.__options.type = text
         self.__printInfo('Gadgets have to be reloaded')
 
@@ -520,6 +523,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_badbytes(self, text):
         if len(text) ==0:
             self.__printInfo('badbytes cleared')
+        if not isHex('0x'+text):
+            self.__printError('not allowed characters in badbytes')
+            return
         self.__options.badbytes =text
         self.__printInfo('Gadgets have to be reloaded')
 

@@ -33,6 +33,18 @@ import ropperapp
 import cmd
 
 
+def printError(error):
+        print(cstr('[ERROR]', Color.RED)+' {}\n'.format(error))
+
+def secure_cmd(func):
+    def cmd(self, text):
+        try:
+            func(self, text)
+        except RopperError as e:
+            printError(e)
+    return cmd
+
+
 class Console(cmd.Cmd):
 
     def __init__(self, options):
@@ -86,7 +98,7 @@ class Console(cmd.Cmd):
         print('{}  -  {}\n'.format(cmd, desc))
 
     def __printError(self, error):
-        print(cstr('[ERROR]', Color.RED)+' {}\n'.format(error))
+        printError(error)
 
     def __printInfo(self, error):
         print(cstr('[INFO]', Color.BLUE)+' {}'.format(error))
@@ -300,7 +312,8 @@ class Console(cmd.Cmd):
         else:
             self.__searchAndPrintGadgets()
 
-# cmd commands
+####### cmd commands ######
+    @secure_cmd
     def do_show(self, text):
         if not self.__binary:
             self.__printError("No file loaded!")
@@ -309,10 +322,8 @@ class Console(cmd.Cmd):
             self.help_show()
             return
 
-        try:
-            self.__printData(text)
-        except RopperError as e:
-            self.__printError(e)
+        self.__printData(text)
+
 
     def help_show(self):
         desc = 'shows informations about the loaded file'
@@ -327,20 +338,19 @@ class Console(cmd.Cmd):
             return [i for i in self.__printer.availableInformations if i.startswith(
                     text)]
 
+    @secure_cmd
     def do_file(self, text):
         if len(text) == 0:
             self.help_file()
             return
-        try:
-            self.__loadFile(text)
-            self.__printInfo('File loaded.')
-
-        except RopperError as e:
-            self.__printError(e)
+        
+        self.__loadFile(text)
+        self.__printInfo('File loaded.')
 
     def help_file(self):
         self.__printHelpText('file <file>', 'loads a file')
 
+    @secure_cmd
     def do_set(self, text):
         if not text:
             self.help_set()
@@ -348,10 +358,8 @@ class Console(cmd.Cmd):
         if not self.__binary:
             self.__printError('No file loaded')
             return
-        try:
-            self.__set(text, True)
-        except RopperError as e:
-            self.__printError(e)
+        self.__set(text, True)
+        
 
     def help_set(self):
         desc = """Sets options.
@@ -363,17 +371,16 @@ nx\t- Sets the NX-Flag (ELF|PE)"""
     def complete_set(self, text, line, begidx, endidx):
         return [i for i in ['aslr', 'nx'] if i.startswith(text)]
 
+    @secure_cmd
     def do_unset(self, text):
         if not text:
             self.help_unset()
             return
-        try:
-            if not self.__binary:
-                self.__printError('No file loaded')
-                return
-            self.__set(text, False)
-        except RopperError as e:
-            self.__printError(e)
+        if not self.__binary:
+            self.__printError('No file loaded')
+            return
+        self.__set(text, False)
+       
 
     def help_unset(self):
         desc = """Clears options.
@@ -385,6 +392,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_unset(self, text, line, begidx, endidx):
         return self.complete_set(text, line, begidx, endidx)
 
+    @secure_cmd
     def do_gadgets(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -397,6 +405,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_gadgets(self):
         self.__printHelpText('gadgets', 'shows all loaded gadgets')
 
+    @secure_cmd
     def do_load(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -408,6 +417,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_load(self):
         self.__printHelpText('load', 'loads gadgets')
 
+    @secure_cmd
     def do_ppr(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -417,6 +427,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_ppr(self):
         self.__printHelpText('ppr', 'shows all pop,pop,ret instructions')
 
+    @secure_cmd
     def do_filter(self, text):
         if len(text) == 0:
             self.help_filter()
@@ -427,6 +438,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_filter(self):
         self.__printHelpText('filter <filter>', 'filters gadgets')
 
+    @secure_cmd
     def do_search(self, text):
         if len(text) == 0:
             self.help_search()
@@ -437,6 +449,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_search(self):
         self.__printHelpText('searchs <regex>', 'search gadgets')
 
+    @secure_cmd
     def do_opcode(self, text):
         if len(text) == 0:
             self.help_opcode()
@@ -451,6 +464,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText(
             'opcode <opcode>', 'searchs opcode in executable sections')
 
+    @secure_cmd
     def do_imagebase(self, text):
         if len(text) == 0:
             self.__options.I = None
@@ -462,6 +476,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_imagebase(self):
         self.__printHelpText('imagebase <base>', 'sets a new imagebase for searching gadgets')
 
+    @secure_cmd
     def do_type(self, text):
         if len(text) == 0:
             self.help_type()
@@ -476,6 +491,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_type(self):
         self.__printHelpText('type <type>', 'sets the gadget type (rop, jop, all, default:all)')
 
+    @secure_cmd
     def do_jmp(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -483,15 +499,14 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_jmp()
             return
-        try:
-            self.__searchJmpReg(text)
-        except RopperError as e:
-            self.__printError(e)
+
+        self.__searchJmpReg(text)
 
 
     def help_jmp(self):
         self.__printHelpText('jmp <reg[,reg...]>', 'searchs jmp reg instructions')
 
+    @secure_cmd
     def do_detailed(self, text):
         if text:
             if text == 'on':
@@ -507,7 +522,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_detailed(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
 
-
+    @secure_cmd
     def do_settings(self, text):
         data = [
             (cstr('badbytes') , cstr(self.__options.badbytes)),
@@ -520,6 +535,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_settings(self):
         self.__printHelpText('settings','shows the current settings')
 
+    @secure_cmd
     def do_badbytes(self, text):
         if len(text) ==0:
             self.__printInfo('badbytes cleared')
@@ -532,6 +548,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_badbytes(self):
         self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes')
 
+    @secure_cmd
     def do_color(self, text):
         if self.__options.isWindows():
             self.__printInfo('No color support for windows')
@@ -550,16 +567,16 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_color(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
 
+    @secure_cmd
     def do_ropchain(self, text):
         if len(text) == 0:
             self.help_ropchain()
             return
         if not self.__gadgets:
             self.do_load(text)
-        try:
-            self.__generateChain(self.__gadgets, text)
-        except RopperError as e:
-            self.__printError(str(e))
+        
+        self.__generateChain(self.__gadgets, text)
+        
 
     def help_ropchain(self):
         self.__printHelpText('ropchain <generator>[=args]','uses the given generator and create a ropchain with args')
@@ -570,13 +587,12 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_quit(self):
         self.__printHelpText('quit', 'quits the application')
 
+    @secure_cmd
     def do_arch(self, text):
-        try:
-            if not text:
-                self.help_arch()
-            self.__setarch(text)
-        except RopperError as e:
-            self.__printError(e)
+        if not text:
+            self.help_arch()
+        self.__setarch(text)
+        
 
     def help_arch(self):
         self.__printHelpText('arch', 'sets the architecture for the loaded file')

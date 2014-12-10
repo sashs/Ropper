@@ -66,7 +66,7 @@ class Gadget(object):
     def match(self, filter):
         if not filter or len(filter) == 0:
             return True
-        return bool(re.search(filter, self._gadget))
+        return bool(re.match(filter, self._gadget))
 
     def addressesContainsBytes(self, badbytes):
         line =  self.__lines[0]

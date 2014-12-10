@@ -100,7 +100,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['int3', 'db']
+        self._badInstructions = ['int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe']
 
     def _initCategories(self):
         self._categories = {

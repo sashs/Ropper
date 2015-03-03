@@ -20,6 +20,8 @@
 
 from ropperapp.common.abstract import *
 from ropperapp.common.error import NotSupportedError
+from ropperapp.search.search import Searcher
+from ropperapp.search.search import Searcherx86
 from re import compile
 from capstone import *
 from . import gadget
@@ -39,6 +41,8 @@ class Architecture(AbstractSingleton):
         self._endings = {}
         self._badInstructions = []
         self._categories = {}
+
+        self._searcher = Searcher()
 
         self._initGadgets()
         self._initBadInstructions()
@@ -80,6 +84,10 @@ class Architecture(AbstractSingleton):
     def badInstructions(self):
         return self._badInstructions
 
+    @property
+    def searcher(self):
+        return self._searcher
+
     def __str__(self):
         return self.__class__.__name__
 
@@ -88,6 +96,8 @@ class ArchitectureX86(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_X86, CS_MODE_32, 4, 1)
+
+        self._searcher = Searcherx86()
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = [(b'\xc3', 1),

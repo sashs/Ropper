@@ -61,7 +61,7 @@ class Gadget(object):
 
     def append(self, address, inst):
         self.__lines.append((address, inst))
-        self._gadget += inst + '\n'
+        self._gadget += inst + '; '
 
     def match(self, filter):
         if not filter or len(filter) == 0:
@@ -71,7 +71,7 @@ class Gadget(object):
     def addressesContainsBytes(self, badbytes):
         line =  self.__lines[0]
         for b in badbytes:
-            
+
             address = line[0] + self.__imageBase
             if type(b) == str:
                 b = ord(b)

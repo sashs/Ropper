@@ -18,7 +18,7 @@ setup(
     packages=find_packages(),
     license="GPLv2",
     author="Sascha Schirra",
-    author_email="schirra@scoding.de",
+    author_email="sashs@scoding.de",
     install_requires=['capstone'],
     url="http://scoding.de/ropper/",
     scripts=['script/ropper'],
@@ -27,7 +27,7 @@ setup(
         'Environment :: Console',
         'Operating System :: OS Independent',
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python',
         'Intended Audience :: Developers'
     ]
 )

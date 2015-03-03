@@ -17,18 +17,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from .console import Console
-from .options import Options
-from .common.error import RopperError
-
-app_options = None
-VERSION='1.4.2'
-
-def start(args):
-    try:
-        global app_options
-        app_options = Options(args)
-        Console(app_options).start()
-    except RopperError as e:
-        print(e)

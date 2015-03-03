@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # coding=utf-8
 #
 # Copyright 2014 Sascha Schirra
@@ -31,6 +31,7 @@ from ropperapp.disasm.arch import getArchitecture
 from binascii import unhexlify
 import ropperapp
 import cmd
+import re
 
 
 def printError(error):
@@ -208,7 +209,7 @@ class Console(cmd.Cmd):
         self.__loadGadgets()
         gadgets = self.__gadgets
         if self.__options.search:
-            gadgets = self.__search(self.__gadgets, self.__options.search)
+            gadgets = self.__search(self.__gadgets, self.__options.search, self.__options.quality)
         elif self.__options.filter:
             gadgets = self.__filter(self.__gadgets, self.__options.filter)
         self.__printRopGadgets(gadgets)
@@ -223,15 +224,8 @@ class Console(cmd.Cmd):
             filtered[section] = fg
         return filtered
 
-    def __search(self, gadgets, filter):
-        filtered = {}
-        for section, gadget in gadgets.items():
-            fg = []
-            for g in gadget:
-                if g.match(filter):
-                    fg.append(g)
-            filtered[section] = fg
-        return filtered
+    def __search(self, gadgets, filter, quality=None):
+        return self.__binary.arch.searcher.search(gadgets, filter, quality)
 
     def __generateChain(self, gadgets, command):
         split = command.split('=')
@@ -343,7 +337,7 @@ class Console(cmd.Cmd):
         if len(text) == 0:
             self.help_file()
             return
-        
+
         self.__loadFile(text)
         self.__printInfo('File loaded.')
 
@@ -359,7 +353,7 @@ class Console(cmd.Cmd):
             self.__printError('No file loaded')
             return
         self.__set(text, True)
-        
+
 
     def help_set(self):
         desc = """Sets options.
@@ -380,7 +374,7 @@ nx\t- Sets the NX-Flag (ELF|PE)"""
             self.__printError('No file loaded')
             return
         self.__set(text, False)
-       
+
 
     def help_unset(self):
         desc = """Clears options.
@@ -443,11 +437,34 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_search()
             return
-
-        self.__printRopGadgets(self.__search(self.__gadgets, text))
+        match = re.match('/\d+/', text)
+        qual = None
+        if match:
+            qual = int(match.group(0)[1:-1])
+            text = text[len(match.group(0)):].strip()
+        self.__printRopGadgets(self.__search(self.__gadgets, text, qual))
 
     def help_search(self):
-        self.__printHelpText('searchs <regex>', 'search gadgets')
+        desc = 'search gadgets.\n\n'
+        desc += '/quality/\tThe quality of the gadget (1 = best).'
+        desc += 'The better the quality the less instructions are between the found intruction and ret\n'
+        desc += '?\t\tany character\n%\t\tany string\n\n'
+        desc += 'Example:\n'
+        desc += 'search mov e?x\n\n'
+        desc += '0x000067f1: mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;\n'
+        desc += '0x00006d03: mov eax, esi; pop ebx; pop esi; pop edi; pop ebp; ret ;\n'
+        desc += '0x00006d6f: mov ebx, esi; mov esi, dword ptr [esp + 0x18]; add esp, 0x1c; ret ;\n'
+        desc += '0x000076f8: mov eax, dword ptr [eax]; mov byte ptr [eax + edx], 0; add esp, 0x18; pop ebx; ret ;\n\n\n'
+        desc += 'search mov [%], ecx\n\n'
+        desc += '0x000067ed: mov dword ptr [esp + 4], edx; mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;\n'
+        desc += '0x00006f4e: mov dword ptr [ecx + 0x14], edx; add esp, 0x2c; pop ebx; pop esi; pop edi; pop ebp; ret ;\n'
+        desc += '0x000084b8: mov dword ptr [eax], edx; ret ;\n'
+        desc += '0x00008d9b: mov dword ptr [eax], edx; add esp, 0x18; pop ebx; ret ;\n\n\n'
+        desc += 'search /1/ mov [%], ecx\n\n'
+        desc += '0x000084b8: mov dword ptr [eax], edx; ret ;\n'
+
+
+        self.__printHelpText('search [/<quality>/] <string>',desc )
 
     @secure_cmd
     def do_opcode(self, text):
@@ -574,9 +591,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             return
         if not self.__gadgets:
             self.do_load(text)
-        
+
         self.__generateChain(self.__gadgets, text)
-        
+
 
     def help_ropchain(self):
         self.__printHelpText('ropchain <generator>[=args]','uses the given generator and create a ropchain with args')
@@ -592,7 +609,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if not text:
             self.help_arch()
         self.__setarch(text)
-        
+
 
     def help_arch(self):
         self.__printHelpText('arch', 'sets the architecture for the loaded file')

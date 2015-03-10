@@ -8,16 +8,10 @@ awesome Capstone Framework.
 Install
 -------
 
-Download and Install Capstone
+Install [Capstone](http://www.capstone-engine.org) with PyPi:
 
-    $ wget http://capstone-engine.org/download/3.0/capstone-3.0.tgz
-    $ tar xf capstone-3.0.tgz
-    $ cd capstone-3.0
-    $ ./make.sh
-    $ sudo ./make.sh install
-    $ cd ./bindings/python
-    $ sudo make install
-
+    $ sudo pip install capstone
+    
 Install and execute Ropper
 
     $ python setup.py install

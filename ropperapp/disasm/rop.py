@@ -130,18 +130,26 @@ class Ropper(object):
 
                 return gadget
 
-        for index in range(0, len(code), self.__arch.align):
-            for ending in self.__arch.endings[gtype]:
-                if re.match(ending[0], code[index:index + ending[1]]):
+        for ending in self.__arch.endings[gtype]:
+            offset = 0
+            tmp_code = code[:]
+            match = re.search(ending[0], tmp_code)
+            while match:
+                offset += match.start()
+                index = match.start()
+                for x in range(1, (depth + 1) * self.__arch.align):
 
-                    for x in range(1, (depth + 1) * self.__arch.align):
-                        code_part = code[index - x:index + ending[1]]
+                    code_part = tmp_code[index - x:index + ending[1]]
 
-                        gadget = createGadget(
-                            code_part, index - x, ending)
+                    gadget = createGadget(
+                        code_part, offset - x, ending)
 
-                        if gadget:
-                            toReturn.append(gadget)
+                    if gadget:
+                        toReturn.append(gadget)
+
+                tmp_code = tmp_code[index+1:]
+                offset += 1
+                match = re.search(ending[0], tmp_code)
         return self.__deleteDuplicates(toReturn)
 
     def __deleteDuplicates(self, gadgets):

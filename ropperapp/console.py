@@ -34,7 +34,10 @@ import re
 
 
 def printError(error):
-        print(cstr('[ERROR]', Color.RED)+' {}\n'.format(error))
+    print(cstr('[ERROR]', Color.RED)+' {}\n'.format(error))
+
+def printProgress(text, progress):
+    print(cstr('\r[*]'+text+' ', Color.BLUE)+ cstr(int(100 * progress)) + cstr(' %   ')  ),
 
 def secure_cmd(func):
     def cmd(self, text):
@@ -188,9 +191,10 @@ class Console(cmd.Cmd):
         r = Ropper(self.__binary.arch)
         for section in self.__binary.executableSections:
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+            self.__printInfo('Loading gadgets for section: ' + section.name)
             newGadgets = r.searchRopGadgets(
-                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
-
+                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], pprinter=printProgress)
+            print('')
 
             gadgets[section] = (newGadgets)
         return gadgets
@@ -224,7 +228,10 @@ class Console(cmd.Cmd):
         return filtered
 
     def __search(self, gadgets, filter, quality=None):
-        return self.__binary.arch.searcher.search(gadgets, filter, quality)
+        self.__printInfo('Searching for gadgets: '+filter)
+        found = self.__binary.arch.searcher.search(gadgets, filter, quality, pprinter=printProgress)
+        print('')
+        return found
 
     def __generateChain(self, gadgets, command):
         split = command.split('=')
@@ -403,7 +410,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if not self.__binary:
             self.__printError('No file loaded')
             return
-        self.__printInfo('loading...')
         self.__loadGadgets()
         self.__printInfo('gadgets loaded.')
 

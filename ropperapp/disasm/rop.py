@@ -102,9 +102,8 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL):
+    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None):
         toReturn = []
-
         code = bytes(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
@@ -130,6 +129,7 @@ class Ropper(object):
 
                 return gadget
 
+        max_prog = len(code) * len(self.__arch.endings[gtype])
         for ending in self.__arch.endings[gtype]:
             offset = 0
             tmp_code = code[:]
@@ -150,6 +150,13 @@ class Ropper(object):
                 tmp_code = tmp_code[index+1:]
                 offset += 1
                 match = re.search(ending[0], tmp_code)
+
+                if pprinter:
+                    progress = self.__arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+                    pprinter('Load gadget', float(progress) / max_prog)
+
+        if pprinter:
+            pprinter('Load gadget', 1)
         return self.__deleteDuplicates(toReturn)
 
     def __deleteDuplicates(self, gadgets):

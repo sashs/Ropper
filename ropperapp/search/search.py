@@ -33,9 +33,13 @@ class Searcher(object):
         filter = filter.replace('%', '.*')
         return filter
 
-    def search(self, gadgets, filter, quality = None):
+    def search(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)
         filtered = {}
+        count = 0
+        max_count = 0
+        for g in gadgets.values():
+            max_count += len(g)
         for section, gadget in gadgets.items():
             fg = []
             for g in gadget:
@@ -45,6 +49,9 @@ class Searcher(object):
                             fg.append(g)
                     else:
                         fg.append(g)
+                count += 1
+                if pprinter:
+                    pprinter('Searching gadgets', float(count) / max_count)
             filtered[section] = fg
         return filtered
 

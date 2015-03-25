@@ -148,26 +148,33 @@ class Ropper(object):
                         toReturn.append(gadget)
 
                 tmp_code = tmp_code[index+1:]
-                offset += 1
+                offset += self.__arch.align
                 match = re.search(ending[0], tmp_code)
 
                 if pprinter:
                     progress = self.__arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-                    pprinter('Load gadget', float(progress) / max_prog)
+                    pprinter.printProgress('loading gadgets...', float(progress) / max_prog)
 
         if pprinter:
-            pprinter('Load gadget', 1)
-        return self.__deleteDuplicates(toReturn)
+            pprinter.printProgress('loading gadgets...', 1)
+            pprinter.finishProgress();
+        return self.__deleteDuplicates(toReturn, pprinter)
 
-    def __deleteDuplicates(self, gadgets):
+    def __deleteDuplicates(self, gadgets, pprinter=None):
         toReturn = []
         inst = []
         gadgetString = None
-        for gadget in gadgets:
+        for i,gadget in enumerate(gadgets):
             gadgetString = gadget._gadget
-            if gadgetString not in inst:
-                inst.append(gadgetString)
+            gadgetHash = hash(gadgetString)
+            if gadgetHash not in inst:
+                inst.append(gadgetHash)
                 toReturn.append(gadget)
+            if pprinter:
+                pprinter.printProgress('clearing up...', float(i) / len(gadgets))
+        if pprinter:
+            pprinter.printProgress('clearing up...', 1)
+            pprinter.finishProgress()
         return toReturn
 
 

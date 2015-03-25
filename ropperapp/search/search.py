@@ -51,8 +51,10 @@ class Searcher(object):
                         fg.append(g)
                 count += 1
                 if pprinter:
-                    pprinter('Searching gadgets', float(count) / max_count)
+                    pprinter.printProgress('searching gadgets...', float(count) / max_count)
             filtered[section] = fg
+        if pprinter:
+            pprinter.finishProgress();
         return filtered
 
 

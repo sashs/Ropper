@@ -28,23 +28,23 @@ from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
 from ropperapp.disasm.arch import getArchitecture
 from binascii import unhexlify
+from sys import stdout
 import ropperapp
 import cmd
 import re
 
 
-def printError(error):
-    print(cstr('[ERROR]', Color.RED)+' {}\n'.format(error))
+
 
 def printProgress(text, progress):
     print(cstr('\r[*]'+text+' ', Color.BLUE)+ cstr(int(100 * progress)) + cstr(' %   ')  ),
 
-def secure_cmd(func):
+def safe_cmd(func):
     def cmd(self, text):
         try:
             func(self, text)
         except RopperError as e:
-            printError(e)
+            ConsolePrinter().printError(e)
     return cmd
 
 
@@ -58,6 +58,7 @@ class Console(cmd.Cmd):
         self.__gadgets = {}
         self.__allGadgets = {}
         self.__loaded = False
+        self.__cprinter = ConsolePrinter()
         self.prompt = cstr('(ropper) ', Color.YELLOW)
 
     def start(self):
@@ -85,29 +86,29 @@ class Console(cmd.Cmd):
 
     def __printGadget(self, gadget):
         if self.__options.detail:
-            print(gadget)
+            self.__cprinter.println(gadget)
         else:
-            print(gadget.simpleString())
+            self.__cprinter.println(gadget.simpleString())
 
     def __printData(self, data):
         self.__printer.printData(self.__binary, data)
 
     def __printVersion(self):
-        print("Version: Ropper %s" % ropperapp.VERSION)
-        print("Author: Sascha Schirra")
-        print("Website: http://scoding.de/ropper\n")
+        self.__cprinter.println("Version: Ropper %s" % ropperapp.VERSION)
+        self.__cprinter.println("Author: Sascha Schirra")
+        self.__cprinter.println("Website: http://scoding.de/ropper\n")
 
     def __printHelpText(self, cmd, desc):
-        print('{}  -  {}\n'.format(cmd, desc))
+        self.__cprinter.println('{}  -  {}\n'.format(cmd, desc))
 
     def __printError(self, error):
-        printError(error)
+        self.__cprinter.printError(error)
 
-    def __printInfo(self, error):
-        print(cstr('[INFO]', Color.BLUE)+' {}'.format(error))
+    def __printInfo(self, info):
+        self.__cprinter.printInfo(cstr(info))
 
     def __printSeparator(self,before='', behind=''):
-        print(before + '-'*40 + behind)
+        self.__cprinter.println(before + '-'*40 + behind)
 
     def __setASLR(self, enable):
         self.__binary.setASLR(enable)
@@ -137,10 +138,10 @@ class Console(cmd.Cmd):
             for g in gadget:
                 vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
                 g.imageBase = vaddr
-                print(g.simpleString())
+                self.__cprinter.println(g.simpleString())
                 counter += 1
-        print('')
-        print('%d times opcode found' % counter)
+        self.__cprinter.println('')
+        self.__cprinter.println('%d times opcode found' % counter)
 
     def __searchOpcode(self, opcode):
         r = Ropper(self.__binary.arch)
@@ -155,10 +156,10 @@ class Console(cmd.Cmd):
             for g in gadget:
                 vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
                 g.imageBase = vaddr
-                print(g.simpleString())
+                self.__cprinter.println(g.simpleString())
                 counter += 1
-        print('')
-        print('%d times opcode found' % counter)
+        self.__cprinter.println('')
+        self.__cprinter.println('%d times opcode found' % counter)
 
     def __searchPopPopRet(self):
         r = Ropper(self.__binary.arch)
@@ -171,7 +172,7 @@ class Console(cmd.Cmd):
             for ppr in pprs:
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)
-        print('')
+        self.__cprinter.println('')
 
 
     def __printRopGadgets(self, gadgets):
@@ -184,7 +185,7 @@ class Console(cmd.Cmd):
                 self.__printGadget(g)
                 counter +=1
             #print('')
-        print('\n%d gadgets found' % counter)
+        self.__cprinter.println('\n%d gadgets found' % counter)
 
     def __searchGadgets(self):
         gadgets = {}
@@ -193,8 +194,7 @@ class Console(cmd.Cmd):
             vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
             self.__printInfo('Loading gadgets for section: ' + section.name)
             newGadgets = r.searchRopGadgets(
-                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], pprinter=printProgress)
-            print('')
+                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter)
 
             gadgets[section] = (newGadgets)
         return gadgets
@@ -229,8 +229,7 @@ class Console(cmd.Cmd):
 
     def __search(self, gadgets, filter, quality=None):
         self.__printInfo('Searching for gadgets: '+filter)
-        found = self.__binary.arch.searcher.search(gadgets, filter, quality, pprinter=printProgress)
-        print('')
+        found = self.__binary.arch.searcher.search(gadgets, filter, quality, pprinter=self.__cprinter)
         return found
 
     def __generateChain(self, gadgets, command):
@@ -313,7 +312,7 @@ class Console(cmd.Cmd):
             self.__searchAndPrintGadgets()
 
 ####### cmd commands ######
-    @secure_cmd
+    @safe_cmd
     def do_show(self, text):
         if not self.__binary:
             self.__printError("No file loaded!")
@@ -338,7 +337,7 @@ class Console(cmd.Cmd):
             return [i for i in self.__printer.availableInformations if i.startswith(
                     text)]
 
-    @secure_cmd
+    @safe_cmd
     def do_file(self, text):
         if len(text) == 0:
             self.help_file()
@@ -350,7 +349,7 @@ class Console(cmd.Cmd):
     def help_file(self):
         self.__printHelpText('file <file>', 'loads a file')
 
-    @secure_cmd
+    @safe_cmd
     def do_set(self, text):
         if not text:
             self.help_set()
@@ -371,7 +370,7 @@ nx\t- Sets the NX-Flag (ELF|PE)"""
     def complete_set(self, text, line, begidx, endidx):
         return [i for i in ['aslr', 'nx'] if i.startswith(text)]
 
-    @secure_cmd
+    @safe_cmd
     def do_unset(self, text):
         if not text:
             self.help_unset()
@@ -392,7 +391,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_unset(self, text, line, begidx, endidx):
         return self.complete_set(text, line, begidx, endidx)
 
-    @secure_cmd
+    @safe_cmd
     def do_gadgets(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -405,7 +404,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_gadgets(self):
         self.__printHelpText('gadgets', 'shows all loaded gadgets')
 
-    @secure_cmd
+    @safe_cmd
     def do_load(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -416,7 +415,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_load(self):
         self.__printHelpText('load', 'loads gadgets')
 
-    @secure_cmd
+    @safe_cmd
     def do_ppr(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -426,7 +425,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_ppr(self):
         self.__printHelpText('ppr', 'shows all pop,pop,ret instructions')
 
-    @secure_cmd
+    @safe_cmd
     def do_filter(self, text):
         if len(text) == 0:
             self.help_filter()
@@ -437,7 +436,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_filter(self):
         self.__printHelpText('filter <filter>', 'filters gadgets')
 
-    @secure_cmd
+    @safe_cmd
     def do_search(self, text):
         if len(text) == 0:
             self.help_search()
@@ -471,7 +470,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
         self.__printHelpText('search [/<quality>/] <string>',desc )
 
-    @secure_cmd
+    @safe_cmd
     def do_opcode(self, text):
         if len(text) == 0:
             self.help_opcode()
@@ -486,7 +485,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText(
             'opcode <opcode>', 'searchs opcode in executable sections')
 
-    @secure_cmd
+    @safe_cmd
     def do_imagebase(self, text):
         if len(text) == 0:
             self.__options.I = None
@@ -498,7 +497,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_imagebase(self):
         self.__printHelpText('imagebase <base>', 'sets a new imagebase for searching gadgets')
 
-    @secure_cmd
+    @safe_cmd
     def do_type(self, text):
         if len(text) == 0:
             self.help_type()
@@ -513,7 +512,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_type(self):
         self.__printHelpText('type <type>', 'sets the gadget type (rop, jop, all, default:all)')
 
-    @secure_cmd
+    @safe_cmd
     def do_jmp(self, text):
         if not self.__binary:
             self.__printError('No file loaded')
@@ -528,7 +527,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_jmp(self):
         self.__printHelpText('jmp <reg[,reg...]>', 'searchs jmp reg instructions')
 
-    @secure_cmd
+    @safe_cmd
     def do_detailed(self, text):
         if text:
             if text == 'on':
@@ -536,7 +535,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             elif text == 'off':
                 self.__options.detail = False
         else:
-            print('on' if self.__options.detail else 'off')
+            self.__cprinter.println('on' if self.__options.detail else 'off')
 
     def help_detailed(self):
         self.__printHelpText('detailed [on|off]', 'sets detailed gadget output')
@@ -544,7 +543,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_detailed(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
 
-    @secure_cmd
+    @safe_cmd
     def do_settings(self, text):
         data = [
             (cstr('badbytes') , cstr(self.__options.badbytes)),
@@ -557,7 +556,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_settings(self):
         self.__printHelpText('settings','shows the current settings')
 
-    @secure_cmd
+    @safe_cmd
     def do_badbytes(self, text):
         if len(text) ==0:
             self.__printInfo('badbytes cleared')
@@ -570,7 +569,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_badbytes(self):
         self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes')
 
-    @secure_cmd
+    @safe_cmd
     def do_color(self, text):
         if self.__options.isWindows():
             self.__printInfo('No color support for windows')
@@ -581,7 +580,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             elif text == 'off':
                 self.__options.nocolor = True
         else:
-            print('off' if self.__options.nocolor else 'on')
+            self.__cprinter.println('off' if self.__options.nocolor else 'on')
 
     def help_color(self):
         self.__printHelpText('color [on|off]', 'sets colorized output')
@@ -589,7 +588,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def complete_color(self, text, line, begidx, endidx):
         return [i for i in ['on', 'off'] if i.startswith(text)]
 
-    @secure_cmd
+    @safe_cmd
     def do_ropchain(self, text):
         if len(text) == 0:
             self.help_ropchain()
@@ -609,7 +608,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_quit(self):
         self.__printHelpText('quit', 'quits the application')
 
-    @secure_cmd
+    @safe_cmd
     def do_arch(self, text):
         if not text:
             self.help_arch()
@@ -618,3 +617,45 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_arch(self):
         self.__printHelpText('arch', 'sets the architecture for the loaded file')
+
+
+
+class ConsolePrinter(object):
+
+
+    def __init__(self, out=stdout):
+        super(ConsolePrinter, self).__init__()
+        self._out = out
+
+    def puts(self, *args):
+
+        for i, arg in enumerate(args):
+            self._out.write(str(arg))
+            if i != len(args)-1:
+                self._out.write(' ')
+
+    def println(self, *args):
+
+        self.puts(*args)
+        self._out.write('\n')
+
+    def printMessage(self, mtype, message):
+        self.println(mtype, message)
+
+    def printError(self, message):
+        self.printMessage(cstr('[ERROR]', Color.RED), message)
+
+    def printInfo(self, message):
+        self.printMessage(cstr('[INFO]', Color.BLUE), message)
+
+    def startProgress(self, message=None):
+        if message:
+            self.printInfo(message)
+
+    def printProgress(self, message, progress):
+        self.puts(cstr('\r') + cstr('[LOAD]', Color.GREEN), message, cstr(int(progress * 100))+cstr('%'))
+
+    def finishProgress(self, message=None):
+        self.println('')
+        if message:
+            self.printInfo(message)

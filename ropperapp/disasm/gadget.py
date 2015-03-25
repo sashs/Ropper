@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import sqlite3
 import ropperapp.common.enum as enum
 from ropperapp.common.utils import toHex
 from ropperapp.common.coloredstring import *
@@ -126,4 +127,61 @@ class Gadget(object):
         for line in self.__lines:
             toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.BLUE) +': '+ cstr(line[1], Color.WHITE) + '\n'
 
+        return toReturn
+
+
+class GadgetDAO(object):
+
+    def __init__(self, dbname):
+        self.__dbname = dbname
+
+
+
+    def save(self, section_gadgets):
+        conn = sqlite3.connect(self.__dbname)
+        c = conn.cursor()
+        c.execute('create table sections(nr, name, offs)')
+        c.execute('create table gadgets(nr, snr)')
+        c.execute('create table lines(gnr, addr, inst)')
+        scount = 0
+        gcount = 0
+        for section, gadgets in section_gadgets.items():
+            c.execute('insert into sections values(?, ?,?)' ,(str(scount), section.name, section.offset))
+
+            for gadget in gadgets:
+                c.execute('insert into gadgets values(?,?)', (str(gcount), str(scount)))
+
+                for addr, line in gadget.lines:
+                    c.execute('insert into lines values(?,?,?)', (str(gcount), str(addr), line))
+
+                gcount +=1
+            scount += 1
+        conn.commit()
+        conn.close()
+
+
+    def load(self, binary):
+        conn = sqlite3.connect(self.__dbname)
+        c = conn.cursor()
+
+        c.execute('select * from sections')
+        toReturn = {}
+        execSect = binary.executableSections
+
+        for s in c.fetchall():
+            for section in execSect:
+                if s[1] == section.name and int(s[2]) == section.offset:
+                    c.execute('select * from gadgets where snr=?', (s[0],))
+                    gadgets = []
+                    for g in c.fetchall():
+                        gadget = Gadget(binary.arch)
+                        gadgets.append(gadget)
+                        c.execute('select * from lines where gnr=?', (g[0],))
+
+                        for l in c.fetchall():
+                            gadget.append(int(l[1]), l[2])
+
+                    toReturn[section] = gadgets
+
+        conn.close()
         return toReturn

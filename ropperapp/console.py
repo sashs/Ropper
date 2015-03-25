@@ -22,6 +22,7 @@ from ropperapp.printer.printer import FileDataPrinter
 from ropperapp.disasm.rop import Ropper
 from ropperapp.common.error import *
 from ropperapp.disasm.gadget import GadgetType
+from ropperapp.disasm.gadget import GadgetDAO
 from ropperapp.common.utils import isHex
 from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
@@ -616,7 +617,36 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
 
     def help_arch(self):
-        self.__printHelpText('arch', 'sets the architecture for the loaded file')
+        self.__printHelpText('arch <arch>', 'sets the architecture <arch> for the loaded file')
+
+    def help_savedb(self):
+        self.__printHelpText('savedb <dbname>', 'saves all gadgets in database <dbname>')
+
+    def help_loaddb(self):
+        self.__printHelpText('loaddb <dbname>', 'loads all gadgets from database <dbname>')
+
+    @safe_cmd
+    def do_savedb(self, text):
+        if not text:
+            self.help_savedb()
+            return
+        if not self.__loaded:
+            self.__printInfo('Gadgets have to be loaded with load')
+            return
+        dao = GadgetDAO(text+'.sqlite')
+
+        dao.save(self.__gadgets)
+
+    @safe_cmd
+    def do_loaddb(self, text):
+        if not text:
+            self.help_loaddb()
+            return
+
+        dao = GadgetDAO(text+'.sqlite')
+
+        self.__gadgets = dao.load(self.__binary)
+        self.__loaded = True
 
 
 

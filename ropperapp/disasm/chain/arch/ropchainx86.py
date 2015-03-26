@@ -481,7 +481,7 @@ class RopChainX86System(RopChainX86):
                 chain += self._createOpcode('cd80')
             except:
                 chain += self._createOpcode('65ff1510000000')
-        print chain
+        print(chain)
 
 
 class RopChainX86Mprotect(RopChainX86):
@@ -547,4 +547,4 @@ class RopChainX86Mprotect(RopChainX86):
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'
 
-        print chain
+        print(chain)

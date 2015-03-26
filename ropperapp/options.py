@@ -114,6 +114,8 @@ epilog="""example uses:
         parser.add_argument(
             '-f', '--file', metavar="<file>", help='The file to load')
         parser.add_argument(
+             '--db', metavar="<dbfile>", help='The dbfile to load')
+        parser.add_argument(
             '-a', '--arch', metavar="<arch>", help='The architecture of the loaded file')
         parser.add_argument(
             '-i', '--info', help='Shows file header [ELF/PE/Mach-O]', action='store_true')

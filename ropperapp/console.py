@@ -227,14 +227,9 @@ class Console(cmd.Cmd):
         self.__printRopGadgets(gadgets)
 
     def __filter(self, gadgets, filter):
-        filtered = {}
-        for section, gadget in gadgets.items():
-            fg = []
-            for g in gadget:
-                if not g.match(filter):
-                    fg.append(g)
-            filtered[section] = fg
-        return filtered
+        self.__printInfo('Filtering gadgets: '+filter)
+        found = self.binary.arch.searcher.filter(gadgets, filter, pprinter=self.__cprinter)
+        return found
 
     def __search(self, gadgets, filter, quality=None):
         self.__printInfo('Searching for gadgets: '+filter)

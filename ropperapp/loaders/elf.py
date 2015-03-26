@@ -162,7 +162,7 @@ class ELF(Loader):
             self.__parseSymbols()
 
         for hdr in self.shdrs:
-            if hdr.struct.sh_type == SHT.REL or hdr.struct.sh_type == SHT.RELA:
+            if hdr.struct.sh_link != SHN.UNDEF and (hdr.struct.sh_type == SHT.REL or hdr.struct.sh_type == SHT.RELA):
                 symbols = self.symbols[self.shdrs[hdr.struct.sh_link].name]
                 relocations = self.__parseRelocationEntries(hdr, symbols)
                 self.relocations[hdr.name] = relocations
@@ -203,7 +203,7 @@ class ELF(Loader):
     def imageBase(self):
         return self.phdrs[0].p_vaddr - self.phdrs[0].p_offset
 
-    
+
     def _loadDefaultArch(self):
         try:
             return self.__elf_module.getArch( (EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]]),self.ehdr.e_entry)

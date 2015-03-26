@@ -140,19 +140,19 @@ class GadgetDAO(object):
     def save(self, section_gadgets):
         conn = sqlite3.connect(self.__dbname)
         c = conn.cursor()
-        c.execute('create table sections(nr, name, offs)')
-        c.execute('create table gadgets(nr, snr)')
-        c.execute('create table lines(gnr, addr, inst)')
+        c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs, gcount INTEGER)')
+        c.execute('create table gadgets(nr INTEGER PRIMARY KEY ASC, snr INTEGER, lcount INTEGER)')
+        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst)')
         scount = 0
         gcount = 0
         for section, gadgets in section_gadgets.items():
-            c.execute('insert into sections values(?, ?,?)' ,(str(scount), section.name, section.offset))
+            c.execute('insert into sections values(?, ?,?,?)' ,(scount, section.name, section.offset, len(gadgets)))
 
             for gadget in gadgets:
-                c.execute('insert into gadgets values(?,?)', (str(gcount), str(scount)))
+                c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
 
                 for addr, line in gadget.lines:
-                    c.execute('insert into lines values(?,?,?)', (str(gcount), str(addr), line))
+                    c.execute('insert into lines values(?,?,?)', (gcount, addr, line))
 
                 gcount +=1
             scount += 1
@@ -165,21 +165,26 @@ class GadgetDAO(object):
         c = conn.cursor()
 
         c.execute('select * from sections')
+        sectionrows = c.fetchall()
+        c.execute('select * from gadgets')
+        gadgetrows = iter(c.fetchall())
+        c.execute('select * from lines')
+        linerows = iter(c.fetchall())
         toReturn = {}
         execSect = binary.executableSections
 
-        for s in c.fetchall():
+        for s in sectionrows:
             for section in execSect:
                 if s[1] == section.name and int(s[2]) == section.offset:
-                    c.execute('select * from gadgets where snr=?', (s[0],))
                     gadgets = []
-                    for g in c.fetchall():
+                    for gcount in range(s[3]):
+                        grow = gadgetrows.next()
                         gadget = Gadget(binary.arch)
                         gadgets.append(gadget)
-                        c.execute('select * from lines where gnr=?', (g[0],))
 
-                        for l in c.fetchall():
-                            gadget.append(int(l[1]), l[2])
+                        for lcount in range(grow[2]):
+                            lrow = linerows.next()
+                            gadget.append(int(lrow[1]), lrow[2])
 
                     toReturn[section] = gadgets
 

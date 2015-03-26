@@ -504,8 +504,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.help_type()
             return
         if text not in ['rop','jop','all']:
-            self.__printError('invalid type: %s' % text)
-            return
+            raise RopperError('invalid type: %s' % text)
+
         self.__options.type = text
         self.__printInfo('Gadgets have to be reloaded')
 
@@ -561,14 +561,14 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_badbytes(self, text):
         if len(text) ==0:
             self.__printInfo('badbytes cleared')
-        if not isHex('0x'+text):
+        elif not isHex('0x'+text):
             self.__printError('not allowed characters in badbytes')
             return
         self.__options.badbytes =text
         self.__printInfo('Gadgets have to be reloaded')
 
     def help_badbytes(self):
-        self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes')
+        self.__printHelpText('badbytes [bytes]', 'sets/clears bad bytes\n\n Example:\nbadbytes 000a0d  -- sets 0x00, 0x0a and 0x0d as badbytes')
 
     @safe_cmd
     def do_color(self, text):

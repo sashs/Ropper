@@ -106,10 +106,16 @@ class ArchitectureX86(Architecture):
             b'\xff[\x20\x21\x22\x23\x26\x27]', 2),
             (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),
             (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),
-            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2)]
+            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),
+            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),
+            (b'\xff[\x14\x24]\x24', 3),
+            (b'\xff[\x55\x65]\x00', 3),
+            (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),
+            (b'\xff\xa4\x24[\x00-\x0ff]{4}', 7),
+            (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe']
+        self._badInstructions = ['loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe']
 
     def _initCategories(self):
         self._categories = {

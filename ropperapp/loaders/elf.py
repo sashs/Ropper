@@ -115,16 +115,17 @@ class ELF(Loader):
         self.__parseSectionNames(self.shdrs)
 
     def __parseSectionNames(self, shdrs):
-        strtab = self.shdrs[self.ehdr.e_shstrndx]
-        strtab_p = cast(pointer(strtab.bytes), c_void_p)
-        strtab_tmp = c_void_p(strtab_p.value)
+        if self.ehdr.e_shstrndx != SHN.UNDEF:
+            strtab = self.shdrs[self.ehdr.e_shstrndx]
+            strtab_p = cast(pointer(strtab.bytes), c_void_p)
+            strtab_tmp = c_void_p(strtab_p.value)
 
-        for hdr in shdrs:
+            for hdr in shdrs:
 
-            strtab_tmp.value = strtab_p.value + hdr.struct.sh_name
-            self.assertFileRange(strtab_tmp.value)
-            name = cast(strtab_tmp, c_char_p).value
-            hdr.name = name
+                strtab_tmp.value = strtab_p.value + hdr.struct.sh_name
+                self.assertFileRange(strtab_tmp.value)
+                name = cast(strtab_tmp, c_char_p).value
+                hdr.name = name
 
     def __getName(self, strtab, idx):
         strtab_p = cast(pointer(strtab.bytes), c_void_p)

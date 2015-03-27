@@ -658,6 +658,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             return
         self.__loaddb(text)
 
+    def do_EOF(self, text):
+        self.__cprinter.println('')
+        self.do_quit(text);
 
 
 class ConsolePrinter(object):

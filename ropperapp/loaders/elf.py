@@ -115,16 +115,17 @@ class ELF(Loader):
         self.__parseSectionNames(self.shdrs)
 
     def __parseSectionNames(self, shdrs):
-        strtab = self.shdrs[self.ehdr.e_shstrndx]
-        strtab_p = cast(pointer(strtab.bytes), c_void_p)
-        strtab_tmp = c_void_p(strtab_p.value)
+        if self.ehdr.e_shstrndx != SHN.UNDEF:
+            strtab = self.shdrs[self.ehdr.e_shstrndx]
+            strtab_p = cast(pointer(strtab.bytes), c_void_p)
+            strtab_tmp = c_void_p(strtab_p.value)
 
-        for hdr in shdrs:
+            for hdr in shdrs:
 
-            strtab_tmp.value = strtab_p.value + hdr.struct.sh_name
-            self.assertFileRange(strtab_tmp.value)
-            name = cast(strtab_tmp, c_char_p).value
-            hdr.name = name
+                strtab_tmp.value = strtab_p.value + hdr.struct.sh_name
+                self.assertFileRange(strtab_tmp.value)
+                name = cast(strtab_tmp, c_char_p).value
+                hdr.name = name
 
     def __getName(self, strtab, idx):
         strtab_p = cast(pointer(strtab.bytes), c_void_p)
@@ -162,7 +163,7 @@ class ELF(Loader):
             self.__parseSymbols()
 
         for hdr in self.shdrs:
-            if hdr.struct.sh_type == SHT.REL or hdr.struct.sh_type == SHT.RELA:
+            if hdr.struct.sh_link != SHN.UNDEF and (hdr.struct.sh_type == SHT.REL or hdr.struct.sh_type == SHT.RELA):
                 symbols = self.symbols[self.shdrs[hdr.struct.sh_link].name]
                 relocations = self.__parseRelocationEntries(hdr, symbols)
                 self.relocations[hdr.name] = relocations
@@ -203,7 +204,7 @@ class ELF(Loader):
     def imageBase(self):
         return self.phdrs[0].p_vaddr - self.phdrs[0].p_offset
 
-    
+
     def _loadDefaultArch(self):
         try:
             return self.__elf_module.getArch( (EM[self.ehdr.e_machine], ELFCLASS[self.ehdr.e_ident[EI.CLASS]]),self.ehdr.e_entry)

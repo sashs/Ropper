@@ -249,6 +249,15 @@ class R_386(Enum):
     TLS_TPOFF32 = 37
     NUM = 38
 
+class SHN(Enum):
+
+    UNDEF = 0
+    LOPROC = 0xff00
+    HIPROC = 0xff1f
+    ABS = 0xfff1
+    COMMON = 0xfff2
+    HIRESERVE = 0xffff
+
 
 class PF(Enum):
 

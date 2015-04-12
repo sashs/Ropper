@@ -18,8 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import sqlite3
+import hashlib
 import ropperapp.common.enum as enum
 from ropperapp.common.utils import toHex
+from ropperapp.common.error import RopperError
 from ropperapp.common.coloredstring import *
 
 class Category(enum.Enum):
@@ -126,4 +129,90 @@ class Gadget(object):
         for line in self.__lines:
             toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.BLUE) +': '+ cstr(line[1], Color.WHITE) + '\n'
 
+        return toReturn
+
+
+class GadgetDAO(object):
+
+    def __init__(self, dbname, printer=None):
+        self.__dbname = dbname
+        self._printer = printer
+
+
+
+    def save(self, section_gadgets):
+        conn = sqlite3.connect(self.__dbname)
+        c = conn.cursor()
+        c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs,gcount INTEGER, hash)')
+        c.execute('create table gadgets(nr INTEGER PRIMARY KEY ASC, snr INTEGER, lcount INTEGER)')
+        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst)')
+        scount = 0
+        gcount = 0
+        endcount = 0
+        if self._printer:
+            for gadgets in section_gadgets.values():
+                endcount += len(gadgets)
+
+        for section, gadgets in section_gadgets.items():
+            c.execute('insert into sections values(?, ?,?,?,?)' ,(scount, section.name, section.offset, len(gadgets), hashlib.md5(section.bytes).hexdigest()))
+
+            for gadget in gadgets:
+                c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
+
+                for addr, line in gadget.lines:
+                    c.execute('insert into lines values(?,?,?)', (gcount, addr, line))
+
+                gcount +=1
+                if self._printer:
+                    self._printer.printProgress('saving gadgets...', float(gcount) / endcount)
+            scount += 1
+        if self._printer:
+            self._printer.finishProgress('gadgets saved in: ' + self.__dbname)
+        conn.commit()
+        conn.close()
+
+
+    def load(self, binary, printer=None):
+        toReturn = {}
+        execSect = binary.executableSections
+        gcount = 0
+        lcount = 0
+        endcount = 0
+
+        conn = sqlite3.connect(self.__dbname)
+        c = conn.cursor()
+
+        c.execute('select * from sections')
+        sectionrows = c.fetchall()
+        c.execute('select * from gadgets')
+        gadgetrows = c.fetchall()
+        c.execute('select * from lines')
+        linerows = c.fetchall()
+
+        if self._printer:
+            for i in sectionrows:
+                endcount += i[3]
+
+        for s in sectionrows:
+            for section in execSect:
+                if s[1] == section.name and int(s[2]) == section.offset:
+                    if s[4] != hashlib.md5(section.bytes).hexdigest():
+                        raise RopperError('wrong checksum: '+s[4] + ' and ' + hashlib.md5(section.bytes).hexdigest())
+                    gadgets = []
+                    for g in range(s[3]):
+                        grow = gadgetrows[gcount]
+                        gcount +=1
+                        gadget = Gadget(binary.arch)
+                        gadgets.append(gadget)
+
+                        for l in range(grow[2]):
+                            lrow = linerows[lcount]
+                            lcount += 1
+                            gadget.append(int(lrow[1]), lrow[2])
+
+                        if self._printer:
+                            self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
+                    toReturn[section] = gadgets
+        self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
+        conn.close()
         return toReturn

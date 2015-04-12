@@ -16,4 +16,4 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from ropchainx86 import *
+from ropperapp.disasm.chain.arch.ropchainx86 import *

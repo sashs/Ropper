@@ -102,9 +102,8 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL):
+    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None):
         toReturn = []
-
         code = bytes(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
@@ -130,29 +129,52 @@ class Ropper(object):
 
                 return gadget
 
-        for index in range(0, len(code), self.__arch.align):
-            for ending in self.__arch.endings[gtype]:
-                if re.match(ending[0], code[index:index + ending[1]]):
+        max_prog = len(code) * len(self.__arch.endings[gtype])
+        for ending in self.__arch.endings[gtype]:
+            offset = 0
+            tmp_code = code[:]
+            match = re.search(ending[0], tmp_code)
+            while match:
+                offset += match.start()
+                index = match.start()
+                for x in range(1, (depth + 1) * self.__arch.align):
 
-                    for x in range(1, (depth + 1) * self.__arch.align):
-                        code_part = code[index - x:index + ending[1]]
+                    code_part = tmp_code[index - x:index + ending[1]]
 
-                        gadget = createGadget(
-                            code_part, index - x, ending)
+                    gadget = createGadget(
+                        code_part, offset - x, ending)
 
-                        if gadget:
-                            toReturn.append(gadget)
-        return self.__deleteDuplicates(toReturn)
+                    if gadget:
+                        toReturn.append(gadget)
 
-    def __deleteDuplicates(self, gadgets):
+                tmp_code = tmp_code[index+1:]
+                offset += self.__arch.align
+                match = re.search(ending[0], tmp_code)
+
+                if pprinter:
+                    progress = self.__arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+                    pprinter.printProgress('loading gadgets...', float(progress) / max_prog)
+
+        if pprinter:
+            pprinter.printProgress('loading gadgets...', 1)
+            pprinter.finishProgress();
+        return self.__deleteDuplicates(toReturn, pprinter)
+
+    def __deleteDuplicates(self, gadgets, pprinter=None):
         toReturn = []
         inst = []
         gadgetString = None
-        for gadget in gadgets:
+        for i,gadget in enumerate(gadgets):
             gadgetString = gadget._gadget
-            if gadgetString not in inst:
-                inst.append(gadgetString)
+            gadgetHash = hash(gadgetString)
+            if gadgetHash not in inst:
+                inst.append(gadgetHash)
                 toReturn.append(gadget)
+            if pprinter:
+                pprinter.printProgress('clearing up...', float(i) / len(gadgets))
+        if pprinter:
+            pprinter.printProgress('clearing up...', 1)
+            pprinter.finishProgress()
         return toReturn
 
 

@@ -1,9 +1,9 @@
 Ropper
 ================
 
-With ropper you can show information about files in different file formats
-and you can search for gadgets to build rop chains for different architectures. For disassembly ropper uses the
-awesome Capstone Framework.
+You can use ropper to display information about binary files in different file formats
+and you can search for gadgets to build rop chains for different architectures (x86/X86_64, ARM/ARM64, MIPS/MIPS64, PowerPC). 
+For disassembly ropper uses the awesome [Capstone Framework](http://www.capstone-engine.org).
 
 Install
 -------
@@ -37,8 +37,8 @@ Usage
                      [--type <type>] [--detail] [--chain <generator>]
                      [-b <badbytes>] [--nocolor]
 
-    With ropper you can show information about files in different file formats
-    and you can find gadgets to build rop chains for different architectures.
+    You can use ropper to display information about binary files in different file formats
+    and you can search for gadgets to build rop chains for different architectures
 
     supported filetypes:
       ELF

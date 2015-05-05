@@ -35,8 +35,8 @@ class Options(object):
 
     def _createArgParser(self):
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-description="""With ropper you can show information about files in different file formats
-and you can find gadgets to build rop chains for different architectures.
+description="""You can use ropper to display information about binary files in different file formats
+    and you can search for gadgets to build rop chains for different architectures
 
 supported filetypes:
   ELF

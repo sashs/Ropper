@@ -42,11 +42,11 @@ class RopChain(Abstract):
         return []
 
     @classmethod
-    def get(cls, binaries, name, gadgets, imagebase):
+    def get(cls, binaries, name):
         for subclass in cls.__subclasses__():
             if binaries[0].arch in subclass.archs():
                 gens = subclass.availableGenerators()
                 for gen in gens:
                     if gen.name() == name:
                         return gen(binaries)
-        raise RopChainError('generator %s is for arch %s not available' % (name, binary.arch.__class__.__name__))
+        raise RopChainError('generator %s is for arch %s not available' % (name, binaries[0].arch.__class__.__name__))

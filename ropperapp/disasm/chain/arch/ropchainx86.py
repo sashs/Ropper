@@ -44,10 +44,12 @@ class RopChainX86(RopChain):
         return toReturn
 
     def _printRebase(self):
+        toReturn = ''
         for binary in self._usedBinaries:
-            imagebase = binary.manualImagebase + binary.gadgets.keys()[1].offset if binary.manualImagebase != None else binary.gadgets.keys()[1].virtualAddress
-            toReturn += ('IMAGE_BASE = %s\n' % toHex(imageBase , 4))
-            toReturn += ('rebase = lambda x : p(x + IMAGE_BASE)\n')
+            imageBase = binary.manualImagebase + binary.gadgets.keys()[-1].offset if binary.manualImagebase != None else binary.gadgets.keys()[-1].virtualAddress
+            toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index(binary),toHex(imageBase , 4), binary.fileName))
+            toReturn += ('rebase_%d = lambda x : p(x + IMAGE_BASE_%d)\n'% (self._usedBinaries.index(binary),self._usedBinaries.index(binary)))
+        return toReturn
 
     @classmethod
     def name(cls):
@@ -118,7 +120,8 @@ class RopChainX86(RopChain):
 
 
     def _printRopInstruction(self, gadget, padding=True):
-        toReturn = ('rop += rebase(%s) # %s\n' % (toHex(gadget.lines[0][0],4), gadget.simpleInstructionString()))
+        print gadget._binary
+        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index(gadget._binary),toHex(gadget.lines[0][0],4), gadget.simpleInstructionString()))
         if padding:
             regs = self._paddingNeededFor(gadget)
             for i in range(len(regs)):
@@ -128,8 +131,8 @@ class RopChainX86(RopChain):
     def _printAddString(self, string):
         return ('rop += \'%s\'\n' % string)
 
-    def _printRebasedAddress(self, addr, comment=''):
-        return ('rop += rebase(%s)\n' % addr)
+    def _printRebasedAddress(self, addr, comment='', idx=0):
+        return ('rop += rebase_%d(%s)\n' % (idx,addr))
 
     def _printPaddingInstruction(self, addr='0xdeadbeef'):
         return ('rop += p(%s)\n' % addr)
@@ -152,34 +155,42 @@ class RopChainX86(RopChain):
     def _find(self, category, reg=None, srcdst='dst', badDst=[], badSrc=None, dontModify=None, srcEqDst=False, switchRegs=False ):
         quali = 1
         while quali < RopChainX86System.MAX_QUALI:
-            for gadget in self._gadgets:
-                if gadget.category[0] == category and gadget.category[1] == quali:
-                    if badSrc and gadget.category[2]['src'] in badSrc:
-                        continue
-                    if badDst and gadget.category[2]['dst'] in badDst:
-                        continue
-                    if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString():
-                        continue
-                    if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
-                        continue
-                    elif not srcEqDst and 'src' in gadget.category[2] and (gadget.category[2]['dst'] == gadget.category[2]['src']):
-                        continue
-                    if self._isModified(gadget, dontModify):
-                        continue
-                    if reg:
-                        if gadget.category[2][srcdst] == reg:
-                            return gadget
-                        elif switchRegs:
-                            other = 'src' if srcdst == 'dst' else 'dst'
-                            if gadget.category[2][other] == reg:
+            for binary in self._binaries:
+                for section, gadgets in binary.gadgets.items():
+                    for gadget in gadgets:
+                        if gadget.category[0] == category and gadget.category[1] == quali:
+                            if badSrc and gadget.category[2]['src'] in badSrc:
+                                continue
+                            if badDst and gadget.category[2]['dst'] in badDst:
+                                continue
+                            if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString():
+                                continue
+                            if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
+                                continue
+                            elif not srcEqDst and 'src' in gadget.category[2] and (gadget.category[2]['dst'] == gadget.category[2]['src']):
+                                continue
+                            if self._isModified(gadget, dontModify):
+                                continue
+                            if reg:
+                                if gadget.category[2][srcdst] == reg:
+                                    if binary not in self._usedBinaries:
+                                        self._usedBinaries.append(binary)
+                                    return gadget
+                                elif switchRegs:
+                                    other = 'src' if srcdst == 'dst' else 'dst'
+                                    if gadget.category[2][other] == reg:
+                                        if binary not in self._usedBinaries:
+                                            self._usedBinaries.append(binary)
+                                        return gadget
+                            else:
+                                if binary not in self._usedBinaries:
+                                    self._usedBinaries.append(binary)
                                 return gadget
-                    else:
-                        return gadget
 
             quali += 1
 
 
-    def _createWriteStringWhere(self, what, where, reg=None, dontModify=[]):
+    def _createWriteStringWhere(self, what, where, reg=None, dontModify=[], idx=0):
         badRegs = []
         badDst = []
         while True:
@@ -212,7 +223,7 @@ class RopChainX86(RopChain):
                 toReturn +=self._printPaddingInstruction()
             toReturn += self._printRopInstruction(popReg2, False)
 
-            toReturn += self._printRebasedAddress(toHex(where+idx,4))
+            toReturn += self._printRebasedAddress(toHex(where+idx,4), idx=idx)
             regs = self._paddingNeededFor(popReg2)
             for i in range(len(regs)):
                 toReturn +=self._printPaddingInstruction()
@@ -221,7 +232,7 @@ class RopChainX86(RopChain):
         return (toReturn,popReg.category[2]['dst'], popReg2.category[2]['dst'])
 
 
-    def _createWriteRegValueWhere(self, what, where, dontModify=[]):
+    def _createWriteRegValueWhere(self, what, where, dontModify=[], idx=0):
         badRegs = []
         badDst = []
         while True:
@@ -239,7 +250,7 @@ class RopChainX86(RopChain):
                     break;
 
         toReturn = self._printRopInstruction(popReg2, False)
-        toReturn += self._printRebasedAddress(toHex(where,4))
+        toReturn += self._printRebasedAddress(toHex(where,4), idx=idx)
         regs = self._paddingNeededFor(popReg2)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -403,7 +414,7 @@ class RopChainX86(RopChain):
         toReturn = ''
 
         toReturn += self._printRopInstruction(popReg,False)
-        toReturn += self._printRebasedAddress(toHex(address, 4))
+        toReturn += self._printRebasedAddress(toHex(address, 4), idx=self._usedBinaries.index(popReg._binary))
         regs = self._paddingNeededFor(popReg)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -422,9 +433,9 @@ class RopChainX86(RopChain):
         return (toReturn,)
 
     def _createOpcode(self, opcode):
-        r = Ropper(self._binary.arch)
+        r = Ropper(self._binaries[0])
         gadgets = []
-        for section in self._binary.executableSections:
+        for section in self._binaries[0].executableSections:
             vaddr = section.virtualAddress
             gadgets.extend(
                 r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset, True))
@@ -445,27 +456,29 @@ class RopChainX86System(RopChainX86):
     def name(cls):
         return 'execve'
 
-    def _createCommand(self, what, where, reg=None, dontModify=[]):
+    def _createCommand(self, what, where, reg=None, dontModify=[], idx=0):
         if len(what) % 4 > 0:
             what = '/' * (4 - len(what) % 4) + what
-        return self._createWriteStringWhere(what,where)
+        return self._createWriteStringWhere(what,where, idx=idx)
 
     def create(self, cmd='/bin/sh'):
         if len(cmd.split(' ')) > 1:
             raise RopChainError('No argument support for execve commands')
 
-        section = self._binary.getSection('.data')
+        section = self._binaries[0].getSection('.data')
+        self._usedBinaries.append(self._binaries[0])
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
-        chain += 'rop = \'\'\n'
-        chain += self._createCommand(cmd,section.struct.sh_addr)[0]
+        chain_tmp = '\n'
+        chain_tmp += 'rop = \'\'\n'
+        chain_tmp += self._createCommand(cmd,section.struct.sh_addr)[0]
         badregs = []
         while True:
 
             ret = self._createNumber(0x0, badRegs=badregs)
-            chain += ret[0]
+            chain_tmp += ret[0]
             try:
-                chain += self._createWriteRegValueWhere(ret[1], section.struct.sh_addr+length)[0]
+                chain_tmp += self._createWriteRegValueWhere(ret[1], section.struct.sh_addr+length)[0]
                 break
             except BaseException as e:
                 raise e
@@ -477,15 +490,17 @@ class RopChainX86System(RopChainX86):
         gadgets.append((self._createAddress, [section.struct.sh_addr+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
 
-
-        chain += self._createDependenceChain(gadgets)
+        
+        chain_tmp += self._createDependenceChain(gadgets)
         try:
-            chain += self._createSyscall()[0]
+            chain_tmp += self._createSyscall()[0]
         except RopChainError:
             try:
-                chain += self._createOpcode('cd80')
+                chain_tmp += self._createOpcode('cd80')
             except:
-                chain += self._createOpcode('65ff1510000000')
+                chain_tmp += self._createOpcode('65ff1510000000')
+        chain += self._printRebase()
+        chain += chain_tmp
         print(chain)
 
 
@@ -506,9 +521,9 @@ class RopChainX86Mprotect(RopChainX86):
 
 
     def _createJmp(self, reg='esp'):
-        r = Ropper(self._binary.arch)
+        r = Ropper(self._binaries[0])
         gadgets = []
-        for section in self._binary.executableSections:
+        for section in self._binaries[0].executableSections:
             vaddr = section.virtualAddress
             gadgets.extend(
                 r.searchJmpReg(section.bytes, 'esp', vaddr))
@@ -519,8 +534,8 @@ class RopChainX86Mprotect(RopChainX86):
             return ''
 
     def __extract(self, param):
-        if not match('0x[0-9a-fA-F]{7,8}:0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{7,8}:[0-9]+', param):
-            raise RopChainError('Parameter have to the following format: <hexnumber>:<hexnumber> or <hexnumber>:<number>')
+        if not match('0x[0-9a-fA-F]{1,8}:0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{1,8}:[0-9]+', param):
+            raise RopChainError('Parameter have to have the following format: <hexnumber>:<hexnumber> or <hexnumber>:<number>')
 
         split = param.split(':')
         if isHex(split[1]):
@@ -546,10 +561,13 @@ class RopChainX86Mprotect(RopChainX86):
         gadgets.append((self._createNumber, [0x7],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0x7d],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
 
+        chain_tmp = ''
+        chain_tmp += self._createDependenceChain(gadgets)
+        chain_tmp += self._createSyscall()[0]
+        chain_tmp += self._createJmp()
 
-        chain += self._createDependenceChain(gadgets)
-        chain += self._createSyscall()[0]
-        chain += self._createJmp()
+        chain += self._printRebase()
+        chain += chain_tmp
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'
 

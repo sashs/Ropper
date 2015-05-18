@@ -132,7 +132,7 @@ class Console(cmd.Cmd):
             raise ArgumentError('Invalid option: {}'.format(option))
 
     def __searchJmpReg(self, regs):
-        r = Ropper(self.binary.arch)
+        r = Ropper(self.binary)
         gadgets = {}
         for section in self.binary.executableSections:
 
@@ -151,7 +151,7 @@ class Console(cmd.Cmd):
         self.__cprinter.println('%d times opcode found' % counter)
 
     def __searchOpcode(self, opcode):
-        r = Ropper(self.binary.arch)
+        r = Ropper(self.binary)
         gadgets = {}
         for section in self.binary.executableSections:
             gadgets[section]=(
@@ -169,7 +169,7 @@ class Console(cmd.Cmd):
         self.__cprinter.println('%d times opcode found' % counter)
 
     def __searchPopPopRet(self):
-        r = Ropper(self.binary.arch)
+        r = Ropper(self.binary)
 
         self.binary.printer.printTableHeader('POP;POP;REG Instructions')
         for section in self.binary.executableSections:
@@ -196,7 +196,7 @@ class Console(cmd.Cmd):
 
     def __searchGadgets(self, binary):
         gadgets = {}
-        r = Ropper(binary.arch)
+        r = Ropper(binary)
         for section in binary.executableSections:
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             self.__printInfo('Loading gadgets for section: ' + section.name)
@@ -255,7 +255,7 @@ class Console(cmd.Cmd):
         old = self.__options.nocolor
         self.__options.nocolor = True
 
-        generator = RopChain.get(self.binaries,split[0])
+        generator = RopChain.get(self.__binaries,split[0])
 
         self.__printInfo('generating rop chain')
         self.__printSeparator(behind='\n\n')

@@ -30,10 +30,11 @@ import sys
 
 class Ropper(object):
 
-    def __init__(self, arch):
+    def __init__(self, binary):
         super(Ropper, self).__init__()
-        self.__arch = arch
-        self.__disassembler = Cs(arch.arch, arch.mode)
+        self.__binary = binary
+        self.__arch = binary.arch
+        self.__disassembler = Cs(binary.arch.arch, binary.arch.mode)
 
     @property
     def arch(self):
@@ -74,6 +75,7 @@ class Ropper(object):
                 if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
                     continue
                 c += 1
+                opcodeGadget._binary = self.__binary
                 toReturn.append(opcodeGadget)
         return toReturn
 
@@ -99,6 +101,7 @@ class Ropper(object):
                     if mnemonic == 'ret':
                         break
                 if len(ppr) == 3:
+                    ppr._binary = self.__binary
                     toReturn.append(ppr)
         return toReturn
 
@@ -108,6 +111,7 @@ class Ropper(object):
 
         def createGadget(code_str, codeStartAddress, ending):
             gadget = Gadget(self.__arch)
+            gadget._binary = self.__binary
             gadget.imageBase = virtualAddress
             hasret = False
             c = 0
@@ -138,19 +142,16 @@ class Ropper(object):
                 offset += match.start()
                 index = match.start()
                 for x in range(1, (depth + 1) * self.__arch.align):
-
                     code_part = tmp_code[index - x:index + ending[1]]
-
                     gadget = createGadget(
                         code_part, offset - x, ending)
-
                     if gadget:
                         toReturn.append(gadget)
 
                 tmp_code = tmp_code[index+1:]
+
                 offset += self.__arch.align
                 match = re.search(ending[0], tmp_code)
-
                 if pprinter:
                     progress = self.__arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
                     pprinter.printProgress('loading gadgets...', float(progress) / max_prog)

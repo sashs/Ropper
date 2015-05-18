@@ -55,10 +55,7 @@ class Console(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.__options = options
         self.__binary = None
-        self.__printer = None
-        self.__gadgets = {}
-        self.__allGadgets = {}
-        self.__loaded = False
+        self.__binaries = []
         self.__cprinter = ConsolePrinter()
         self.prompt = cstr('(ropper) ', Color.YELLOW)
 
@@ -82,13 +79,16 @@ class Console(cmd.Cmd):
         self.__handleOptions(self.__options)
 
     def __loadFile(self, file):
-        self.__loaded = False
         self.__binary = Loader.open(file)
+        self.__binaries.append(self.__binary)
+        self.__binary.manualImagebase = self.__options.I
         if self.__options.arch:
             self.__setarch(self.__options.arch)
+        if self.__binaries[0] != self.__binary and self.__binaries[0].arch != self.__binary.arch:
+            raise RopperError('Load multiple files with different architectures is not supported')
         if not self.binary.arch:
             raise RopperError('An architecture have to be set')
-        self.__printer = FileDataPrinter.create(self.binary.type)
+        self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
 
     def __printGadget(self, gadget):
@@ -98,7 +98,7 @@ class Console(cmd.Cmd):
             self.__cprinter.println(gadget.simpleString())
 
     def __printData(self, data):
-        self.__printer.printData(self.binary, data)
+        self.binary.printer.printData(self.binary, data)
 
     def __printVersion(self):
         self.__cprinter.println("Version: Ropper %s" % ropperapp.VERSION)
@@ -139,11 +139,11 @@ class Console(cmd.Cmd):
             gadgets[section] = (
                 r.searchJmpReg(section.bytes, regs, 0x0, badbytes=unhexlify(self.__options.badbytes)))
 
-        self.__printer.printTableHeader('JMP Instructions')
+        self.binary.printer.printTableHeader('JMP Instructions')
         counter = 0
         for section, gadget in gadgets.items():
             for g in gadget:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+                vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
                 g.imageBase = vaddr
                 self.__cprinter.println(g.simpleString())
                 counter += 1
@@ -157,11 +157,11 @@ class Console(cmd.Cmd):
             gadgets[section]=(
                 r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, badbytes=unhexlify(self.__options.badbytes)))
 
-        self.__printer.printTableHeader('Opcode')
+        self.binary.printer.printTableHeader('Opcode')
         counter = 0
         for section, gadget in gadgets.items():
             for g in gadget:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+                vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
                 g.imageBase = vaddr
                 self.__cprinter.println(g.simpleString())
                 counter += 1
@@ -171,10 +171,10 @@ class Console(cmd.Cmd):
     def __searchPopPopRet(self):
         r = Ropper(self.binary.arch)
 
-        self.__printer.printTableHeader('POP;POP;REG Instructions')
+        self.binary.printer.printTableHeader('POP;POP;REG Instructions')
         for section in self.binary.executableSections:
 
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             pprs = r.searchPopPopRet(section.bytes, 0x0, badbytes=unhexlify(self.__options.badbytes))
             for ppr in pprs:
                 ppr.imageBase = vaddr
@@ -183,10 +183,10 @@ class Console(cmd.Cmd):
 
 
     def __printRopGadgets(self, gadgets):
-        self.__printer.printTableHeader('Gadgets')
+        self.binary.printer.printTableHeader('Gadgets')
         counter = 0
         for section, gadget in gadgets.items():
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             for g in gadget:
                 g.imageBase = vaddr
                 self.__printGadget(g)
@@ -194,11 +194,11 @@ class Console(cmd.Cmd):
             #print('')
         self.__cprinter.println('\n%d gadgets found' % counter)
 
-    def __searchGadgets(self):
+    def __searchGadgets(self, binary):
         gadgets = {}
-        r = Ropper(self.binary.arch)
-        for section in self.binary.executableSections:
-            vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
+        r = Ropper(binary.arch)
+        for section in binary.executableSections:
+            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             self.__printInfo('Loading gadgets for section: ' + section.name)
             newGadgets = r.searchRopGadgets(
                 section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter)
@@ -209,21 +209,34 @@ class Console(cmd.Cmd):
 
 
     def __loadGadgets(self):
-        self.__loaded = True
-        self.__allGadgets = self.__searchGadgets()
+        self.binary.loaded = True
+        self.binary.gadgets = self.__searchGadgets(self.binary)
         self.__filterBadBytes()
 
+    def __loadAllGadgets(self):
+
+        for binary in self.__binaries:
+            self.__cprinter.printInfo('Load %s' % binary.fileName)
+            binary.gadgets = self.__searchGadgets(binary)
+            binary.loaded = True
+
+    def __loadUnloadedGadgets(self):
+
+        for binary in self.__binaries:
+            if not binary.loaded:
+                binary.gadgets = self.__searchGadgets(binary)
+                binary.loaded = True
 
     def __filterBadBytes(self):
-        self.__gadgets = self.__allGadgets
+        self.binary.gadgets = self.binary.gadgets
 
     def __searchAndPrintGadgets(self):
 
-        gadgets = self.__gadgets
+        gadgets = self.binary.gadgets
         if self.__options.search:
-            gadgets = self.__search(self.__gadgets, self.__options.search, self.__options.quality)
+            gadgets = self.__search(self.binary.gadgets, self.__options.search, self.__options.quality)
         elif self.__options.filter:
-            gadgets = self.__filter(self.__gadgets, self.__options.filter)
+            gadgets = self.__filter(self.binary.gadgets, self.__options.filter)
         self.__printRopGadgets(gadgets)
 
     def __filter(self, gadgets, filter):
@@ -241,14 +254,8 @@ class Console(cmd.Cmd):
 
         old = self.__options.nocolor
         self.__options.nocolor = True
-        gadgetlist = []
-        vaddr = 0
-        for section, gadget in gadgets.items():
-            if len(gadget) != 0:
-                vaddr = self.__options.I + section.offset if self.__options.I != None else section.virtualAddress
-            gadgetlist.extend(gadget)
 
-        generator = RopChain.get(self.binary,split[0], gadgetlist, vaddr)
+        generator = RopChain.get(self.binaries,split[0])
 
         self.__printInfo('generating rop chain')
         self.__printSeparator(behind='\n\n')
@@ -294,7 +301,7 @@ class Console(cmd.Cmd):
                 return
         dao = GadgetDAO(dbpath, self.__cprinter)
 
-        dao.save(self.__gadgets)
+        dao.save(self.binary.gadgets)
 
     def __loaddb(self, dbpath):
         if not dbpath.endswith('.db'):
@@ -304,8 +311,8 @@ class Console(cmd.Cmd):
 
         dao = GadgetDAO(dbpath, self.__cprinter)
 
-        self.__gadgets = dao.load(self.binary)
-        self.__loaded = True
+        self.binary.gadgets = dao.load(self.binary)
+        self.binary.loaded = True
 
 
     def __handleOptions(self, options):
@@ -339,7 +346,7 @@ class Console(cmd.Cmd):
          #   self.__checksec()
         elif options.chain:
             self.__loadGadgets()
-            self.__generateChain(self.__gadgets, options.chain)
+            self.__generateChain(self.binary.gadgets, options.chain)
         elif options.db:
             self.__loaddb(options.db)
             self.__searchAndPrintGadgets()
@@ -359,28 +366,64 @@ class Console(cmd.Cmd):
 
     def help_show(self):
         desc = 'shows informations about the loaded file'
-        if self.__printer:
+        if self.binary.printer:
             desc += ('Available informations:\n' +
-                     ('\n'.join(self.__printer.availableInformations)))
+                     ('\n'.join(self.binary.printer.availableInformations)))
         self.__printHelpText(
             'show <info>', 'shows informations about the loaded file')
 
     def complete_show(self, text, line, begidx, endidx):
         if self.binary:
-            return [i for i in self.__printer.availableInformations if i.startswith(
+            return [i for i in self.binary.printer.availableInformations if i.startswith(
                     text)]
+
+    @safe_cmd
+    def do_close(self, text):  
+        
+        if text.isdigit():
+            idx = int(text)
+            if len(self.__binaries) > idx-1:
+                del self.__binaries[idx-1]
+                if len(self.__binaries) != 0:
+                    self.__binary = self.__binaries[0]
+                else:
+                    self.__binary = None
+            else:
+                self.__cprinter.printError('Index is too small or to large')
+        elif text == 'all':
+            self.__binaries = []
+            self.__binary = None
+        else:
+            self.help_close()
+
+
+    def help_close(self):
+        self.__printHelpText('close idx/all', 'closes opened files\nidx - index of file which should be closed\nall - closes all files')
 
     @safe_cmd
     def do_file(self, text):
         if len(text) == 0:
-            self.help_file()
-            return
+            data = []
+            for index,binary in enumerate(self.__binaries):
+                if self.binary == binary:
+                    data.append((cstr(index+1), cstr(binary.fileName+'*') , cstr(binary.loaded)))
+                else:
+                    data.append((cstr(index+1), cstr(binary.fileName) , cstr(binary.loaded)))
 
-        self.__loadFile(text)
-        self.__printInfo('File loaded.')
+            printTable('Opened Files',(cstr('No.'),cstr('Name'), cstr('Loaded')), data)
+            
+        elif text.isdigit():
+            idx = int(text)-1
+            if idx >= len(self.__binaries):
+                raise RopperError('Index is too small or to large')
+            self.__binary = self.__binaries[idx]
+            self.__printInfo('File \'%s\' selected.' % self.binary.fileName)
+        else:
+            self.__loadFile(text)
+            self.__printInfo('File loaded.')
 
     def help_file(self):
-        self.__printHelpText('file <file>', 'loads a file')
+        self.__printHelpText('file <file>|<idx>', 'file - loads a file\nidx - select this loaded file')
 
     @safe_cmd
     def do_set(self, text):
@@ -423,22 +466,27 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_gadgets(self, text):
 
-        if not self.__loaded:
+        if not self.binary.loaded:
             self.__printInfo('Gadgets have to be loaded with load')
             return
-        self.__printRopGadgets(self.__gadgets)
+
+        self.__printRopGadgets(self.binary.gadgets)
 
     def help_gadgets(self):
         self.__printHelpText('gadgets', 'shows all loaded gadgets')
 
     @safe_cmd
     def do_load(self, text):
-
-        self.__loadGadgets()
-        self.__printInfo('gadgets loaded.')
+        if text == 'all':
+            self.__loadAllGadgets()
+        elif text == 'unloaded':
+            self.__loadUnloadedGadgets()
+        else:    
+            self.__loadGadgets()
+            self.__printInfo('gadgets loaded.')
 
     def help_load(self):
-        self.__printHelpText('load', 'loads gadgets')
+        self.__printHelpText('load', 'all - loads gadgets of all opened files\nunloaded - loads gadgets of all unloaded opened files\nloads gadgets')
 
     @safe_cmd
     def do_ppr(self, text):
@@ -453,7 +501,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.help_filter()
             return
 
-        self.__printRopGadgets(self.__filter(self.__gadgets, text))
+        self.__printRopGadgets(self.__filter(self.binary.gadgets, text))
 
     def help_filter(self):
         self.__printHelpText('filter <filter>', 'filters gadgets')
@@ -468,7 +516,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if match:
             qual = int(match.group(0)[1:-1])
             text = text[len(match.group(0)):].strip()
-        self.__printRopGadgets(self.__search(self.__gadgets, text, qual))
+        for binary in self.__binaries:
+            self.__cprinter.printInfo('Search in gadgets of file \'%s\'' % binary.fileName)
+            self.__printRopGadgets(self.__search(binary.gadgets, text, qual))
 
     def help_search(self):
         desc = 'search gadgets.\n\n'
@@ -507,9 +557,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_imagebase(self, text):
         if len(text) == 0:
-            self.__options.I = None
+            self.binary.manualImagebase = None
         elif isHex(text):
-            self.__options.I = int(text, 16)
+            self.binary.manualImagebase = int(text, 16)
         else:
             self.help_imagebase()
 
@@ -609,10 +659,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_ropchain()
             return
-        if not self.__gadgets:
+        if not self.binary.gadgets:
             self.do_load(text)
 
-        self.__generateChain(self.__gadgets, text)
+        gadgets = []
+        for binary in self.__binaries:
+            gadgets.append(binary.gadgets)
+        self.__generateChain(gadgets, text)
 
 
     def help_ropchain(self):
@@ -645,7 +698,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if not text:
             self.help_savedb()
             return
-        if not self.__loaded:
+        if not self.binary.loaded:
             self.__printInfo('Gadgets have to be loaded with load')
             return
         self.__savedb(text)

@@ -40,7 +40,7 @@ class Ropper(object):
     def arch(self):
         return self._arch
 
-    def searchJmpReg(self, code, regs, virtualAddress=0x0,  badbytes=''):
+    def searchJmpReg(self, code, regs, virtualAddress=0x0,  badbytes='', section=None):
         if self.__arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
@@ -53,11 +53,11 @@ class Ropper(object):
             insts = [toBytes(0xff , 0xe0 | Register[reg]), toBytes(0xff, 0xd0 | Register[reg]),  toBytes(0x50 | Register[reg] , 0xc3)]
             for inst in insts:
 
-                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True, badbytes=badbytes))
+                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True, badbytes=badbytes, section=section))
 
         return sorted(toReturn, key=lambda x: str(x))
 
-    def searchOpcode(self, code, opcode, virtualAddress=0x0, disass=False, badbytes=''):
+    def searchOpcode(self, code, opcode, virtualAddress=0x0, disass=False, badbytes='', section=None):
 
         toReturn = []
         code = bytearray(code)
@@ -76,10 +76,11 @@ class Ropper(object):
                     continue
                 c += 1
                 opcodeGadget._binary = self.__binary
+                opcodeGadget._section = section
                 toReturn.append(opcodeGadget)
         return toReturn
 
-    def searchPopPopRet(self, code, virtualAddress=0x0,  badbytes=''):
+    def searchPopPopRet(self, code, virtualAddress=0x0,  badbytes='', section=None):
         if self.__arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
@@ -102,16 +103,18 @@ class Ropper(object):
                         break
                 if len(ppr) == 3:
                     ppr._binary = self.__binary
+                    ppr._section = section
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None):
+    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None, section=None):
         toReturn = []
         code = bytes(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
             gadget = Gadget(self.__arch)
             gadget._binary = self.__binary
+            gadget._section = section
             gadget.imageBase = virtualAddress
             hasret = False
             c = 0

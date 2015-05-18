@@ -45,6 +45,7 @@ class Gadget(object):
         self.__category = None
         self.__imageBase = 0x0
         self._binary = None
+        self._section = None
 
     @property
     def lines(self):

@@ -137,7 +137,7 @@ class Console(cmd.Cmd):
         for section in self.binary.executableSections:
 
             gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, 0x0, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchJmpReg(section.bytes, regs, 0x0, badbytes=unhexlify(self.__options.badbytes), section=section))
 
         self.binary.printer.printTableHeader('JMP Instructions')
         counter = 0
@@ -155,7 +155,7 @@ class Console(cmd.Cmd):
         gadgets = {}
         for section in self.binary.executableSections:
             gadgets[section]=(
-                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, section=section, badbytes=unhexlify(self.__options.badbytes)))
 
         self.binary.printer.printTableHeader('Opcode')
         counter = 0
@@ -175,7 +175,7 @@ class Console(cmd.Cmd):
         for section in self.binary.executableSections:
 
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-            pprs = r.searchPopPopRet(section.bytes, 0x0, badbytes=unhexlify(self.__options.badbytes))
+            pprs = r.searchPopPopRet(section.bytes, 0x0, section=section, badbytes=unhexlify(self.__options.badbytes))
             for ppr in pprs:
                 ppr.imageBase = vaddr
                 self.__printGadget(ppr)
@@ -201,7 +201,7 @@ class Console(cmd.Cmd):
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             self.__printInfo('Loading gadgets for section: ' + section.name)
             newGadgets = r.searchRopGadgets(
-                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter)
+                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, section=section, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter)
 
             gadgets[section] = (newGadgets)
         return gadgets

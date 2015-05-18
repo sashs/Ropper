@@ -68,6 +68,7 @@ class ELF(Loader):
         self.symbols = {}
         self.relocations = {}
         self.__elf_module = None
+        self.__execSections = None
 
         super(ELF, self).__init__(filename)
 
@@ -213,14 +214,15 @@ class ELF(Loader):
 
     @property
     def executableSections(self):
-        sections = []
-        for phdr in self.phdrs:
-            if phdr.p_flags & PF.EXEC > 0:
-                p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
-                execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
-                sections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
+        if not self.__execSections:
+            self.__execSections = []
+            for phdr in self.phdrs:
+                if phdr.p_flags & PF.EXEC > 0:
+                    p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
+                    execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
+                    self.__execSections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
 
-        return sections
+        return self.__execSections
 
     @property
     def codeVA(self):

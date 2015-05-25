@@ -200,7 +200,7 @@ class PE(Loader):
                     ImageDirectoryEntry.IMPORT].Size
                 self.__parseImports(section, p_tmp, size)
                 idata = True
-            if section.Name in (b'code', b'.text'):
+            if section.Characteristics & IMAGE_SCN.CNT_CODE > 0:
                 p_tmp.value = p_bytes.value + section.PointerToRawData
                 size = section.PhysicalAddress_or_VirtualSize
                 self.__parseCode(section, p_tmp, size)

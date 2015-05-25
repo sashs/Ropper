@@ -26,7 +26,7 @@ from ropperapp.common.error import RopperError
 from ropperapp.common.coloredstring import *
 
 class Category(enum.Enum):
-    _enum_ = 'STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE'
+    _enum_ = 'STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
 
 
 
@@ -91,7 +91,7 @@ class Gadget(object):
         toReturn = ''
         for line in self.__lines:
             toReturn += cstr(line[1], Color.LIGHT_GRAY) + cstr('; ', Color.LIGHT_BLUE)
-
+        
         return toReturn
 
     def simpleString(self):

@@ -486,7 +486,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printInfo('gadgets loaded.')
 
     def help_load(self):
-        self.__printHelpText('load', 'all - loads gadgets of all opened files\nunloaded - loads gadgets of all unloaded opened files\nloads gadgets')
+        self.__printHelpText('load [all|unloaded]', 'all - loads gadgets of all opened files\n\t unloaded - loads gadgets of all unloaded opened files\n\t loads gadgets')
 
     @safe_cmd
     def do_ppr(self, text):

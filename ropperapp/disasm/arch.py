@@ -115,7 +115,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe']
+        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe']
 
     def _initCategories(self):
         self._categories = {
@@ -129,6 +129,7 @@ class ArchitectureX86(Architecture):
                 gadget.Category.SUB_REG : (('^sub (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.XCHG_REG : (('^xchg (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.PUSHAD : (('^pushal $',),('mov','call','jmp')),
                 gadget.Category.SYSCALL : (('^int (?P<dst>0x80)$',),('mov','call','jmp'))}
 
 

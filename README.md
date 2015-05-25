@@ -57,6 +57,7 @@ Usage
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86]
       mprotect  (mprotect=<address>:<size>) [Linux x86]
+      virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 
     optional arguments:
       -h, --help            show this help message and exit

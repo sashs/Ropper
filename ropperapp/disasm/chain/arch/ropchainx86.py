@@ -710,7 +710,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         if len(gadgets) > 0:
             if (gadgets[0]._binary, gadgets[0]._section) not in self._usedBinaries:
                 self._usedBinaries.append((gadgets[0]._binary, gadgets[0]._section))
-            return self._printRopInstruction(gadgets[0])
+            return gadgets[0]
         else:
             return ''
 
@@ -746,8 +746,8 @@ class RopChainX86VirtualProtect(RopChainX86):
 
         gadgets = []
         gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh','esi','si']))
-        gadgets.append((self._createNumber, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch','esi','si']))
-        gadgets.append((self._createNumber, [jmp_esp],{'reg':'ebp'},['ebp', 'bp','esi','si']))
+        gadgets.append((self._createAddress, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch','esi','si']))
+        gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp','esi','si']))
         gadgets.append((self._createNumber, [0x40],{'reg':'edx'},['edx', 'dx', 'dh', 'dl','esi','si']))
         gadgets.append((self._createNumber, [0x90909090],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
         gadgets.append((self._createNumber, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di','esi','si']))

@@ -130,6 +130,7 @@ class ArchitectureX86(Architecture):
                 gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.XCHG_REG : (('^xchg (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.PUSHAD : (('^pushal $',),('mov','call','jmp')),
+                gadget.Category.NEG_REG : (('^neg (?P<dst>...)$',),('mov','call','jmp')),
                 gadget.Category.SYSCALL : (('^int (?P<dst>0x80)$',),('mov','call','jmp'))}
 
 

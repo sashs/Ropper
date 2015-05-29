@@ -71,7 +71,7 @@ class RopChainX86(RopChain):
         - method to create chaingadget
         - list with arguments
         - dict with named arguments
-        - list with register which is not allowed to override in the method
+        - list with registers which are not allowed to override in the gadget
         """
         failed = []
         cur_len = 0
@@ -468,25 +468,44 @@ class RopChainX86(RopChain):
         toReturn = self._printRopInstruction(xchg)
         return (toReturn, reg, other)
 
+    def _createNumberNeg(self, number, reg=None, badRegs=None, dontModify=None):
+        neg = self._find(Category.NEG_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
+        if not neg:
+            raise RopChainError('Cannot build number gadget with neg!')
+
+        pop = self._find(Category.LOAD_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
+        if not pop:
+            raise RopChainError('Cannot build number gadget with neg!')
+        
+        toReturn = self._printRopInstruction(pop)
+        toReturn += self._printPaddingInstruction(toHex(~number))
+        toReturn += self._printRopInstruction(neg)
+        return (toReturn, reg,)
+
     def _createNumber(self, number, reg=None, badRegs=None, dontModify=None, xchg=True):
         try:
-            if number < 50:
+            if self._containsZeroByte(number):
                 try:
-                    return self._createNumberXOR(number, reg, badRegs,dontModify)
-                except RopChainError:
-                    try:
-                        return self._createNumberPop(number, reg, badRegs,dontModify)
-                    except RopChainError:
+                    return self._createNumberNeg(number, reg, badRegs,dontModify)
+                except Exception as e:
+                    print e
+                    if number < 50:
+                        try:
+                            return self._createNumberXOR(number, reg, badRegs,dontModify)
+                        except RopChainError:
+                            try:
+                                return self._createNumberPop(number, reg, badRegs,dontModify)
+                            except RopChainError:
+                                try:
+                                    return self._createNumberSubtract(number, reg, badRegs,dontModify)
+                                except RopChainError:
+                                    return self._createNumberAddition(number, reg, badRegs,dontModify)
+
+                    else :
                         try:
                             return self._createNumberSubtract(number, reg, badRegs,dontModify)
                         except RopChainError:
                             return self._createNumberAddition(number, reg, badRegs,dontModify)
-
-            elif self._containsZeroByte(number):
-                try:
-                    return self._createNumberSubtract(number, reg, badRegs,dontModify)
-                except RopChainError:
-                    return self._createNumberAddition(number, reg, badRegs,dontModify)
             else:
                 popReg =self._find(Category.LOAD_REG, reg=reg, badDst=badRegs,dontModify=dontModify)
                 if not popReg:
@@ -701,7 +720,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         r = Ropper(self._binaries[0])
         gadgets = []
         for section in self._binaries[0].executableSections:
-            vaddr = section.virtualAddress
+            vaddr = section.offset
             gadgets.extend(
                 r.searchJmpReg(section.bytes, reg, vaddr, section=section))
 
@@ -738,19 +757,27 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain = self._printHeader()
         chain += 'rop = \'\'\n'
         chain += '\n\nshellcode = \'\\xcc\'*100\n\n'
-        try:
-            chain_tmp = self._createLoadRegValueFrom('esi', address)[0]
-        except:
-            chain_tmp = ''
-            print('Cannot create complete chain!')
-
         gadgets = []
-        gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh','esi','si']))
-        gadgets.append((self._createAddress, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch','esi','si']))
-        gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp','esi','si']))
-        gadgets.append((self._createNumber, [0x40],{'reg':'edx'},['edx', 'dx', 'dh', 'dl','esi','si']))
-        gadgets.append((self._createNumber, [0x90909090],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
-        gadgets.append((self._createNumber, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di','esi','si']))
+        to_extend = []
+        chain_tmp = ''
+        try:
+            chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
+            gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+            to_extend = ['esi','si']
+        except:
+            
+            jmp_eax = self._searchOpcode('ff20') # jmp [eax]
+            gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
+            gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
+
+
+        
+        gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
+        gadgets.append((self._createAddress, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']+to_extend))
+        gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
+        gadgets.append((self._createNumber, [0x40],{'reg':'edx'},['edx', 'dx', 'dh', 'dl']+to_extend))
+        
+        gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))
 
   
         chain_tmp += self._createDependenceChain(gadgets)

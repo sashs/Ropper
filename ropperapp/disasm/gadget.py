@@ -26,7 +26,7 @@ from ropperapp.common.error import RopperError
 from ropperapp.common.coloredstring import *
 
 class Category(enum.Enum):
-    _enum_ = 'STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
+    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
 
 
 

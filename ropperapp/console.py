@@ -255,17 +255,17 @@ class Console(cmd.Cmd):
         old = self.__options.nocolor
         self.__options.nocolor = True
 
-        generator = RopChain.get(self.__binaries,split[0])
+        generator = RopChain.get(self.__binaries,split[0], self.__cprinter)
 
         self.__printInfo('generating rop chain')
-        self.__printSeparator(behind='\n\n')
+        #self.__printSeparator(behind='\n\n')
 
         if len(split) == 2:
             generator.create(split[1])
         else:
             generator.create()
 
-        self.__printSeparator(before='\n\n')
+        #self.__printSeparator(before='\n\n')
         self.__printInfo('rop chain generated!')
         self.__options.nocolor = old
 

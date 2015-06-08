@@ -452,7 +452,6 @@ class RopChainX86System(RopChainX86):
         section = self._binary.getSection(b'.data')
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
-        import pdb; pdb.set_trace()
 
         chain += self._createCommand(cmd,section.struct.sh_addr)[0]
         badregs = []

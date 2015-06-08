@@ -213,7 +213,6 @@ class RopChainX86(RopChain):
             for i in range(len(regs)):
                 toReturn +=self._printPaddingInstruction()
             toReturn += self._printRopInstruction(write4)
-
         return (toReturn,popReg.category[2]['dst'], popReg2.category[2]['dst'])
 
 
@@ -450,9 +449,11 @@ class RopChainX86System(RopChainX86):
         if len(cmd.split(' ')) > 1:
             raise RopChainError('No argument support for execve commands')
 
-        section = self._binary.getSection('.data')
+        section = self._binary.getSection(b'.data')
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
+        import pdb; pdb.set_trace()
+
         chain += self._createCommand(cmd,section.struct.sh_addr)[0]
         badregs = []
         while True:

@@ -135,9 +135,9 @@ class Console(cmd.Cmd):
         r = Ropper(self.binary)
         gadgets = {}
         for section in self.binary.executableSections:
-
+            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, 0x0, badbytes=unhexlify(self.__options.badbytes), section=section))
+                r.searchJmpReg(section.bytes, regs, vaddr, badbytes=unhexlify(self.__options.badbytes), section=section))
 
         self.binary.printer.printTableHeader('JMP Instructions')
         counter = 0
@@ -154,8 +154,9 @@ class Console(cmd.Cmd):
         r = Ropper(self.binary)
         gadgets = {}
         for section in self.binary.executableSections:
+            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             gadgets[section]=(
-                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, section=section, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), vaddr, section=section, badbytes=unhexlify(self.__options.badbytes)))
 
         self.binary.printer.printTableHeader('Opcode')
         counter = 0

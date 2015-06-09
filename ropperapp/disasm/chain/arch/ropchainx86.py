@@ -490,7 +490,7 @@ class RopChainX86(RopChain):
             raise RopChainError('Cannot build number gadget with neg!')
         
         toReturn = self._printRopInstruction(pop)
-        toReturn += self._printPaddingInstruction(toHex(~number))
+        toReturn += self._printPaddingInstruction(toHex((~number)+1) 
         toReturn += self._printRopInstruction(neg)
         return (toReturn, reg,)
 

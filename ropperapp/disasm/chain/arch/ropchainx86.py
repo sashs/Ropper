@@ -391,8 +391,7 @@ class RopChainX86(RopChain):
         regs = self._paddingNeededFor(popDst)
         for i in range(len(regs)):
             toReturn += self._printPaddingInstruction()
-        toReturn += self._printRopInstruction(sub)
-
+        toReturn += self._printRopInstruction(sub)       
         return (toReturn, popDst.category[2]['dst'],popSrc.category[2]['dst'])
 
     def _createNumberAddition(self, number, reg=None, badRegs=None, dontModify=None):
@@ -455,11 +454,14 @@ class RopChainX86(RopChain):
             clearReg = self._find(Category.CLEAR_REG, reg=reg, badDst=badRegs, badSrc=badRegs,dontModify=dontModify, srcEqDst=True)
             if not clearReg:
                 raise RopChainError('Cannot build number with xor gadget!')
-            incReg = self._find(Category.INC_REG, reg=clearReg.category[2]['src'], dontModify=dontModify)
-            if not incReg:
-                if not badRegs:
-                    badRegs = []
-                badRegs.append(clearReg.category[2]['src'])
+            if number > 0:
+                incReg = self._find(Category.INC_REG, reg=clearReg.category[2]['src'], dontModify=dontModify)
+                if not incReg:
+                    if not badRegs:
+                        badRegs = []
+                    badRegs.append(clearReg.category[2]['src'])
+                else:
+                    break
             else:
                 break
 
@@ -482,6 +484,8 @@ class RopChainX86(RopChain):
         return (toReturn, reg, other)
 
     def _createNumberNeg(self, number, reg=None, badRegs=None, dontModify=None):
+        if number == 0:
+            raise RopChainError('Cannot build number gadget with neg if number is 0!')
         neg = self._find(Category.NEG_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
         if not neg:
             raise RopChainError('Cannot build number gadget with neg!')
@@ -491,7 +495,7 @@ class RopChainX86(RopChain):
             raise RopChainError('Cannot build number gadget with neg!')
         
         toReturn = self._printRopInstruction(pop)
-        toReturn += self._printPaddingInstruction(toHex(~number))
+        toReturn += self._printPaddingInstruction(toHex((~number)+1)) # two's complement
         toReturn += self._printRopInstruction(neg)
         return (toReturn, reg,)
 

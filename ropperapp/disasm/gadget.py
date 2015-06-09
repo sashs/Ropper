@@ -18,12 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import sqlite3
 import hashlib
 import ropperapp.common.enum as enum
 from ropperapp.common.utils import toHex
 from ropperapp.common.error import RopperError
 from ropperapp.common.coloredstring import *
+
+# Optional sqlite support
+try:
+    import sqlite3
+except:
+    pass
 
 class Category(enum.Enum):
     _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
@@ -143,6 +148,9 @@ class GadgetDAO(object):
 
 
     def save(self, section_gadgets):
+        if 'sqlite3' not in globals():
+            self._printer.printError('sqlite is not installed!')
+            return
         conn = sqlite3.connect(self.__dbname)
         c = conn.cursor()
         c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs,gcount INTEGER, hash)')
@@ -175,6 +183,9 @@ class GadgetDAO(object):
 
 
     def load(self, binary, printer=None):
+        if 'sqlite3' not in globals():
+            self._printer.printError('sqlite is not installed!')
+            return
         toReturn = {}
         execSect = binary.executableSections
         gcount = 0

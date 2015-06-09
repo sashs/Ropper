@@ -263,7 +263,6 @@ class RopChainX86(RopChain):
             for i in range(len(regs)):
                 toReturn +=self._printPaddingInstruction()
             toReturn += self._printRopInstruction(write4)
-
         return (toReturn,popReg.category[2]['dst'], popReg2.category[2]['dst'])
 
 
@@ -600,12 +599,13 @@ class RopChainX86System(RopChainX86):
         self._printer.printInfo('ROPchain Generator for syscall execve:\n')
         self._printer.println('\nwrite command into data section\neax 0xb\nebx address to cmd\necx address to null\nedx address to null\n')
 
-        section = self._binaries[0].getSection('.data')
+        section = self._binaries[0].getSection(b'.data')
         
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
         chain_tmp = '\n'
         chain_tmp += self._createCommand(cmd,section.struct.sh_offset+0x1000)[0]
+
         badregs = []
 
         while True:

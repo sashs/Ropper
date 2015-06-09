@@ -148,6 +148,7 @@ class GadgetDAO(object):
     def save(self, section_gadgets):
         if 'sqlite3' not in globals():
             self._printer.printError('sqlite is not installed!')
+            return
         conn = sqlite3.connect(self.__dbname)
         c = conn.cursor()
         c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs,gcount INTEGER, hash)')
@@ -182,6 +183,7 @@ class GadgetDAO(object):
     def load(self, binary, printer=None):
         if 'sqlite3' not in globals():
             self._printer.printError('sqlite is not installed!')
+            return
         toReturn = {}
         execSect = binary.executableSections
         gcount = 0

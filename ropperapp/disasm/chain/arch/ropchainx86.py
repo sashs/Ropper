@@ -45,7 +45,7 @@ class RopChainX86(RopChain):
 
     def _printRebase(self):
         toReturn = ''
-        print self._usedBinaries
+       
         for binary,section in self._usedBinaries:
             imageBase = binary.manualImagebase + section.offset if binary.manualImagebase != None else section.virtualAddress
             toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase , 4), binary.fileName))
@@ -123,6 +123,7 @@ class RopChainX86(RopChain):
                 
             failed.append(tuple(fail))
         else:
+            self._printer.println('')
             self._printer.printInfo('Cannot create chain which fills all registers')
         #    print('Impossible to create complete chain')
         self._printer.println('')    
@@ -704,7 +705,7 @@ class RopChainX86Mprotect(RopChainX86):
 
         chain = self._printHeader()
         
-        chain += '\n\nshellcode = \'\\xcc\'*100\n\n'
+        chain += 'shellcode = \'\\xcc\'*100\n\n'
 
         gadgets = []
         gadgets.append((self._createNumber, [address],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
@@ -726,7 +727,7 @@ class RopChainX86Mprotect(RopChainX86):
         self._printer.printInfo('Look for jmp esp')
         jmp_esp = self._createJmp()
         if jmp_esp:
-            self-_printer.printInfo('jmp esp found')
+            self._printer.printInfo('jmp esp found')
             chain_tmp += jmp_esp
         else:
             self-_printer.printInfo('no jmp esp found')

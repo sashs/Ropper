@@ -69,13 +69,11 @@ class Gadget(object):
         return self._vaddr
 
     def append(self, address, mnem, args=None):
-        mnem = cstr(mnem, Color.LIGHT_YELLOW)
         if args:
-            args = cstr(args, Color.WHITE)
-            self.__lines.append((address, mnem + ' ' + args))
+            self.__lines.append((address, cstr(mnem, Color.LIGHT_YELLOW) + ' ' + cstr(args, Color.WHITE)))
             self._gadget += mnem + ' ' + args + '; '
         else:
-            self.__lines.append((address, mnem))
+            self.__lines.append((address, cstr(mnem, Color.LIGHT_YELLOW)))
             self._gadget += mnem + '; '
         
 

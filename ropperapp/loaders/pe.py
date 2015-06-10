@@ -72,6 +72,10 @@ class PE(Loader):
                 toReturn.append(self.sections[value.Name])
         return toReturn
 
+    @property
+    def dataSections(self):
+        return None
+
 
     def setNX(self, enable):
         if enable:

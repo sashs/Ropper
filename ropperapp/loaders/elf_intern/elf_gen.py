@@ -155,6 +155,12 @@ class SHN(Enum):
     COMMON = 0xfff2
     HIRESERVE = 0xffff
 
+class SHF(Enum):
+    WRITE = 0x1
+    ALLOC = 0x2
+    EXECINSTR = 0x4
+    MASKPROC = 0xf0000000
+
 
 class SHT(Enum):
     NULL = 0x0

@@ -53,10 +53,10 @@ class cstr(str):
 		return self._color
 
 	def __add__(self, arg):
-		return str.__add__(str(self),str(arg))
+		return cstr(str.__add__(str(self),str(arg)))
 
 	def __iadd__(self, arg):
-		return str.__iadd__(str(self),str(arg))
+		return cstr(str.__add__(str(self),str(arg)))
 
 	def __len__(self):
 		return str.__len__(str(self))

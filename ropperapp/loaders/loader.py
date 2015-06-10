@@ -87,6 +87,10 @@ class Loader(Abstract):
     def executableSections(self):
         return None
 
+    @abstractproperty
+    def dataSections(self):
+        return None
+
     @abstractmethod
     def _parseFile(self):
         pass

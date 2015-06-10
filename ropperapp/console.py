@@ -315,6 +315,26 @@ class Console(cmd.Cmd):
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
 
+    def __printStrings(self, string):
+        data = []
+        if not string or string == '[ -~]{2}[ -~]*':
+            string = '[ -~]{2}[ -~]*'
+        else:
+            string = self.binary.arch.searcher.prepareFilter(string)
+        sections = list(self.__binary.dataSections)
+        
+        for section in sections:
+            if not self.__options.section or self.__options.section == str(section.name):
+                b = bytes(bytearray(section.bytes))
+                for match in re.finditer(string, b):
+
+                    data.append( (cstr(toHex(match.start() + section.virtualAddress), Color.RED) , cstr(match.group(), Color.LIGHT_GRAY)))
+        printTable('Strings',(cstr('Address'), cstr('Value')), data)
+
+    def __printSectionInHex(self, section):
+        section = self.__binary.getSection(section.encode('ASCII'))
+        printHexFormat(section.bytes, section.struct.sh_addr)
+
 
     def __handleOptions(self, options):
         if options.sections:
@@ -343,6 +363,10 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
+        elif options.string:
+            self.__printStrings(options.string)
+        elif options.hex and options.section:
+            self.__printSectionInHex(options.section)
         #elif options.checksec:
          #   self.__checksec()
         elif options.chain:
@@ -711,6 +735,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.help_loaddb()
             return
         self.__loaddb(text)
+
+    def do_data(self, text):
+        self.__printStrings(text)
 
     def do_EOF(self, text):
         self.__cprinter.println('')

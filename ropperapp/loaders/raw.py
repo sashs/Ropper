@@ -41,6 +41,10 @@ class Raw(Loader):
     def executableSections(self):
         return [self.__codeSection]
 
+    @property
+    def dataSections(self):
+        return None
+
     def _parseFile(self):
         self.__codeSection = Section('bytes', self._bytes, 0x0, 0x0)
 

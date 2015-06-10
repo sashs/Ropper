@@ -90,6 +90,10 @@ class MachO(Loader):
                         toReturn.append(Section(section.sectname, sectbytes, section.addr, section.offset))
         return toReturn
 
+    @property
+    def dataSections(self):
+        return None
+
 
     def __loadModule(self):
         modName = None

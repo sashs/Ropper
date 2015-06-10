@@ -70,10 +70,10 @@ class Gadget(object):
 
     def append(self, address, mnem, args=None):
         if args:
-            self.__lines.append((address, cstr(mnem, Color.LIGHT_YELLOW) + ' ' + cstr(args, Color.WHITE)))
+            self.__lines.append((address, mnem + ' ' + args, mnem ,args))
             self._gadget += mnem + ' ' + args + '; '
         else:
-            self.__lines.append((address, cstr(mnem, Color.LIGHT_YELLOW)))
+            self.__lines.append((address, mnem, mnem))
             self._gadget += mnem + '; '
         
 
@@ -100,7 +100,11 @@ class Gadget(object):
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:
-            toReturn += cstr(line[1], Color.WHITE) + cstr('; ', Color.LIGHT_BLUE)
+            if len(line) == 4:
+                toReturn += cstr(line[2], Color.YELLOW)+ ' ' + cstr(line[3], Color.WHITE)+ cstr('; ', Color.LIGHT_BLUE)
+            else:
+                toReturn += cstr(line[2], Color.YELLOW)+ cstr('; ', Color.LIGHT_BLUE)
+
         
         return toReturn
 

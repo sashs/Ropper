@@ -73,6 +73,35 @@ class cstr(str):
 			return data
 		return '\x1b[%sm%s\x1b[0m' % (self._color.value, data)
 
+	def __eq__(self, other):
+		data = str.__str__(self)
+		other = str.__str__(other)
+		return data.__eq__(other)
+
+	def __ne__(self, other):
+		data = str.__str__(self)
+		other = str.__str__(other)
+		return data.__ne__(other)
+
+	def __lt__(self, other):
+		data = str.__str__(self)
+		other = str.__str__(other)
+		return data.__lt__(other)
+
+	def __le__(self, other):
+		data = str.__str__(self)
+		other = str.__str__(other)
+		return data.__le__(other)
+
+	def __gt__(self, other):
+		data = str.__str__(self)
+		other = str.__str__(other)
+		return data.__gt__(other)
+
+	def __ge__(self, other):
+		data = str.__str__(self)
+		other = str.__str__(other)
+		return data.__ge__(other)
 
 	def colorize(self, color):
 		self._color = color

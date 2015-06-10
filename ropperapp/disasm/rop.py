@@ -68,7 +68,7 @@ class Ropper(object):
                 if disass:
                     for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[index:index + len(opcode)]), virtualAddress + index):
                         opcodeGadget.append(
-                            i.address, i.mnemonic + ' ' + i.op_str)
+                            i.address, i.mnemonic , i.op_str)
                 else:
                     opcodeGadget.append(
                         virtualAddress + index, hexlify(opcode).decode('utf-8'))
@@ -95,7 +95,7 @@ class Ropper(object):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
                     ppr.append(
-                        address, mnemonic + ' ' + op_str)
+                        address, mnemonic , op_str)
                     if c == 0 and ppr.addressesContainsBytes(badbytes):
                         break
                     c += 1
@@ -121,7 +121,7 @@ class Ropper(object):
             for i in self.__disassembler.disasm(code_str, codeStartAddress):
                 if i.mnemonic not in self.__arch.badInstructions:
                     gadget.append(
-                        i.address, i.mnemonic + ' ' + i.op_str)
+                        i.address, i.mnemonic,i.op_str)
                     if c == 0 and gadget.addressesContainsBytes(badbytes):
                         return None
                     c += 1
@@ -179,7 +179,8 @@ class Ropper(object):
         if pprinter:
             pprinter.printProgress('clearing up...', 1)
             pprinter.finishProgress()
-        return toReturn
+        
+        return sorted(toReturn, key=Gadget.simpleInstructionString)
 
 
 def toBytes(*b):

@@ -68,9 +68,16 @@ class Gadget(object):
     def vaddr(self):
         return self._vaddr
 
-    def append(self, address, inst):
-        self.__lines.append((address, inst))
-        self._gadget += inst + '; '
+    def append(self, address, mnem, args=None):
+        mnem = cstr(mnem, Color.LIGHT_YELLOW)
+        if args:
+            args = cstr(args, Color.WHITE)
+            self.__lines.append((address, mnem + ' ' + args))
+            self._gadget += mnem + ' ' + args + '; '
+        else:
+            self.__lines.append((address, mnem))
+            self._gadget += mnem + '; '
+        
 
     def match(self, filter):
         if not filter or len(filter) == 0:
@@ -95,7 +102,7 @@ class Gadget(object):
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:
-            toReturn += cstr(line[1], Color.LIGHT_GRAY) + cstr('; ', Color.LIGHT_BLUE)
+            toReturn += cstr(line[1], Color.WHITE) + cstr('; ', Color.LIGHT_BLUE)
         
         return toReturn
 

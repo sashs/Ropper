@@ -89,7 +89,10 @@ def printHexFormat(data, addr):
         bytes = cstr('')
         c = 0
         for j in range(0,len(part),2):
-            bytes += cstr(('%.2x%.2x ' % tuple(part[j:j+2])), Color.WHITE if c % 2 else Color.LIGHT_GRAY)
+            if j == len(part)-1:
+                bytes += cstr(('%.2x ' % tuple(part[j:j+1])), Color.WHITE if c % 2 else Color.LIGHT_GRAY)
+            else:
+                bytes += cstr(('%.2x%.2x ' % tuple(part[j:j+2])), Color.WHITE if c % 2 else Color.LIGHT_GRAY)
             c += 1
         string = ''
         if ropperapp.app_options.nocolor:

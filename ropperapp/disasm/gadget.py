@@ -101,7 +101,7 @@ class Gadget(object):
         toReturn = ''
         for line in self.__lines:
             if len(line) == 4:
-                toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ ' ' + cstr(line[3], Color.WHITE)+ cstr('; ', Color.LIGHT_BLUE)
+                toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ ' ' + cstr(line[3], Color.LIGHT_GRAY)+ cstr('; ', Color.LIGHT_BLUE)
             else:
                 toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ cstr('; ', Color.LIGHT_BLUE)
 

@@ -340,6 +340,9 @@ class Console(cmd.Cmd):
 
                 code = bytes(bytearray(section.bytes))
                 g = ropper.disassemble(code, addr, addr - section.virtualAddress, length)
+                if not g:
+                    self.__cprinter.printError('Cannot disassemble address: %s' % toHex(addr))
+                    return
                 if len(g) < length:
                     self.__cprinter.printInfo('Cannot find specified count of instructions')
                 self.binary.printer.printTableHeader('Instructions')

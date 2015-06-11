@@ -315,7 +315,7 @@ class Console(cmd.Cmd):
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
 
-    def __printStrings(self, string):
+    def __printStrings(self, string, sec=None):
         data = []
         if not string or string == '[ -~]{2}[ -~]*':
             string = '[ -~]{2}[ -~]*'
@@ -324,7 +324,7 @@ class Console(cmd.Cmd):
         sections = list(self.__binary.dataSections)
         
         for section in sections:
-            if not self.__options.section or self.__options.section == str(section.name):
+            if not sec or sec == str(section.name):
                 b = bytes(bytearray(section.bytes))
                 for match in re.finditer(string, b):
 
@@ -364,7 +364,7 @@ class Console(cmd.Cmd):
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
         elif options.string:
-            self.__printStrings(options.string)
+            self.__printStrings(options.string, options.section)
         elif options.hex and options.section:
             self.__printSectionInHex(options.section)
         #elif options.checksec:
@@ -736,8 +736,26 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             return
         self.__loaddb(text)
 
-    def do_data(self, text):
-        self.__printStrings(text)
+    @safe_cmd
+    def do_string(self, text):
+        match = re.match('/.+/', text)
+        section = None
+        if match:
+            section = int(match.group(0)[1:-1])
+            text = text[len(match.group(0)):].strip()
+        self.__printStrings(text, section)
+
+    def help_string(self):
+        self.__printHelpText('string [/<section>/][<string>]','Looks for string <string> in section <section>. If no string is given all strings are printed. If no section is given all data sections are used.')
+
+    def do_hex(self, text):
+        if not text:
+            self.help_text()
+            return
+        self.__printSectionInHex(text)
+
+    def help_hex(self):
+        self.__printHelpText('hex <section>','Prints the section <section> in hex format')
 
     def do_EOF(self, text):
         self.__cprinter.println('')

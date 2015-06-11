@@ -262,9 +262,12 @@ class ELF(Loader):
         self.save()
 
     def getSection(self, name):
-        for hdr in self.shdrs:
-            if hdr.name == name:
-                return hdr
+        for shdr in self.shdrs:
+            if str(shdr.name) == name:
+                p_tmp = c_void_p(self._bytes_p.value + shdr.struct.sh_offset)
+                dataBytes = cast(p_tmp, POINTER(c_ubyte * shdr.struct.sh_size)).contents
+                return Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset)
+        raise RopperError('No such section: %s' % name)
 
     def checksec(self):
         return {}

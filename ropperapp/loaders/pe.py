@@ -67,15 +67,41 @@ class PE(Loader):
     def executableSections(self):
     #    toReturn = [self.sections['.text']]
         toReturn = []
-        for value in self.sectionHeader:
-            if value.Characteristics & IMAGE_SCN.CNT_CODE > 0:
-                toReturn.append(self.sections[value.Name])
+        for section in self.sectionHeader:
+            if section.Characteristics & IMAGE_SCN.CNT_CODE > 0:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+
+                toReturn.append(s)
         return toReturn
 
     @property
     def dataSections(self):
-        return None
+        toReturn = []
+        for section in self.sectionHeader:
+            if section.Characteristics & IMAGE_SCN.CNT_INITIALIZED_DATA or section.Characteristics & IMAGE_SCN.CNT_UNINITIALIZED_DATA:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
 
+                toReturn.append(s)
+        return toReturn
+
+
+    def getSection(self, name):
+        
+        for section in self.sectionHeader:
+            if str(section.Name) == name:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+
+                return s
+        raise RopperError('No such secion: %s' % name)        
 
     def setNX(self, enable):
         if enable:

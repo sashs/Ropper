@@ -43,6 +43,10 @@ class Section(object):
         self.virtualAddress = virtualAddress
         self.offset = offset
 
+    @property
+    def size(self):
+        return len(self.bytes)
+
 
 class Loader(Abstract):
 
@@ -93,6 +97,10 @@ class Loader(Abstract):
 
     @abstractmethod
     def _parseFile(self):
+        pass
+
+    @abstractmethod
+    def getSection(self, name):
         pass
 
     @abstractmethod

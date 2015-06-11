@@ -190,6 +190,8 @@ class Ropper(object):
 
 
     def disassemble(self, code, vaddr, offset, count):
+        if vaddr % self.__arch.align != 0:
+            raise RopperError('The address doesn\'t have the correct alignment')
         if count < 0:
             return self.__disassembleBackward(code, vaddr, offset, count*-1)
         gadget  = Gadget(self.__arch)

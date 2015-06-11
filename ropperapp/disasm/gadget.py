@@ -140,10 +140,19 @@ class Gadget(object):
             return cmp(str(self),str(other))
         return -1
 
-    def __str__(self):
-        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.RED))
+    def disassemblyString(self):
+        toReturn = ''
         for line in self.__lines:
-            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.BLUE) +': '+ cstr(line[1], Color.WHITE) + '\n'
+            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
+
+        return toReturn
+
+    def __str__(self):
+        if not len(self.__lines):
+            return "empty gadget"
+        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.BLUE))
+        for line in self.__lines:
+            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 
         return toReturn
 

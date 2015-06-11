@@ -137,7 +137,7 @@ class Console(cmd.Cmd):
         for section in self.binary.executableSections:
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, vaddr, badbytes=unhexlify(self.__options.badbytes), section=section))
+                r.searchJmpReg(section.bytes, regs, 0x0, badbytes=unhexlify(self.__options.badbytes), section=section))
 
         self.binary.printer.printTableHeader('JMP Instructions')
         counter = 0
@@ -156,7 +156,7 @@ class Console(cmd.Cmd):
         for section in self.binary.executableSections:
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             gadgets[section]=(
-                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), vaddr, section=section, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), 0x0, section=section, badbytes=unhexlify(self.__options.badbytes)))
 
         self.binary.printer.printTableHeader('Opcode')
         counter = 0
@@ -331,9 +331,24 @@ class Console(cmd.Cmd):
                     data.append( (cstr(toHex(match.start() + section.virtualAddress), Color.RED) , cstr(match.group(), Color.LIGHT_GRAY)))
         printTable('Strings',(cstr('Address'), cstr('Value')), data)
 
+    def __disassemble(self, addr, length):
+        eSections = self.__binary.executableSections
+
+        for section in  eSections:
+            if section.virtualAddress <= addr and section.virtualAddress + section.size > addr:
+                ropper = Ropper(self.binary)
+
+                code = bytes(bytearray(section.bytes))
+                g = ropper.disassemble(code, addr, addr - section.virtualAddress, length)
+                if len(g) < length:
+                    self.__cprinter.printInfo('Cannot find specified count of instructions')
+                self.binary.printer.printTableHeader('Instructions')
+                print g.disassemblyString()
+                return
+
     def __printSectionInHex(self, section):
         section = self.__binary.getSection(section.encode('ASCII'))
-        printHexFormat(section.bytes, section.struct.sh_addr)
+        printHexFormat(section.bytes, section.virtualAddress)
 
 
     def __handleOptions(self, options):
@@ -367,6 +382,18 @@ class Console(cmd.Cmd):
             self.__printStrings(options.string, options.section)
         elif options.hex and options.section:
             self.__printSectionInHex(options.section)
+        elif options.disassemble:
+            split = options.disassemble.split(':')
+            length = 1
+            if not isHex(split[0]):
+                raise RopperError('Number have to be in hex format 0x....')
+                
+            if len(split) > 1:
+                if split[1][1:].isdigit() or (len(split[1]) >= 3 and split[1][1] == '-' and split[1][2:].isdigit()): # is L\d or L-\d
+                    length = int(split[1][1:])
+                else:
+                    raise RopperError('Length have to be in the following format L + Number e.g. L3')
+            self.__disassemble(int(split[0],16), length)
         #elif options.checksec:
          #   self.__checksec()
         elif options.chain:
@@ -738,16 +765,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_string(self, text):
-        match = re.match('/.+/', text)
-        section = None
-        if match:
-            section = int(match.group(0)[1:-1])
-            text = text[len(match.group(0)):].strip()
-        self.__printStrings(text, section)
+        
+        self.__printStrings(text)
 
     def help_string(self):
-        self.__printHelpText('string [/<section>/][<string>]','Looks for string <string> in section <section>. If no string is given all strings are printed. If no section is given all data sections are used.')
+        self.__printHelpText('string [<string>]','Looks for string <string> in section <section>. If no string is given all strings are printed.')
 
+    @safe_cmd
     def do_hex(self, text):
         if not text:
             self.help_text()
@@ -756,6 +780,28 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_hex(self):
         self.__printHelpText('hex <section>','Prints the section <section> in hex format')
+
+    @safe_cmd
+    def do_disassemble(self, text):
+        split = text.split(' ')
+        length = 1
+        if not isHex(split[0]):
+            self._cprinter.printError('Number have to be in hex format 0x....')
+            return
+        if len(split) > 1:
+            if split[1][1:].isdigit() or (len(split[1]) >= 3 and split[1][1] == '-' and split[1][2:].isdigit()): # is L\d or L-\d
+                length = int(split[1][1:])
+            else:
+                self._cprinter.printError('Length have to be in the following format L + Number e.g. L3')
+                return
+
+        addr = int(split[0], 16)
+        self.__disassemble(addr, length)
+
+    def help_disassemble(self):
+        self.__printHelpText('disassemble <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
+
+
 
     def do_EOF(self, text):
         self.__cprinter.println('')

@@ -164,6 +164,45 @@ class Ropper(object):
             pprinter.finishProgress();
         return self.__deleteDuplicates(toReturn, pprinter)
 
+    
+    def __disassembleBackward(self, code, vaddr,offset, count):
+        gadget = Gadget(self.__arch)
+        counter = 0
+        toReturn = None
+        while len(gadget) < count:
+            gadget = Gadget(self.__arch)
+            for i in self.__disassembler.disasm(struct.pack('B' * len(code[offset - counter:]), *bytearray(code[offset - counter:])), vaddr-counter):
+                gadget.append(i.address, i.mnemonic , i.op_str)
+                if i.address == vaddr:
+                    toReturn = gadget
+                    break
+                if i.address > vaddr:
+                    if len(gadget) > count:
+                        return toReturn
+                    gadget = Gadget(self.__arch)
+                    break
+            counter += self.__arch.align
+            if offset - counter < 0:
+                return toReturn
+
+        
+        return toReturn
+
+
+    def disassemble(self, code, vaddr, offset, count):
+        if count < 0:
+            return self.__disassembleBackward(code, vaddr, offset, count*-1)
+        gadget  = Gadget(self.__arch)
+        c = 0
+        for i in self.__disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), vaddr):
+        #for i in self.__disassembler.disasm(code, 0):
+            gadget.append(i.address, i.mnemonic , i.op_str)
+            c += 1
+            if c == count:
+                break
+        return gadget if len(gadget) else None
+
+
     def __deleteDuplicates(self, gadgets, pprinter=None):
         toReturn = []
         inst = []

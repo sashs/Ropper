@@ -125,7 +125,7 @@ epilog="""example uses:
         parser.add_argument(
             '--hex', help='Prints the selected sections in a hex format', action='store_true')
         parser.add_argument(
-            '--disassemble', help='Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)', metavar='<address[:length]>')
+            '--disassemble', help='Disassembles instruction at address <address> (0x12345678:L3). The count of instructions to disassemble can be specified (0x....:L...)', metavar='<address:length>')
         parser.add_argument(
             '-i', '--info', help='Shows file header [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument('-e', help='Shows EntryPoint', action='store_true')

@@ -68,12 +68,12 @@ class Gadget(object):
     def vaddr(self):
         return self._vaddr
 
-    def append(self, address, mnem, args=None):
+    def append(self, address, mnem, args=''):
         if args:
             self.__lines.append((address, mnem + ' ' + args, mnem ,args))
             self._gadget += mnem + ' ' + args + '; '
         else:
-            self.__lines.append((address, mnem, mnem))
+            self.__lines.append((address, mnem, mnem,args))
             self._gadget += mnem + '; '
         
 
@@ -100,7 +100,7 @@ class Gadget(object):
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:
-            if len(line) == 4:
+            if line[3]:
                 toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ ' ' + cstr(line[3], Color.LIGHT_GRAY)+ cstr('; ', Color.LIGHT_BLUE)
             else:
                 toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ cstr('; ', Color.LIGHT_BLUE)
@@ -173,7 +173,7 @@ class GadgetDAO(object):
         c = conn.cursor()
         c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs,gcount INTEGER, hash)')
         c.execute('create table gadgets(nr INTEGER PRIMARY KEY ASC, snr INTEGER, lcount INTEGER)')
-        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst)')
+        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst, mnem, op)')
         scount = 0
         gcount = 0
         endcount = 0
@@ -187,8 +187,8 @@ class GadgetDAO(object):
             for gadget in gadgets:
                 c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
 
-                for addr, line in gadget.lines:
-                    c.execute('insert into lines values(?,?,?)', (gcount, addr, line))
+                for addr, line, mnem, op in gadget.lines:
+                    c.execute('insert into lines values(?,?,?,?,?)', (gcount, addr, line, mnem, op))
 
                 gcount +=1
                 if self._printer:
@@ -239,7 +239,7 @@ class GadgetDAO(object):
                         for l in range(grow[2]):
                             lrow = linerows[lcount]
                             lcount += 1
-                            gadget.append(int(lrow[1]), lrow[2])
+                            gadget.append(int(lrow[1]), lrow[3], lrow[4])
 
                         if self._printer:
                             self._printer.printProgress('loading gadgets...', float(gcount)/endcount)

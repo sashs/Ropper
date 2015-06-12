@@ -185,7 +185,11 @@ class Ropper(object):
             if offset - counter < 0:
                 return toReturn
 
+        if not toReturn:
+            toReturn = Gadget(self.__arch)
+            toReturn.append(vaddr,'bad')
         
+
         return toReturn
 
 
@@ -196,13 +200,15 @@ class Ropper(object):
             return self.__disassembleBackward(code, vaddr, offset, count*-1)
         gadget  = Gadget(self.__arch)
         c = 0
+        
         for i in self.__disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), vaddr):
-        #for i in self.__disassembler.disasm(code, 0):
             gadget.append(i.address, i.mnemonic , i.op_str)
             c += 1
             if c == count:
                 break
-        return gadget if len(gadget) else None
+        if not len(gadget):
+            gadget.append(vaddr,'bad')
+        return gadget
 
 
     def __deleteDuplicates(self, gadgets, pprinter=None):

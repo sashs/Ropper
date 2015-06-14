@@ -43,7 +43,10 @@ class Raw(Loader):
 
     @property
     def dataSections(self):
-        return None
+        return []
+
+    def getSection(self, name):
+        pass
 
     def _parseFile(self):
         self.__codeSection = Section('bytes', self._bytes, 0x0, 0x0)

@@ -67,11 +67,54 @@ class PE(Loader):
     def executableSections(self):
     #    toReturn = [self.sections['.text']]
         toReturn = []
-        for value in self.sectionHeader:
-            if value.Characteristics & IMAGE_SCN.CNT_CODE > 0:
-                toReturn.append(self.sections[value.Name])
+        for section in self.sectionHeader:
+            if section.Characteristics & IMAGE_SCN.CNT_CODE > 0:
+                if section.Name in self.sections:
+                    toReturn.append(self.sections[section.Name])
+                else:
+                    p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                    size = section.PhysicalAddress_or_VirtualSize
+                    ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                    s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+                    self.sections[section.Name] = s
+                    toReturn.append(s)
         return toReturn
 
+    @property
+    def dataSections(self):
+        toReturn = []
+        for section in self.sectionHeader:
+            if section.Characteristics & IMAGE_SCN.CNT_INITIALIZED_DATA or section.Characteristics & IMAGE_SCN.CNT_UNINITIALIZED_DATA:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+
+                toReturn.append(s)
+        return toReturn
+
+
+    def getWriteableSection(self):
+        for section in self.sectionHeader:
+            if section.Characteristics & IMAGE_SCN.MEM_WRITE:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+
+                return s
+
+    def getSection(self, name):
+        
+        for section in self.sectionHeader:
+            if str(section.Name) == name:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+
+                return s
+        raise RopperError('No such secion: %s' % name)        
 
     def setNX(self, enable):
         if enable:
@@ -200,7 +243,7 @@ class PE(Loader):
                     ImageDirectoryEntry.IMPORT].Size
                 self.__parseImports(section, p_tmp, size)
                 idata = True
-            if section.Name in (b'code', b'.text'):
+            if section.Characteristics & IMAGE_SCN.CNT_CODE > 0:
                 p_tmp.value = p_bytes.value + section.PointerToRawData
                 size = section.PhysicalAddress_or_VirtualSize
                 self.__parseCode(section, p_tmp, size)

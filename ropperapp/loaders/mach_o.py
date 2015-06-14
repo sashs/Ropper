@@ -84,12 +84,36 @@ class MachO(Loader):
             if loaderCommand.struct.cmd == LC.SEGMENT or loaderCommand.struct.cmd == LC.SEGMENT_64:
                 for section in loaderCommand.sections:
                     section = section.struct
-                    if section.flags & S_ATTR.SOME_INSTRUCTIONS > 0 or section.flags & S_ATTR.PURE_INSTRUCTIONS:
+                    if section.flags & S_ATTR.SOME_INSTRUCTIONS  or section.flags & S_ATTR.PURE_INSTRUCTIONS:
                         sectbytes_p = c_void_p(self._bytes_p.value + section.offset)
                         sectbytes = cast(sectbytes_p, POINTER(c_ubyte * section.size)).contents
                         toReturn.append(Section(section.sectname, sectbytes, section.addr, section.offset))
         return toReturn
 
+    @property
+    def dataSections(self):
+        toReturn = []
+        for loaderCommand in self.loaderCommands:
+            if loaderCommand.struct.cmd == LC.SEGMENT or loaderCommand.struct.cmd == LC.SEGMENT_64:
+                for section in loaderCommand.sections:
+                    section = section.struct
+                    if not section.flags & S_ATTR.SOME_INSTRUCTIONS  or  not section.flags & S_ATTR.PURE_INSTRUCTIONS:
+                        sectbytes_p = c_void_p(self._bytes_p.value + section.offset)
+                        sectbytes = cast(sectbytes_p, POINTER(c_ubyte * section.size)).contents
+                        toReturn.append(Section(section.sectname, sectbytes, section.addr, section.offset))
+        return toReturn
+
+    def getSection(self, name):
+        for loaderCommand in self.loaderCommands:
+            if loaderCommand.struct.cmd == LC.SEGMENT or loaderCommand.struct.cmd == LC.SEGMENT_64:
+                for section in loaderCommand.sections:
+                    section = section.struct
+                    if str(section.sectname) == name:
+                        sectbytes_p = c_void_p(self._bytes_p.value + section.offset)
+                        sectbytes = cast(sectbytes_p, POINTER(c_ubyte * section.size)).contents
+                        return Section(section.sectname, sectbytes, section.addr, section.offset)
+        raise RopperError('No such secion: %s' % name)        
+        
 
     def __loadModule(self):
         modName = None

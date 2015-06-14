@@ -16,7 +16,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from ropperapp.common.abstract import *
 from ctypes import *
 from ropperapp.common.enum import Enum
@@ -44,6 +43,10 @@ class Section(object):
         self.virtualAddress = virtualAddress
         self.offset = offset
 
+    @property
+    def size(self):
+        return len(self.bytes)
+
 
 class Loader(Abstract):
 
@@ -58,6 +61,11 @@ class Loader(Abstract):
         self._loadFile()
         self._parseFile()
         self._arch = self._loadDefaultArch()
+        self._gadgets = {}
+
+        self._printer = None
+        self._manual_imagebase = None
+        self.loaded = False
 
     @abstractproperty
     def entryPoint(self):
@@ -83,8 +91,16 @@ class Loader(Abstract):
     def executableSections(self):
         return None
 
+    @abstractproperty
+    def dataSections(self):
+        return None
+
     @abstractmethod
     def _parseFile(self):
+        pass
+
+    @abstractmethod
+    def getSection(self, name):
         pass
 
     @abstractmethod
@@ -127,6 +143,37 @@ class Loader(Abstract):
         else:
             raise LoaderError('Not supported file type')
 
+    @property
+    def loaded(self):
+        return self._loaded
+
+    @loaded.setter
+    def loaded(self, isloaded):
+        self._loaded = isloaded
+
+    @property
+    def printer(self):
+        return self._printer
+
+    @printer.setter
+    def printer(self, new_printer):
+        self._printer = new_printer
+
+    @property
+    def gadgets(self):
+        return self._gadgets
+
+    @gadgets.setter
+    def gadgets(self, new_gadgets):
+        self._gadgets = new_gadgets
+
+    @property
+    def manualImagebase(self):
+        return self._manual_imagebase
+
+    @manualImagebase.setter
+    def manualImagebase(self, new_imagebase):
+        self._manual_imagebase = new_imagebase
 
     def _loadFile(self):
         with open(self.fileName, 'rb') as binFile:

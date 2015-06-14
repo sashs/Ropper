@@ -55,6 +55,7 @@ supported architectures:
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86]
   mprotect  (mprotect=<address>:<size>) [Linux x86]
+  virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 """,
 epilog="""example uses:
   [Generic]
@@ -117,6 +118,14 @@ epilog="""example uses:
              '--db', metavar="<dbfile>", help='The dbfile to load')
         parser.add_argument(
             '-a', '--arch', metavar="<arch>", help='The architecture of the loaded file')
+        parser.add_argument(
+            '--section', help='The data of the this section should be printed', metavar='<section>')
+        parser.add_argument(
+            '--string', help='Looks for the string <string> in all data sections', metavar='<string>',nargs='?', const='[ -~]{2}[ -~]*')
+        parser.add_argument(
+            '--hex', help='Prints the selected sections in a hex format', action='store_true')
+        parser.add_argument(
+            '--disassemble', help='Disassembles instruction at address <address> (0x12345678:L3). The count of instructions to disassemble can be specified (0x....:L...)', metavar='<address:length>')
         parser.add_argument(
             '-i', '--info', help='Shows file header [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument('-e', help='Shows EntryPoint', action='store_true')

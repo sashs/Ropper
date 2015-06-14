@@ -29,16 +29,17 @@ If you want, you can use Ropper without installation
 Usage
 -----
 
-    usage: ropper.py [-h] [-v] [--console] [-f <file>] [-a <arch>] [-i] [-e]
-                     [--imagebase] [-c] [-s] [-S] [--imports] [--symbols]
-                     [--set <option>] [--unset <option>] [-I <imagebase>] [-p]
-                     [-j <reg>] [--depth <n bytes>] [--search <regex>]
-                     [--quality <quality>] [--filter <regex>] [--opcode <opcode>]
-                     [--type <type>] [--detail] [--chain <generator>]
-                     [-b <badbytes>] [--nocolor]
+    usage: ropper.py [-h] [-v] [--console] [-f <file>] [--db <dbfile>] [-a <arch>]
+                     [--section <section>] [--string [<string>]] [--hex]
+                     [--disassemble <address:length>] [-i] [-e] [--imagebase] [-c]
+                     [-s] [-S] [--imports] [--symbols] [--set <option>]
+                     [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
+                     [--depth <n bytes>] [--search <regex>] [--quality <quality>]
+                     [--filter <regex>] [--opcode <opcode>] [--type <type>]
+                     [--detail] [--chain <generator>] [-b <badbytes>] [--nocolor]
 
     You can use ropper to display information about binary files in different file formats
-    and you can search for gadgets to build rop chains for different architectures
+        and you can search for gadgets to build rop chains for different architectures
 
     supported filetypes:
       ELF
@@ -57,6 +58,7 @@ Usage
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86]
       mprotect  (mprotect=<address>:<size>) [Linux x86]
+      virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -64,8 +66,16 @@ Usage
       --console             Starts interactive commandline
       -f <file>, --file <file>
                             The file to load
+      --db <dbfile>         The dbfile to load
       -a <arch>, --arch <arch>
                             The architecture of the loaded file
+      --section <section>   The data of the this section should be printed
+      --string [<string>]   Looks for the string <string> in all data sections
+      --hex                 Prints the selected sections in a hex format
+      --disassemble <address:length>
+                            Disassembles instruction at address <address>
+                            (0x12345678:L3). The count of instructions to
+                            disassemble can be specified (0x....:L...)
       -i, --info            Shows file header [ELF/PE/Mach-O]
       -e                    Shows EntryPoint
       --imagebase           Shows ImageBase [ELF/PE/Mach-O]
@@ -126,8 +136,8 @@ Usage
       ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
 
       [Search]
-      ?		any character
-      %		any string
+      ?   any character
+      %   any string
 
       Example:
 
@@ -149,18 +159,41 @@ Usage
 
 
 
-
-
 Planned features for future versions
 ------------------------------------
 
-  Edit header fields;
-  Print more informations;
+- Edit header fields;
+- Print more informations;
 
-  For any other ideas please contact me
+For any other ideas please contact me
 
 
 
 Project page
 ------------------------------------
 http://scoding.de/ropper
+
+
+Screenshots
+------------------------------------
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/load.jpg" alt="load"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/x86.jpg" alt="x86"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/arm.jpg" alt="arm"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/mips.jpg" alt="mips"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/ppc.jpg" alt="ppc"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/ropchain.jpg" alt="ropchain"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/header.jpg" alt="header"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/disass.jpg" alt="disassembler"></img>
+
+<img src="https://scoding.de/wp-content/uploads/2014/08/hex.jpg" alt="hex"></img>
+
+
+

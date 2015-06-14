@@ -21,10 +21,10 @@ from ropperapp.common.error import *
 
 class RopChain(Abstract):
 
-    def __init__(self, binary, gadgets, imagebase):
-        self._gadgets = gadgets
-        self._binary = binary
-        self._imageBase = imagebase
+    def __init__(self, binaries, printer):
+        self._binaries = binaries
+        self._usedBinaries = []
+        self._printer = printer
 
     @abstractmethod
     def create(self):
@@ -43,11 +43,11 @@ class RopChain(Abstract):
         return []
 
     @classmethod
-    def get(cls, binary, name, gadgets, imagebase):
+    def get(cls, binaries, name, printer):
         for subclass in cls.__subclasses__():
-            if binary.arch in subclass.archs():
+            if binaries[0].arch in subclass.archs():
                 gens = subclass.availableGenerators()
                 for gen in gens:
                     if gen.name() == name:
-                        return gen(binary, gadgets, imagebase)
-        raise RopChainError('generator %s is for arch %s not available' % (name, binary.arch.__class__.__name__))
+                        return gen(binaries, printer)
+        raise RopChainError('generator %s is for arch %s not available' % (name, binaries[0].arch.__class__.__name__))

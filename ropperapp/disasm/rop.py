@@ -30,16 +30,17 @@ import sys
 
 class Ropper(object):
 
-    def __init__(self, arch):
+    def __init__(self, binary):
         super(Ropper, self).__init__()
-        self.__arch = arch
-        self.__disassembler = Cs(arch.arch, arch.mode)
+        self.__binary = binary
+        self.__arch = binary.arch
+        self.__disassembler = Cs(binary.arch.arch, binary.arch.mode)
 
     @property
     def arch(self):
         return self._arch
 
-    def searchJmpReg(self, code, regs, virtualAddress=0x0,  badbytes=''):
+    def searchJmpReg(self, code, regs, virtualAddress=0x0,  badbytes='', section=None):
         if self.__arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
@@ -52,11 +53,11 @@ class Ropper(object):
             insts = [toBytes(0xff , 0xe0 | Register[reg]), toBytes(0xff, 0xd0 | Register[reg]),  toBytes(0x50 | Register[reg] , 0xc3)]
             for inst in insts:
 
-                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True, badbytes=badbytes))
+                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True, badbytes=badbytes, section=section))
 
         return sorted(toReturn, key=lambda x: str(x))
 
-    def searchOpcode(self, code, opcode, virtualAddress=0x0, disass=False, badbytes=''):
+    def searchOpcode(self, code, opcode, virtualAddress=0x0, disass=False, badbytes='', section=None):
 
         toReturn = []
         code = bytearray(code)
@@ -67,17 +68,19 @@ class Ropper(object):
                 if disass:
                     for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[index:index + len(opcode)]), virtualAddress + index):
                         opcodeGadget.append(
-                            i.address, i.mnemonic + ' ' + i.op_str)
+                            i.address, i.mnemonic , i.op_str)
                 else:
                     opcodeGadget.append(
                         virtualAddress + index, hexlify(opcode).decode('utf-8'))
                 if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
                     continue
                 c += 1
+                opcodeGadget._binary = self.__binary
+                opcodeGadget._section = section
                 toReturn.append(opcodeGadget)
         return toReturn
 
-    def searchPopPopRet(self, code, virtualAddress=0x0,  badbytes=''):
+    def searchPopPopRet(self, code, virtualAddress=0x0,  badbytes='', section=None):
         if self.__arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
@@ -92,29 +95,33 @@ class Ropper(object):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
                     ppr.append(
-                        address, mnemonic + ' ' + op_str)
+                        address, mnemonic , op_str)
                     if c == 0 and ppr.addressesContainsBytes(badbytes):
                         break
                     c += 1
                     if mnemonic == 'ret':
                         break
                 if len(ppr) == 3:
+                    ppr._binary = self.__binary
+                    ppr._section = section
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None):
+    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None, section=None):
         toReturn = []
         code = bytes(bytearray(code))
 
         def createGadget(code_str, codeStartAddress, ending):
             gadget = Gadget(self.__arch)
+            gadget._binary = self.__binary
+            gadget._section = section
             gadget.imageBase = virtualAddress
             hasret = False
             c = 0
             for i in self.__disassembler.disasm(code_str, codeStartAddress):
                 if i.mnemonic not in self.__arch.badInstructions:
                     gadget.append(
-                        i.address, i.mnemonic + ' ' + i.op_str)
+                        i.address, i.mnemonic,i.op_str)
                     if c == 0 and gadget.addressesContainsBytes(badbytes):
                         return None
                     c += 1
@@ -138,19 +145,16 @@ class Ropper(object):
                 offset += match.start()
                 index = match.start()
                 for x in range(1, (depth + 1) * self.__arch.align):
-
                     code_part = tmp_code[index - x:index + ending[1]]
-
                     gadget = createGadget(
                         code_part, offset - x, ending)
-
                     if gadget:
                         toReturn.append(gadget)
 
                 tmp_code = tmp_code[index+1:]
+
                 offset += self.__arch.align
                 match = re.search(ending[0], tmp_code)
-
                 if pprinter:
                     progress = self.__arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
                     pprinter.printProgress('loading gadgets...', float(progress) / max_prog)
@@ -159,6 +163,53 @@ class Ropper(object):
             pprinter.printProgress('loading gadgets...', 1)
             pprinter.finishProgress();
         return self.__deleteDuplicates(toReturn, pprinter)
+
+    
+    def __disassembleBackward(self, code, vaddr,offset, count):
+        gadget = Gadget(self.__arch)
+        counter = 0
+        toReturn = None
+        while len(gadget) < count:
+            gadget = Gadget(self.__arch)
+            for i in self.__disassembler.disasm(struct.pack('B' * len(code[offset - counter:]), *bytearray(code[offset - counter:])), vaddr-counter):
+                gadget.append(i.address, i.mnemonic , i.op_str)
+                if i.address == vaddr:
+                    toReturn = gadget
+                    break
+                if i.address > vaddr:
+                    if len(gadget) > count:
+                        return toReturn
+                    gadget = Gadget(self.__arch)
+                    break
+            
+                
+            counter += self.__arch.align
+            if offset - counter < 0:
+                return toReturn
+
+            if not toReturn:
+                toReturn = Gadget(self.__arch)
+                toReturn.append(vaddr,'bad instructions')
+        return toReturn
+
+
+    def disassemble(self, code, vaddr, offset, count):
+        if vaddr % self.__arch.align != 0:
+            raise RopperError('The address doesn\'t have the correct alignment')
+        if count < 0:
+            return self.__disassembleBackward(code, vaddr, offset, count*-1)
+        gadget  = Gadget(self.__arch)
+        c = 0
+        
+        for i in self.__disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), vaddr):
+            gadget.append(i.address, i.mnemonic , i.op_str)
+            c += 1
+            if c == count:
+                break
+        if not len(gadget):
+            gadget.append(vaddr,'bad instructions')
+        return gadget
+
 
     def __deleteDuplicates(self, gadgets, pprinter=None):
         toReturn = []
@@ -175,7 +226,8 @@ class Ropper(object):
         if pprinter:
             pprinter.printProgress('clearing up...', 1)
             pprinter.finishProgress()
-        return toReturn
+        
+        return sorted(toReturn, key=Gadget.simpleInstructionString)
 
 
 def toBytes(*b):

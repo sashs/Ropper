@@ -41,6 +41,13 @@ class Raw(Loader):
     def executableSections(self):
         return [self.__codeSection]
 
+    @property
+    def dataSections(self):
+        return []
+
+    def getSection(self, name):
+        raise RopperError('No such secion: %s' % name) 
+
     def _parseFile(self):
         self.__codeSection = Section('bytes', self._bytes, 0x0, 0x0)
 

@@ -31,7 +31,7 @@ except:
     pass
 
 class Category(enum.Enum):
-    _enum_ = 'STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE'
+    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
 
 
 
@@ -49,6 +49,8 @@ class Gadget(object):
         self._vaddr = 0x0
         self.__category = None
         self.__imageBase = 0x0
+        self._binary = None
+        self._section = None
 
     @property
     def lines(self):
@@ -66,9 +68,14 @@ class Gadget(object):
     def vaddr(self):
         return self._vaddr
 
-    def append(self, address, inst):
-        self.__lines.append((address, inst))
-        self._gadget += inst + '; '
+    def append(self, address, mnem, args=''):
+        if args:
+            self.__lines.append((address, mnem + ' ' + args, mnem ,args))
+            self._gadget += mnem + ' ' + args + '; '
+        else:
+            self.__lines.append((address, mnem, mnem,args))
+            self._gadget += mnem + '; '
+        
 
     def match(self, filter):
         if not filter or len(filter) == 0:
@@ -93,8 +100,12 @@ class Gadget(object):
     def simpleInstructionString(self):
         toReturn = ''
         for line in self.__lines:
-            toReturn += cstr(line[1], Color.LIGHT_GRAY) + cstr('; ', Color.LIGHT_BLUE)
+            if line[3]:
+                toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ ' ' + cstr(line[3], Color.LIGHT_GRAY)+ cstr('; ', Color.LIGHT_BLUE)
+            else:
+                toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ cstr('; ', Color.LIGHT_BLUE)
 
+        
         return toReturn
 
     def simpleString(self):
@@ -129,10 +140,19 @@ class Gadget(object):
             return cmp(str(self),str(other))
         return -1
 
-    def __str__(self):
-        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.RED))
+    def disassemblyString(self):
+        toReturn = ''
         for line in self.__lines:
-            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.BLUE) +': '+ cstr(line[1], Color.WHITE) + '\n'
+            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
+
+        return toReturn
+
+    def __str__(self):
+        if not len(self.__lines):
+            return "empty gadget"
+        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.BLUE))
+        for line in self.__lines:
+            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 
         return toReturn
 
@@ -153,7 +173,7 @@ class GadgetDAO(object):
         c = conn.cursor()
         c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs,gcount INTEGER, hash)')
         c.execute('create table gadgets(nr INTEGER PRIMARY KEY ASC, snr INTEGER, lcount INTEGER)')
-        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst)')
+        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst, mnem, op)')
         scount = 0
         gcount = 0
         endcount = 0
@@ -167,8 +187,8 @@ class GadgetDAO(object):
             for gadget in gadgets:
                 c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
 
-                for addr, line in gadget.lines:
-                    c.execute('insert into lines values(?,?,?)', (gcount, addr, line))
+                for addr, line, mnem, op in gadget.lines:
+                    c.execute('insert into lines values(?,?,?,?,?)', (gcount, addr, line, mnem, op))
 
                 gcount +=1
                 if self._printer:
@@ -219,7 +239,7 @@ class GadgetDAO(object):
                         for l in range(grow[2]):
                             lrow = linerows[lcount]
                             lcount += 1
-                            gadget.append(int(lrow[1]), lrow[2])
+                            gadget.append(int(lrow[1]), lrow[3], lrow[4])
 
                         if self._printer:
                             self._printer.printProgress('loading gadgets...', float(gcount)/endcount)

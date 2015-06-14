@@ -68,6 +68,8 @@ class ELF(Loader):
         self.symbols = {}
         self.relocations = {}
         self.__elf_module = None
+        self.__execSections = None
+        self.__dataSections = None
 
         super(ELF, self).__init__(filename)
 
@@ -213,14 +215,26 @@ class ELF(Loader):
 
     @property
     def executableSections(self):
-        sections = []
-        for phdr in self.phdrs:
-            if phdr.p_flags & PF.EXEC > 0:
-                p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
-                execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
-                sections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
+        if not self.__execSections:
+            self.__execSections = []
+            for phdr in self.phdrs:
+                if phdr.p_flags & PF.EXEC > 0:
+                    p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
+                    execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
+                    self.__execSections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
 
-        return sections
+        return self.__execSections
+
+    @property
+    def dataSections(self):
+        if not self.__dataSections:
+            self.__dataSections = []
+            for shdr in self.shdrs:
+                if shdr.struct.sh_flags & SHF.ALLOC and not (shdr.struct.sh_flags & SHF.EXECINSTR):
+                    p_tmp = c_void_p(self._bytes_p.value + shdr.struct.sh_offset)
+                    dataBytes = cast(p_tmp, POINTER(c_ubyte * shdr.struct.sh_size)).contents
+                    self.__dataSections.append(Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset))
+        return self.__dataSections
 
     @property
     def codeVA(self):
@@ -248,9 +262,12 @@ class ELF(Loader):
         self.save()
 
     def getSection(self, name):
-        for hdr in self.shdrs:
-            if hdr.name == name:
-                return hdr
+        for shdr in self.shdrs:
+            if str(shdr.name) == name:
+                p_tmp = c_void_p(self._bytes_p.value + shdr.struct.sh_offset)
+                dataBytes = cast(p_tmp, POINTER(c_ubyte * shdr.struct.sh_size)).contents
+                return Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset)
+        raise RopperError('No such section: %s' % name)
 
     def checksec(self):
         return {}

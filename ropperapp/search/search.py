@@ -29,8 +29,8 @@ class Searcher(object):
         filter = filter.replace('+','\\+')
         filter = filter.replace('.',r'\.')
         filter = filter.replace('*',r'\*')
-        filter = filter.replace('?','.')
-        filter = filter.replace('%', '.*')
+        filter = filter.replace('?','[ -~]')
+        filter = filter.replace('%', '[ -~]*')
         return filter
 
     def search(self, gadgets, filter, quality = None, pprinter=None):

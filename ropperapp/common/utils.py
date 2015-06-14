@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from .coloredstring import *
+import ropperapp
 import re
 
 
@@ -81,3 +82,33 @@ def printTable(header, cnames, data, space=2, fmt=None):
         print(line.strip())
 
     print('')
+
+def printHexFormat(data, addr):
+    for i in range((len(data)/16)+1):
+        part = data[i*16:i*16+16]
+        bytes = cstr('')
+        c = 0
+        for j in range(0,len(part),2):
+            if j == len(part)-1:
+                bytes += cstr(('%.2x ' % tuple(part[j:j+1])), Color.WHITE if c % 2 else Color.LIGHT_GRAY)
+            else:
+                bytes += cstr(('%.2x%.2x ' % tuple(part[j:j+2])), Color.WHITE if c % 2 else Color.LIGHT_GRAY)
+            c += 1
+        string = ''
+        if ropperapp.app_options.nocolor:
+            if len(bytes) < 40:
+                bytes += ' ' * (40 - len(bytes))
+        else:
+            if len(bytes) < 227:
+                
+                bytes += ' ' * ((8-len(bytes)/29)*5)
+        for b in part:
+            if b < 32 or b > 126:
+                string += '.'
+            else:
+                string += chr(b)
+
+        bytes +=  ' ' + cstr(string, Color.BLUE)
+        print cstr(toHex(addr + i*16), Color.RED) +': ' + bytes
+    
+

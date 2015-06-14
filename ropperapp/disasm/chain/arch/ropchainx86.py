@@ -693,7 +693,7 @@ class RopChainX86Mprotect(RopChainX86):
         if not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{1,8},[0-9]+', param):
             raise RopChainError('Parameter have to have the following format: <hexnumber>,<hexnumber> or <hexnumber>,<number>')
 
-        split = param.split(':')
+        split = param.split(',')
         if isHex(split[1]):
             return (int(split[0], 16), int(split[1], 16))
         else:

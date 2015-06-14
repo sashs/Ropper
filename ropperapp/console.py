@@ -343,8 +343,10 @@ class Console(cmd.Cmd):
                 if not g:
                     self.__cprinter.printError('Cannot disassemble address: %s' % toHex(addr))
                     return
+                if length < 0:
+                    length = length * -1
                 if len(g) < length:
-                    self.__cprinter.printInfo('Cannot find specified count of instructions')
+                    self.__cprinter.printInfo('Cannot disassemble specified count of instructions')
                 self.binary.printer.printTableHeader('Instructions')
                 print g.disassemblyString()
                 return

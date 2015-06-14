@@ -181,14 +181,15 @@ class Ropper(object):
                         return toReturn
                     gadget = Gadget(self.__arch)
                     break
-            else:
-                if not toReturn:
-                    toReturn = Gadget(self.__arch)
-                toReturn.append(vaddr,'bad instructions')
+            
+                
             counter += self.__arch.align
             if offset - counter < 0:
                 return toReturn
-                
+
+            if not toReturn:
+                toReturn = Gadget(self.__arch)
+                toReturn.append(vaddr,'bad instructions')
         return toReturn
 
 

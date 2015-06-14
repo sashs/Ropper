@@ -46,7 +46,7 @@ class Raw(Loader):
         return []
 
     def getSection(self, name):
-        pass
+        raise RopperError('No such secion: %s' % name) 
 
     def _parseFile(self):
         self.__codeSection = Section('bytes', self._bytes, 0x0, 0x0)

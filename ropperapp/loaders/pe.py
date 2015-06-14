@@ -69,12 +69,15 @@ class PE(Loader):
         toReturn = []
         for section in self.sectionHeader:
             if section.Characteristics & IMAGE_SCN.CNT_CODE > 0:
-                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
-                size = section.PhysicalAddress_or_VirtualSize
-                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
-                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
-
-                toReturn.append(s)
+                if section.Name in self.sections:
+                    toReturn.append(self.sections[section.Name])
+                else:
+                    p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                    size = section.PhysicalAddress_or_VirtualSize
+                    ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                    s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+                    self.sections[section.Name] = s
+                    toReturn.append(s)
         return toReturn
 
     @property
@@ -90,6 +93,16 @@ class PE(Loader):
                 toReturn.append(s)
         return toReturn
 
+
+    def getWriteableSection(self):
+        for section in self.sectionHeader:
+            if section.Characteristics & IMAGE_SCN.MEM_WRITE:
+                p_tmp = c_void_p(self._bytes_p.value + section.PointerToRawData)
+                size = section.PhysicalAddress_or_VirtualSize
+                ibytes = cast(p_tmp, POINTER(c_ubyte * size)).contents
+                s = Section(section.Name, ibytes, section.VirtualAddress + self.imageBase, section.VirtualAddress)
+
+                return s
 
     def getSection(self, name):
         

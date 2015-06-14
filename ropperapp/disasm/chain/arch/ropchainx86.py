@@ -23,6 +23,7 @@ from ropperapp.common.utils import *
 from ropperapp.disasm.rop import Ropper
 from ropperapp.disasm.arch import x86
 from ropperapp.disasm.chain.ropchain import *
+from ropperapp.loaders.loader import Type
 from re import match
 import itertools
 import math
@@ -45,7 +46,7 @@ class RopChainX86(RopChain):
 
     def _printRebase(self):
         toReturn = ''
-       
+        
         for binary,section in self._usedBinaries:
             imageBase = binary.manualImagebase + section.offset if binary.manualImagebase != None else section.virtualAddress
             toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase , 4), binary.fileName))
@@ -689,8 +690,8 @@ class RopChainX86Mprotect(RopChainX86):
             return None
 
     def __extract(self, param):
-        if not match('0x[0-9a-fA-F]{1,8}:0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{1,8}:[0-9]+', param):
-            raise RopChainError('Parameter have to have the following format: <hexnumber>:<hexnumber> or <hexnumber>:<number>')
+        if not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{1,8},[0-9]+', param):
+            raise RopChainError('Parameter have to have the following format: <hexnumber>,<hexnumber> or <hexnumber>,<number>')
 
         split = param.split(':')
         if isHex(split[1]):
@@ -766,7 +767,11 @@ class RopChainX86VirtualProtect(RopChainX86):
 
     def _createPushad(self):
         pushad = self._find(Category.PUSHAD)
-        return self._printRopInstruction(pushad)
+        if pushad:
+            return self._printRopInstruction(pushad)
+        else:
+            self._printer.printInfo('No pushad found!')
+            return '# Add here PUSHAD gadget!'
 
 
     def _createJmp(self, reg='esp'):
@@ -787,26 +792,48 @@ class RopChainX86VirtualProtect(RopChainX86):
             return ''
 
     def __extract(self, param):
-        if not match('0x[0-9a-fA-F]{1,8}:0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{1,8}:[0-9]+', param):
-            raise RopChainError('Parameter have to have the following format: <hexnumber>:<hexnumber> or <hexnumber>:<number>')
+        if (not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param)) and (not match('0x[0-9a-fA-F]+', param)):
+            raise RopChainError('Parameter have to have the following format: <hexnumber>,<hexnumber> or <hexnumber>')
 
-        split = param.split(':')
-        if isHex(split[1]):
-            return (int(split[0], 16), int(split[1], 16))
+        split = param.split(',')
+        if len(split) == 2:
+            if isHex(split[1]):
+                return (int(split[0], 16), int(split[1], 16))
         else:
-            return (int(split[0], 16), int(split[1], 10))
+            return (None, int(split[0], 16))
+
+    def __getVirtualProtectEntry(self):
+        for binary in self._binaries:
+            if binary.type == Type.PE:
+                s = binary.sections['.idata']
+                for descriptorData in s.importDescriptorTable:
+                    for function in descriptorData.functions:
+                        if str(function[1]) == 'VirtualProtect':
+                            return function[2]
+            else:
+                self._printer.printError('File is not a PE file.')
+        return None
+
 
 
     def create(self, param=None):
         if not param:
-            raise RopChainError('Missing parameter: address:size')
+            raise RopChainError('Missing parameter: address,size or size')
 
         self._printer.printInfo('Ropchain Generator for VirtualProtect:\n')
         self._printer.println('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
 
         address, size = self.__extract(param)
+        given = False
+        if not address:
+            address = self.__getVirtualProtectEntry()
+            if not address:
+                self._printer.printError('No IAT-Entry for VirtualProtect found!')
+                raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
+        else:
+            given = True
         
-        writeable_ptr = 0xffffffff
+        writeable_ptr = self._binaries[0].getWriteableSection().offset + 0x4
         jmp_esp = self._createJmp()
         ret_addr = self._searchOpcode('c3')
 
@@ -819,7 +846,10 @@ class RopChainX86VirtualProtect(RopChainX86):
         try:
             self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: %s' % address)
             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
-            gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+            if given:
+                gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+            else:
+                gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
             to_extend = ['esi','si']
         except:
             self._printer.printInfo('Cannot create fill esi gadget!')
@@ -828,7 +858,10 @@ class RopChainX86VirtualProtect(RopChainX86):
 
             jmp_eax = self._searchOpcode('ff20') # jmp [eax]
             gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
-            gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
+            if given:
+                gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
+            else:
+                gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))                
 
 
         

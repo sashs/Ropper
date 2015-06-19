@@ -109,6 +109,6 @@ def printHexFormat(data, addr):
                 string += chr(b)
 
         bytes +=  ' ' + cstr(string, Color.BLUE)
-        print cstr(toHex(addr + i*16), Color.RED) +': ' + bytes
+        print(cstr(toHex(addr + i*16), Color.RED) +': ' + bytes)
     
 

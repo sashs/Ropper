@@ -348,7 +348,7 @@ class Console(cmd.Cmd):
                 if len(g) < length:
                     self.__cprinter.printInfo('Cannot disassemble specified count of instructions')
                 self.binary.printer.printTableHeader('Instructions')
-                print g.disassemblyString()
+                self.__cprinter.println(g.disassemblyString())
                 return
 
     def __printSectionInHex(self, section):

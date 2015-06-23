@@ -791,13 +791,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         split = text.split(' ')
         length = 1
         if not isHex(split[0]):
-            self._cprinter.printError('Number have to be in hex format 0x....')
+            self.__cprinter.printError('Number have to be in hex format 0x....')
             return
         if len(split) > 1:
             if split[1][1:].isdigit() or (len(split[1]) >= 3 and split[1][1] == '-' and split[1][2:].isdigit()): # is L\d or L-\d
                 length = int(split[1][1:])
             else:
-                self._cprinter.printError('Length have to be in the following format L + Number e.g. L3')
+                self.__cprinter.printError('Length have to be in the following format L + Number e.g. L3')
                 return
 
         addr = int(split[0], 16)

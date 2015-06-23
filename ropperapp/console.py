@@ -79,7 +79,7 @@ class Console(cmd.Cmd):
         self.__handleOptions(self.__options)
 
     def __loadFile(self, file):
-        self.__binary = Loader.open(file)
+        self.__binary = Loader.open(file, self.__options.raw)
         self.__binaries.append(self.__binary)
         self.__binary.manualImagebase = self.__options.I
         if self.__options.arch:

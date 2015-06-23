@@ -115,6 +115,8 @@ epilog="""example uses:
         parser.add_argument(
             '-f', '--file', metavar="<file>", help='The file to load')
         parser.add_argument(
+            '-r', '--raw', help='Loads the file as raw file', action='store_true')
+        parser.add_argument(
              '--db', metavar="<dbfile>", help='The dbfile to load')
         parser.add_argument(
             '-a', '--arch', metavar="<arch>", help='The architecture of the loaded file')

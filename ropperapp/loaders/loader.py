@@ -128,12 +128,12 @@ class Loader(Abstract):
         return False
 
     @classmethod
-    def open(cls, fileName):
+    def open(cls, fileName, raw=False):
         sc = Loader.__subclasses__()
         Raw = None
         for subclass in sc:
             if subclass.__name__ != 'Raw':
-                if subclass.isSupportedFile(fileName):
+                if not raw and subclass.isSupportedFile(fileName):
                     return subclass(fileName)
             else:
                 Raw = subclass

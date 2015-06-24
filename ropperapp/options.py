@@ -154,6 +154,8 @@ epilog="""example uses:
         parser.add_argument(
             '-j', '--jmp', help='Searches for \'jmp reg\' instructions (-j reg[,reg...]) [only x86/x86_64]', metavar='<reg>')
         parser.add_argument(
+            '--stack-pivot', help='Prints all stack pivot gadgets',action='store_true')
+        parser.add_argument(
             '--depth', help='Specifies the depth of search (default: 10)', metavar='<n bytes>', type=int)
         parser.add_argument(
             '--search', help='Searches for gadgets', metavar='<regex>')

@@ -23,6 +23,7 @@ from ropperapp.disasm.rop import Ropper
 from ropperapp.common.error import *
 from ropperapp.disasm.gadget import GadgetType
 from ropperapp.disasm.gadget import GadgetDAO
+from ropperapp.disasm.gadget import Category
 from ropperapp.common.utils import isHex
 from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
@@ -172,7 +173,7 @@ class Console(cmd.Cmd):
     def __searchPopPopRet(self):
         r = Ropper(self.binary)
 
-        self.binary.printer.printTableHeader('POP;POP;REG Instructions')
+        self.binary.printer.printTableHeader('POP;POP;RET Instructions')
         for section in self.binary.executableSections:
 
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
@@ -183,15 +184,16 @@ class Console(cmd.Cmd):
         self.__cprinter.println('')
 
 
-    def __printRopGadgets(self, gadgets):
+    def __printRopGadgets(self, gadgets, category=None):
         self.binary.printer.printTableHeader('Gadgets')
         counter = 0
         for section, gadget in gadgets.items():
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             for g in gadget:
-                g.imageBase = vaddr
-                self.__printGadget(g)
-                counter +=1
+                if not category or category == g.category[0]:
+                    g.imageBase = vaddr
+                    self.__printGadget(g)
+                    counter +=1
             #print('')
         self.__cprinter.println('\n%d gadgets found' % counter)
 
@@ -381,6 +383,9 @@ class Console(cmd.Cmd):
             self.__searchPopPopRet()
         elif options.jmp:
             self.__searchJmpReg(options.jmp)
+        elif options.stack_pivot:
+            self.__loadGadgets()
+            self.__printRopGadgets(self.__binary.gadgets, Category.STACK_PIVOT)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
         elif options.string:
@@ -806,6 +811,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_disassemble(self):
         self.__printHelpText('disassemble <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
 
+    def do_stack_pivot(self, text):
+        self.__printRopGadgets(self.binary.gadgets, Category.STACK_PIVOT)
 
 
     def do_EOF(self, text):

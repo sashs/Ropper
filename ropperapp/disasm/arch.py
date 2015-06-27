@@ -111,7 +111,9 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x14\x24]\x24', 3),
             (b'\xff[\x55\x65]\x00', 3),
             (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),
-            (b'\xff\xa4\x24[\x00-\x0ff]{4}', 7),
+            (b'\xff\xa4\x24[\x00-\xff]{4}', 7),
+            (b'\xff\x51[\x00-\xff]{1}', 3),                             # call [reg + value]
+            (b'\xff\x61[\x00-\xff]{1}', 3),                             # jmp [reg + value]
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):

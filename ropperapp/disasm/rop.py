@@ -40,7 +40,7 @@ class Ropper(object):
     def arch(self):
         return self._arch
 
-    def searchJmpReg(self, code, regs, virtualAddress=0x0,  badbytes='', section=None):
+    def searchJmpReg(self, code, regs, virtualAddress=0x0, offset=0x0,  badbytes='', section=None):
         if self.__arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
@@ -53,11 +53,11 @@ class Ropper(object):
             insts = [toBytes(0xff , 0xe0 | Register[reg]), toBytes(0xff, 0xd0 | Register[reg]),  toBytes(0x50 | Register[reg] , 0xc3)]
             for inst in insts:
 
-                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, True, badbytes=badbytes, section=section))
+                toReturn.extend(self.searchOpcode(code, inst, virtualAddress, offset, True, badbytes=badbytes, section=section))
 
         return sorted(toReturn, key=lambda x: str(x))
 
-    def searchOpcode(self, code, opcode, virtualAddress=0x0, disass=False, badbytes='', section=None):
+    def searchOpcode(self, code, opcode, virtualAddress=0x0, offset=0x0, disass=False, badbytes='', section=None):
 
         toReturn = []
         code = bytearray(code)
@@ -65,13 +65,14 @@ class Ropper(object):
             c = 0
             if code[index:index + len(opcode)] == opcode:
                 opcodeGadget = Gadget(self.__arch)
+                opcodeGadget.imageBase = virtualAddress
                 if disass:
-                    for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[index:index + len(opcode)]), virtualAddress + index):
+                    for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[index:index + len(opcode)]), offset + index):
                         opcodeGadget.append(
                             i.address, i.mnemonic , i.op_str)
                 else:
                     opcodeGadget.append(
-                        virtualAddress + index, hexlify(opcode).decode('utf-8'))
+                        offset + index, hexlify(opcode).decode('utf-8'))
                 if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
                     continue
                 c += 1
@@ -80,7 +81,7 @@ class Ropper(object):
                 toReturn.append(opcodeGadget)
         return toReturn
 
-    def searchPopPopRet(self, code, virtualAddress=0x0,  badbytes='', section=None):
+    def searchPopPopRet(self, code, virtualAddress=0x0, offset=0x0,  badbytes='', section=None):
         if self.__arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, pop pop ret is only supported on x86/x86_64')
@@ -90,8 +91,9 @@ class Ropper(object):
         for index in range(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
                 ppr = Gadget(self.__arch)
+                ppr.imageBase = virtualAddress
                 c = 0
-                for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), virtualAddress + index -2):
+                for (address, size, mnemonic, op_str) in self.__disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
                     ppr.append(
@@ -99,7 +101,7 @@ class Ropper(object):
                     if c == 0 and ppr.addressesContainsBytes(badbytes):
                         break
                     c += 1
-                    if mnemonic == 'ret':
+                    if mnemonic.startswith('ret'):
                         break
                 if len(ppr) == 3:
                     ppr._binary = self.__binary

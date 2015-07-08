@@ -37,11 +37,12 @@ class DataContainer(object):
 
 class Section(object):
 
-    def __init__(self, name, sectionbytes, virtualAddress, offset):
+    def __init__(self, name, sectionbytes, virtualAddress, offset, struct=None):
         self.name = name
         self.bytes = sectionbytes
         self.virtualAddress = virtualAddress
         self.offset = offset
+        self.struct = struct
 
     @property
     def size(self):

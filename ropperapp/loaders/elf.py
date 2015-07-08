@@ -230,10 +230,12 @@ class ELF(Loader):
         if not self.__dataSections:
             self.__dataSections = []
             for shdr in self.shdrs:
-                if shdr.struct.sh_flags & SHF.ALLOC and not (shdr.struct.sh_flags & SHF.EXECINSTR):
+                if shdr.struct.sh_flags & SHF.ALLOC and not (shdr.struct.sh_flags & SHF.EXECINSTR) and not(shdr.struct.sh_type & SHT.NOBITS):
                     p_tmp = c_void_p(self._bytes_p.value + shdr.struct.sh_offset)
+                    self.assertFileRange(p_tmp.value)
+                    self.assertFileRange(p_tmp.value + shdr.struct.sh_size)
                     dataBytes = cast(p_tmp, POINTER(c_ubyte * shdr.struct.sh_size)).contents
-                    self.__dataSections.append(Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset))
+                    self.__dataSections.append(Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset, shdr.struct))
         return self.__dataSections
 
     @property

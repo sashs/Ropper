@@ -220,6 +220,8 @@ class ELF(Loader):
             for phdr in self.phdrs:
                 if phdr.p_flags & PF.EXEC > 0:
                     p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
+                    self.assertFileRange(p_tmp.value)
+                    self.assertFileRange(p_tmp.value+phdr.p_memsz)
                     execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
                     self.__execSections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
 

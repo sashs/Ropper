@@ -77,6 +77,8 @@ epilog="""example uses:
   ropper.py --file /bin/ls --filter "sub eax"
   ropper.py --file /bin/ls --depth 5 --filter "sub eax"
   ropper.py --file /bin/ls --opcode ffe4
+  ropper.py --file /bin/ls --opcode ffe?
+  ropper.py --file /bin/ls --opcode ??e4
   ropper.py --file /bin/ls --detail
   ropper.py --file /bin/ls --ppr --nocolor
   ropper.py --file /bin/ls --jmp esp,eax
@@ -164,7 +166,7 @@ epilog="""example uses:
         parser.add_argument(
             '--filter', help='Filters gadgets', metavar='<regex>')
         parser.add_argument(
-            '--opcode', help='Searches for opcodes', metavar='<opcode>')
+            '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(
             '--type', help='Sets the type of gadgets [rop, jop, all] (default: all)', metavar='<type>')
         parser.add_argument(

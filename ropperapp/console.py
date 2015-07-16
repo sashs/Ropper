@@ -29,7 +29,7 @@ from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
 from ropperapp.disasm.arch import getArchitecture
-from binascii import unhexlify
+from binascii import unhexlify, hexlify
 from sys import stdout, stdin
 import ropperapp
 import cmd
@@ -152,12 +152,47 @@ class Console(cmd.Cmd):
         self.__cprinter.println('%d times opcode found' % counter)
 
     def __searchOpcode(self, opcode):
+        if len(opcode) % 2 > 0:
+            raise RopperError('The length of the opcode have to be a multiple of two')
+
+        opcode = opcode.encode('ascii')
+        m = re.search('\?', opcode)
+        while m:
+
+
+            if m.start() % 2 == 0:
+                if opcode[m.start()+1] == '?':
+
+                    opcode = opcode[:m.start()] + hexlify(b'[\x00-\xff]') +  opcode[m.start()+2:]
+
+                else:
+                    raise RopperError('A ? for the high 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
+            elif m.start() % 2 == 1:
+                high = int(opcode[m.start()-1],16)
+                print (opcode[:m.start()-1])
+                start = high << 4
+                print (hex(start))
+                end  = start + 0xf
+                print(hex(end))
+                opcode = opcode[:m.start()-1] + hexlify(b'['+chr(start)+'-'+chr(end)+']') +  opcode[m.start()+1:]
+
+
+
+            m = re.search('\?', opcode)
+
+
+        try:
+            opcode = unhexlify(opcode)
+        except:
+            raise RopperError('Invalid characters in opcode string')
+
+
         r = Ropper(self.binary)
         gadgets = {}
         for section in self.binary.executableSections:
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             gadgets[section]=(
-                r.searchOpcode(section.bytes, unhexlify(opcode.encode('ascii')), vaddr,0x0, section=section, badbytes=unhexlify(self.__options.badbytes)))
+                r.searchOpcode(section.bytes, opcode, vaddr,0x0, section=section, badbytes=unhexlify(self.__options.badbytes)))
 
         self.binary.printer.printTableHeader('Opcode')
         counter = 0

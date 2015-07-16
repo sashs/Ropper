@@ -61,24 +61,24 @@ class Ropper(object):
 
         toReturn = []
         code = bytearray(code)
-        for index in range(len(code)):
+
+        for match in re.finditer(opcode, code):
             c = 0
-            if code[index:index + len(opcode)] == opcode:
-                opcodeGadget = Gadget(self.__arch)
-                opcodeGadget.imageBase = virtualAddress
-                if disass:
-                    for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[index:index + len(opcode)]), offset + index):
-                        opcodeGadget.append(
-                            i.address, i.mnemonic , i.op_str)
-                else:
+            opcodeGadget = Gadget(self.__arch)
+            opcodeGadget.imageBase = virtualAddress
+            if disass:
+                for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[match.start():match.end()]), offset + match.start()):
                     opcodeGadget.append(
-                        offset + index, hexlify(opcode).decode('utf-8'))
-                if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
-                    continue
-                c += 1
-                opcodeGadget._binary = self.__binary
-                opcodeGadget._section = section
-                toReturn.append(opcodeGadget)
+                        i.address, i.mnemonic , i.op_str)
+            else:
+                opcodeGadget.append(
+                    offset + match.start(), hexlify(match.group(0)).decode('utf-8'))
+            if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
+                continue
+            c += 1
+            opcodeGadget._binary = self.__binary
+            opcodeGadget._section = section
+            toReturn.append(opcodeGadget)
         return toReturn
 
     def searchPopPopRet(self, code, virtualAddress=0x0, offset=0x0,  badbytes='', section=None):

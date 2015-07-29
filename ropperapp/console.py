@@ -359,7 +359,7 @@ class Console(cmd.Cmd):
         else:
             string = self.binary.arch.searcher.prepareFilter(string)
         sections = list(self.__binary.dataSections)
-        
+
         for section in sections:
             if not sec or sec == str(section.name):
                 b = bytes(bytearray(section.bytes))
@@ -432,7 +432,7 @@ class Console(cmd.Cmd):
             length = 1
             if not isHex(split[0]):
                 raise RopperError('Number have to be in hex format 0x....')
-                
+
             if len(split) > 1:
                 if split[1][1:].isdigit() or (len(split[1]) >= 3 and split[1][1] == '-' and split[1][2:].isdigit()): # is L\d or L-\d
                     length = int(split[1][1:])
@@ -475,8 +475,8 @@ class Console(cmd.Cmd):
                     text)]
 
     @safe_cmd
-    def do_close(self, text):  
-        
+    def do_close(self, text):
+
         if text.isdigit():
             idx = int(text)
             if len(self.__binaries) > idx-1:
@@ -508,7 +508,7 @@ class Console(cmd.Cmd):
                     data.append((cstr(index+1), cstr(binary.fileName) , cstr(binary.loaded)))
 
             printTable('Opened Files',(cstr('No.'),cstr('Name'), cstr('Loaded')), data)
-            
+
         elif text.isdigit():
             idx = int(text)-1
             if idx >= len(self.__binaries):
@@ -578,7 +578,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__loadAllGadgets()
         elif text == 'unloaded':
             self.__loadUnloadedGadgets()
-        else:    
+        else:
             self.__loadGadgets()
             self.__printInfo('gadgets loaded.')
 
@@ -668,10 +668,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_type()
             return
-        if text not in ['rop','jop','all']:
-            raise RopperError('invalid type: %s' % text)
-
-        self.__options.type = text
+        
+        self.__options.setOption('type', text)
         self.__printInfo('Gadgets have to be reloaded')
 
 
@@ -708,25 +706,35 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_settings(self, text):
-        data = [
-            (cstr('badbytes') , cstr(self.__options.badbytes)),
-            (cstr('color') , cstr('off' if self.__options.nocolor else 'on')),
-            (cstr('detailed') , cstr('on' if self.__options.detail else 'off')),
-            (cstr('type') , cstr(self.__options.type))]
+        if len(text):
+            splits = text.split(' ')
+            if len(splits) == 1:
+                self.__options.getOption(splits[0])
+            elif len(splits) == 2:
+                self.__options.setOption(splits[0], splits[1])
+            else:
+                raise RopperError('Invalid setting')
+        else:
+            data = [
+                (cstr('all') , cstr('off' if self.__options.all else 'on')),
+                (cstr('badbytes') , cstr(self.__options.badbytes)),
+                (cstr('color') , cstr('off' if self.__options.nocolor else 'on')),
+                (cstr('depth') , cstr(self.__options.depth)),
+                (cstr('detailed') , cstr('on' if self.__options.detailed else 'off')),
+                (cstr('type') , cstr(self.__options.type))]
 
-        printTable('Settings',(cstr('Name'), cstr('Value')), data)
+            printTable('Settings',(cstr('Name'), cstr('Value')), data)
 
     def help_settings(self):
         self.__printHelpText('settings','shows the current settings')
+
 
     @safe_cmd
     def do_badbytes(self, text):
         if len(text) ==0:
             self.__printInfo('badbytes cleared')
-        elif not isHex('0x'+text):
-            self.__printError('not allowed characters in badbytes')
-            return
-        self.__options.badbytes =text
+        
+        self.__options.setOption('badbytes',text)
         self.__printInfo('Gadgets have to be reloaded')
 
     def help_badbytes(self):
@@ -810,7 +818,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_string(self, text):
-        
+
         self.__printStrings(text)
 
     def help_string(self):

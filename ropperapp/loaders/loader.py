@@ -185,7 +185,7 @@ class Loader(Abstract):
 
     def assertFileRange(self, value):
         assert value >= self._bytes_p.value and value <= (
-            self._bytes_p.value + len(self._bytes)), 'Pointer no in file range'
+            self._bytes_p.value + len(self._bytes)), 'Pointer not in file range'
 
     def save(self, fileName=None):
 

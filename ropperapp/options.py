@@ -26,7 +26,7 @@ import sys
 
 class Options(object):
 
-    
+
 
     def __init__(self, argv):
         super(Options, self).__init__()
@@ -228,7 +228,11 @@ epilog="""example uses:
 
     def setOption(self, key, value):
         if key in VALID_OPTIONS:
-            if not VALID_OPTIONS[key](self, value):
+            result = VALID_OPTIONS[key](self, value)
+            if result:
+                return result[1]
+
+            else:
               raise RopperError('Invalid value for option %s: %s' %(key, value))
         else:
             raise RopperError('Invalid option')
@@ -243,42 +247,42 @@ epilog="""example uses:
     def _setAll(self, value):
         if value.lower() in ('on', 'off'):
             self.all = bool(value == 'on')
-            return True
+            return  (True,True)
         return False
-     
+
     def _setDepth(self, value):
         if value.isdigit():
             self.depth = int(value)
-            return True
+            return (True,True)
         return False
 
     def _setBadbytes(self, value):
         if len(value) == 0 or isHex('0x'+value):
             self.badbytes = value
-            return True
+            return  (True,True)
         return False
 
     def _setDetailed(self, value):
         if value.lower() in ('on', 'off'):
             self.detailed = bool(value == 'on')
-            return True
+            return (True, False)
         return False
 
     def _setType(self, value):
         if value in ['rop','jop','all']:
             self.type = value
-            return True
+            return  (True,True)
         return False
 
     def _setColor(self, value):
         if value.lower() in ('on', 'off'):
             self.nocolor = bool(value == 'off')
-            return True
+            return (True,False)
         return False
 
 VALID_OPTIONS = {'all' : Options._setAll,
                      'depth' : Options._setDepth,
-                     'badbytes' : Options._setBadbytes, 
-                     'detailed' : Options._setDetailed, 
+                     'badbytes' : Options._setBadbytes,
+                     'detailed' : Options._setDetailed,
                      'type' : Options._setType,
                      'color' : Options._setColor}

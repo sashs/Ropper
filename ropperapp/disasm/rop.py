@@ -109,7 +109,7 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None, section=None):
+    def searchRopGadgets(self, code,  offset=0x0, virtualAddress=0x0, badbytes='',depth=10, gtype=GadgetType.ALL, pprinter=None, section=None, all=False):
         toReturn = []
         code = bytes(bytearray(code))
 
@@ -164,9 +164,11 @@ class Ropper(object):
         if pprinter:
             pprinter.printProgress('loading gadgets...', 1)
             pprinter.finishProgress();
+        if all:
+            return toReturn
         return self.__deleteDuplicates(toReturn, pprinter)
 
-    
+
     def __disassembleBackward(self, code, vaddr,offset, count):
         gadget = Gadget(self.__arch)
         counter = 0
@@ -183,8 +185,8 @@ class Ropper(object):
                         return toReturn
                     gadget = Gadget(self.__arch)
                     break
-            
-                
+
+
             counter += self.__arch.align
             if offset - counter < 0:
                 return toReturn
@@ -202,7 +204,7 @@ class Ropper(object):
             return self.__disassembleBackward(code, vaddr, offset, count*-1)
         gadget  = Gadget(self.__arch)
         c = 0
-        
+
         for i in self.__disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), vaddr):
             gadget.append(i.address, i.mnemonic , i.op_str)
             c += 1
@@ -228,7 +230,7 @@ class Ropper(object):
         if pprinter:
             pprinter.printProgress('clearing up...', 1)
             pprinter.finishProgress()
-        
+
         return sorted(toReturn, key=Gadget.simpleInstructionString)
 
 

@@ -93,7 +93,7 @@ class Console(cmd.Cmd):
 
 
     def __printGadget(self, gadget):
-        if self.__options.detail:
+        if self.__options.detailed:
             self.__cprinter.println(gadget)
         else:
             self.__cprinter.println(gadget.simpleString())
@@ -239,7 +239,7 @@ class Console(cmd.Cmd):
             vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
             self.__printInfo('Loading gadgets for section: ' + section.name)
             newGadgets = r.searchRopGadgets(
-                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, section=section, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter)
+                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, section=section, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter, all=self.__options.all)
 
             gadgets[section] = (newGadgets)
         return gadgets
@@ -668,7 +668,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_type()
             return
-        
+
         self.__options.setOption('type', text)
         self.__printInfo('Gadgets have to be reloaded')
 
@@ -692,11 +692,11 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_detailed(self, text):
         if text:
             if text == 'on':
-                self.__options.detail = True
+                self.__options.detailed = True
             elif text == 'off':
-                self.__options.detail = False
+                self.__options.detailed = False
         else:
-            self.__cprinter.println('on' if self.__options.detail else 'off')
+            self.__cprinter.println('on' if self.__options.detailed else 'off')
 
     def help_detailed(self):
         self.__printHelpText('detailed [on|off]', 'sets detailed gadget output')
@@ -711,12 +711,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             if len(splits) == 1:
                 self.__options.getOption(splits[0])
             elif len(splits) == 2:
-                self.__options.setOption(splits[0], splits[1])
+                if self.__options.setOption(splits[0], splits[1]):
+                    self.__printInfo('Gadgets have to be reloaded')
             else:
                 raise RopperError('Invalid setting')
         else:
             data = [
-                (cstr('all') , cstr('off' if self.__options.all else 'on')),
+                (cstr('all') , cstr('on' if self.__options.all else 'off')),
                 (cstr('badbytes') , cstr(self.__options.badbytes)),
                 (cstr('color') , cstr('off' if self.__options.nocolor else 'on')),
                 (cstr('depth') , cstr(self.__options.depth)),
@@ -733,7 +734,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_badbytes(self, text):
         if len(text) ==0:
             self.__printInfo('badbytes cleared')
-        
+
         self.__options.setOption('badbytes',text)
         self.__printInfo('Gadgets have to be reloaded')
 

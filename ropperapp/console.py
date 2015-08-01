@@ -166,7 +166,7 @@ class Console(cmd.Cmd):
                     opcode = opcode[:m.start()] + hexlify(b'[\x00-\xff]') +  opcode[m.start()+2:]
 
                 else:
-                    raise RopperError('A ? for the high 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
+                    raise RopperError('A ? for the highest 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
             elif m.start() % 2 == 1:
                 high = int(opcode[m.start()-1],16)
                 print (opcode[:m.start()-1])

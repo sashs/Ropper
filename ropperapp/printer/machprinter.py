@@ -27,7 +27,7 @@ class MachOPrinter(FileDataPrinter):
     def validType(cls):
         return Type.MACH_O
 
-    def printInformations(self, binary):
+    def printInformation(self, binary):
         hdr = binary.header
         data = [(cstr('CPU', Color.BLUE), cstr(CpuType[hdr.cputype], Color.WHITE)),
                 (cstr('Subtype', Color.BLUE), cstr(CPU_SUBTYPE_X86[hdr.cpusubtype], Color.WHITE)),

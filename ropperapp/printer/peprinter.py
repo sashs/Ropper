@@ -28,7 +28,7 @@ class PEPrinter(FileDataPrinter):
     def validType(cls):
         return Type.PE
 
-    def printInformations(self, binary):
+    def printInformation(self, binary):
 
         self.__printImageHeaders(binary)
         self.__printOptionalHeaders(binary)

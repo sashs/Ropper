@@ -27,7 +27,7 @@ class ELFPrinter(FileDataPrinter):
     def validType(cls):
         return Type.ELF
 
-    def printInformations(self, binary):
+    def printInformation(self, binary):
         ehdr = binary.ehdr
         data = [(cstr('Class', Color.BLUE), cstr(ELFCLASS[ehdr.e_ident[EI.CLASS]], Color.WHITE)),
                 (cstr('Machine', Color.BLUE), cstr(EM[ehdr.e_machine], Color.WHITE)),

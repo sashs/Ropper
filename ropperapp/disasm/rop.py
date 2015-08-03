@@ -66,13 +66,16 @@ class Ropper(object):
             c = 0
             opcodeGadget = Gadget(self.__arch)
             opcodeGadget.imageBase = virtualAddress
-            if disass:
-                for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[match.start():match.end()]), offset + match.start()):
+            if (offset + match.start()) % self.__arch.align == 0:
+                if disass:
+                    for i in self.__disassembler.disasm(struct.pack('B' * len(opcode), *code[match.start():match.end()]), offset + match.start()):
+                        opcodeGadget.append(
+                            i.address, i.mnemonic , i.op_str)
+                else:
                     opcodeGadget.append(
-                        i.address, i.mnemonic , i.op_str)
+                        offset + match.start(), hexlify(match.group(0)).decode('utf-8'))
             else:
-                opcodeGadget.append(
-                    offset + match.start(), hexlify(match.group(0)).decode('utf-8'))
+                continue
             if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
                 continue
             c += 1
@@ -146,14 +149,16 @@ class Ropper(object):
             while match:
                 offset_tmp += match.start()
                 index = match.start()
-                for x in range(1, (depth + 1) * self.__arch.align):
-                    code_part = tmp_code[index - x:index + ending[1]]
-                    gadget = createGadget(
-                        code_part, offset + offset_tmp - x, ending)
-                    if gadget:
-                        toReturn.append(gadget)
 
-                tmp_code = tmp_code[index+self.__arch.align:]
+                if offset_tmp % self.__arch.align == 0:
+                    for x in range(1, (depth + 1) * self.__arch.align):
+                        code_part = tmp_code[index - x:index + ending[1]]
+                        gadget = createGadget(
+                            code_part, offset + offset_tmp - x, ending)
+                        if gadget:
+                            toReturn.append(gadget)
+
+                    tmp_code = tmp_code[index+self.__arch.align:]
 
                 offset_tmp += self.__arch.align
                 match = re.search(ending[0], tmp_code)

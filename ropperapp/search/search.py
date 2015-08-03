@@ -89,3 +89,21 @@ class Searcherx86(Searcher):
         if not re.search('. ptr \\[', filter,  re.IGNORECASE):
             filter = filter.replace('\\[', '.{4,6} ptr \\[')
         return filter
+
+class SearcherARM(Searcher):
+
+    def prepareFilter(self, filter):
+        filter = super(SearcherARM,self).prepareFilter(filter)
+        filter = filter.replace('r9','sb')
+        filter = filter.replace('r10','sl')
+        filter = filter.replace('r11','fp')
+        filter = filter.replace('r12','ip')
+        filter = filter.replace('r13','sp')
+        filter = filter.replace('r14','lr')
+        filter = filter.replace('r15','pc')
+
+        return filter
+
+    def search(self, gadgets, filter, quality = None, pprinter=None):
+        pprinter.printInfo('r9=sb r10=sl r11=fp r12=ip r13=sp r14=lr r15=pc')
+        return super(SearcherARM, self).search(gadgets, filter, quality, pprinter)

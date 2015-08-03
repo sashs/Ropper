@@ -21,6 +21,7 @@ from ropperapp.common.abstract import *
 from ropperapp.common.error import NotSupportedError
 from ropperapp.search.search import Searcher
 from ropperapp.search.search import Searcherx86
+from ropperapp.search.search import SearcherARM
 from re import compile
 from capstone import *
 from . import gadget
@@ -177,6 +178,7 @@ class ArchitectureArm(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
+        self._searcher = SearcherARM()
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
@@ -189,6 +191,7 @@ class ArchitectureArmThumb(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
+        self._searcher = SearcherARM()
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []

@@ -158,7 +158,7 @@ class Ropper(object):
                         if gadget:
                             toReturn.append(gadget)
 
-                    tmp_code = tmp_code[index+self.__arch.align:]
+                tmp_code = tmp_code[index+self.__arch.align:]
 
                 offset_tmp += self.__arch.align
                 match = re.search(ending[0], tmp_code)

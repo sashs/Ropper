@@ -195,7 +195,7 @@ class ArchitectureArmThumb(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x50\x58\x60\x68\x70\x78]\x47', 2),
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00-\x7f]\x47', 2),
                                                 (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xd0\xd8\xe0\xe8\xf0\xf8]\x47', 2),
                                                 (b'[\x00-\xff]\xbd', 2)]
 

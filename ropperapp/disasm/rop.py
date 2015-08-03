@@ -140,22 +140,22 @@ class Ropper(object):
 
         max_prog = len(code) * len(self.__arch.endings[gtype])
         for ending in self.__arch.endings[gtype]:
-            offset = 0
+            offset_tmp = 0
             tmp_code = code[:]
             match = re.search(ending[0], tmp_code)
             while match:
-                offset += match.start()
+                offset_tmp += match.start()
                 index = match.start()
                 for x in range(1, (depth + 1) * self.__arch.align):
                     code_part = tmp_code[index - x:index + ending[1]]
                     gadget = createGadget(
-                        code_part, offset - x, ending)
+                        code_part, offset + offset_tmp - x, ending)
                     if gadget:
                         toReturn.append(gadget)
 
-                tmp_code = tmp_code[index+1:]
+                tmp_code = tmp_code[index+self.__arch.align:]
 
-                offset += self.__arch.align
+                offset_tmp += self.__arch.align
                 match = re.search(ending[0], tmp_code)
                 if pprinter:
                     progress = self.__arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)

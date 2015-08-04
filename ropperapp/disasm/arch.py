@@ -250,4 +250,4 @@ def getArchitecture(archString):
     if isinstance(arch, Architecture):
         return arch
 
-    raise NotSupportedError('Architecture is not supported: ' + archString)
+    raise NotSupportedError('Architecture is not supported: ' + archString + '\nSupported architectures are: x86, x86_64, MIPS, MIPS64, ARM, ARMTHUMB, ARM64, PPC, PPC64')

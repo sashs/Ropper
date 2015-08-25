@@ -84,11 +84,8 @@ class Ropper(object):
                     raise RopperError('A ? for the highest 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
             elif m.start() % 2 == 1:
                 high = int(opcode[m.start()-1],16)
-                print (opcode[:m.start()-1])
                 start = high << 4
-                print (hex(start))
                 end  = start + 0xf
-                print(hex(end))
                 opcode = opcode[:m.start()-1] + hexlify(b'['+chr(start)+'-'+chr(end)+']') + opcode[m.start()+1:]
 
             m = re.search('\?', opcode)

@@ -200,7 +200,7 @@ class GadgetDAO(object):
         conn.close()
 
 
-    def load(self, binary, printer=None):
+    def load(self, binary):
         if 'sqlite3' not in globals():
             self._printer.printError('sqlite is not installed!')
             return
@@ -246,7 +246,7 @@ class GadgetDAO(object):
 
                         if self._printer:
                             self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
-                    
-        self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
+        if self._printer:         
+            self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
         conn.close()
         return gadgets

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from ropperapp.common.enum import Enum
 from ctypes import *
-from ropperapp.disasm.arch import *
+from ropperapp.arch import *
 
 
 class VM_PROT(Enum):

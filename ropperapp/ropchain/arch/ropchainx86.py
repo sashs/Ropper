@@ -17,12 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropperapp.disasm.gadget import Category
+from ropperapp.gadget import Category
 from ropperapp.common.error import *
 from ropperapp.common.utils import *
-from ropperapp.disasm.rop import Ropper
-from ropperapp.disasm.arch import x86
-from ropperapp.disasm.chain.ropchain import *
+from ropperapp.rop import Ropper
+from ropperapp.arch import x86
+from ropperapp.ropchain.ropchain import *
 from ropperapp.loaders.loader import Type
 from re import match
 import itertools

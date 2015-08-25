@@ -19,7 +19,7 @@
 
 from ropperapp.common.enum import Enum
 from ctypes import *
-from ropperapp.disasm.arch import *
+from ropperapp.arch import *
 
 
 class IMAGE_FILE_MACHINE(Enum):

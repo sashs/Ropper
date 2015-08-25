@@ -18,8 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ropperapp.loaders.loader import *
-from ropperapp.disasm.rop import Ropper
-from ropperapp.disasm.arch import *
+from ropperapp.rop import Ropper
+from ropperapp.arch import *
 from ropperapp.common.error import *
 
 import unittest

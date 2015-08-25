@@ -101,5 +101,6 @@ class SearcherARM(Searcher):
         return filter
 
     def search(self, gadgets, filter, quality = None, pprinter=None):
-        pprinter.printInfo('r9=sb r10=sl r11=fp r12=ip r13=sp r14=lr r15=pc')
+        if pprinter:
+            pprinter.printInfo('r9=sb r10=sl r11=fp r12=ip r13=sp r14=lr r15=pc')
         return super(SearcherARM, self).search(gadgets, filter, quality, pprinter)

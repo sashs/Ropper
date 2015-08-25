@@ -29,7 +29,6 @@ from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
 from ropperapp.disasm.arch import getArchitecture
-from binascii import unhexlify, hexlify
 from sys import stdout, stdin, stderr
 import ropperapp
 import cmd

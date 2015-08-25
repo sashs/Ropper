@@ -19,16 +19,16 @@
 
 from ropperapp.loaders.loader import Loader
 from ropperapp.printer.printer import FileDataPrinter
-from ropperapp.disasm.rop import Ropper
+from ropperapp.rop import Ropper
 from ropperapp.common.error import *
-from ropperapp.disasm.gadget import GadgetType
-from ropperapp.disasm.gadget import GadgetDAO
-from ropperapp.disasm.gadget import Category
+from ropperapp.gadget import GadgetType
+from ropperapp.gadget import GadgetDAO
+from ropperapp.gadget import Category
 from ropperapp.common.utils import isHex
 from ropperapp.common.coloredstring import *
 from ropperapp.common.utils import *
-from ropperapp.disasm.chain.ropchain import *
-from ropperapp.disasm.arch import getArchitecture
+from ropperapp.ropchain.ropchain import *
+from ropperapp.arch import getArchitecture
 from sys import stdout, stdin, stderr
 import ropperapp
 import cmd
@@ -210,18 +210,21 @@ class Console(cmd.Cmd):
         old = self.__options.nocolor
         self.__options.nocolor = True
 
-        generator = RopChain.get(self.__binaries,split[0], self.__cprinter)
+        try:
+            generator = RopChain.get(self.__binaries,split[0], self.__cprinter)
 
-        self.__printInfo('generating rop chain')
-        #self.__printSeparator(behind='\n\n')
+            self.__printInfo('generating rop chain')
+            #self.__printSeparator(behind='\n\n')
 
-        if len(split) == 2:
-            generator.create(split[1])
-        else:
-            generator.create()
+            if len(split) == 2:
+                generator.create(split[1])
+            else:
+                generator.create()
 
-        #self.__printSeparator(before='\n\n')
-        self.__printInfo('rop chain generated!')
+            #self.__printSeparator(before='\n\n')
+            self.__printInfo('rop chain generated!')
+        except RopperError as e:
+            self.__printError(e)
         self.__options.nocolor = old
 
 

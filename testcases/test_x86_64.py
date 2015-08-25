@@ -124,6 +124,58 @@ class PE_x86_84(unittest.TestCase):
         self.assertEqual(len(gadgets), 113)
         self.assertEqual(gadgets[0].lines[0][0], 0x14ec)
 
+
+class MACHO_x86_84(unittest.TestCase):
+
+    def setUp(self):
+        self.file = Loader.open('test-binaries/ls-macho-x86_64')
+
+    def test_general(self):
+        self.assertEqual(self.file.arch, x86_64)
+        self.assertEqual(self.file.type, Type.MACH_O)
+        
+    def test_gadgets(self):
+        ropper = Ropper(self.file)
+        gadgets = ropper.searchRopGadgets()
+
+        gadget = gadgets[0]
+        self.assertEqual(len(gadgets), 120)
+        self.assertEqual(gadget.lines[0][0], 0x3a29)
+        self.assertEqual(gadget.imageBase, 0x100000000)
+        self.file.manualImagebase = 0x0
+        self.assertEqual(gadget.imageBase, 0x0)
+        self.file.manualImagebase = None
+        self.assertEqual(gadget.imageBase, 0x100000000)
+
+    def test_jmpreg(self):
+        ropper = Ropper(self.file)
+        regs=['rax']
+        gadgets = ropper.searchJmpReg(regs)
+        gadget = gadgets[0]
+        self.assertEqual(len(gadgets), 4)
+        self.assertEqual(gadget.lines[0][0], 0x19bb)
+
+        regs=['rcx','rax']
+        gadgets = ropper.searchJmpReg(regs)
+        self.assertEqual(len(gadgets), 7)
+
+        self.assertEqual(gadget.imageBase, 0x100000000)
+        self.file.manualImagebase = 0x0
+        self.assertEqual(gadget.imageBase, 0x0)
+        self.file.manualImagebase = None
+        self.assertEqual(gadget.imageBase, 0x100000000)
+
+        with self.assertRaises(RopperError):
+            regs=['invalid']
+            ropper.searchJmpReg(regs)
+
+    def test_ppr(self):
+        ropper = Ropper(self.file)
+        
+        gadgets = ropper.searchPopPopRet()
+        
+        self.assertEqual(len(gadgets), 16)
+        self.assertEqual(gadgets[0].lines[0][0], 0x1cdc)
     
 if __name__ == '__main__':
     unittest.main()

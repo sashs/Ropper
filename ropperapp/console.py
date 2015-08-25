@@ -30,7 +30,7 @@ from ropperapp.common.utils import *
 from ropperapp.disasm.chain.ropchain import *
 from ropperapp.disasm.arch import getArchitecture
 from binascii import unhexlify, hexlify
-from sys import stdout, stdin
+from sys import stdout, stdin, stderr
 import ropperapp
 import cmd
 import re
@@ -92,8 +92,8 @@ class Console(cmd.Cmd):
         self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
 
-    def __printGadget(self, gadget):
-        if self.__options.detailed:
+    def __printGadget(self, gadget, detailed=False):
+        if detailed:
             self.__cprinter.println(gadget)
         else:
             self.__cprinter.println(gadget.simpleString())
@@ -134,122 +134,43 @@ class Console(cmd.Cmd):
 
     def __searchJmpReg(self, regs):
         r = Ropper(self.binary)
-        gadgets = {}
-        for section in self.binary.executableSections:
-            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-            gadgets[section] = (
-                r.searchJmpReg(section.bytes, regs, vaddr,0x0, badbytes=unhexlify(self.__options.badbytes), section=section))
-
-        self.binary.printer.printTableHeader('JMP Instructions')
-        counter = 0
-        for section, gadget in gadgets.items():
-            for g in gadget:
-                vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-                g.imageBase = vaddr
-                self.__cprinter.println(g.simpleString())
-                counter += 1
-        self.__cprinter.println('')
-        self.__cprinter.println('%d times opcode found' % counter)
+        regs = regs.split(',')
+        gadgets = r.searchJmpReg(regs, badbytes=self.__options.badbytes)
+        self.__printGadgets(gadgets, header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
-        if len(opcode) % 2 > 0:
-            raise RopperError('The length of the opcode have to be a multiple of two')
-
-        opcode = opcode.encode('ascii')
-        m = re.search('\?', opcode)
-        while m:
-
-
-            if m.start() % 2 == 0:
-                if opcode[m.start()+1] == '?':
-
-                    opcode = opcode[:m.start()] + hexlify(b'[\x00-\xff]') +  opcode[m.start()+2:]
-
-                else:
-                    raise RopperError('A ? for the highest 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
-            elif m.start() % 2 == 1:
-                high = int(opcode[m.start()-1],16)
-                print (opcode[:m.start()-1])
-                start = high << 4
-                print (hex(start))
-                end  = start + 0xf
-                print(hex(end))
-                opcode = opcode[:m.start()-1] + hexlify(b'['+chr(start)+'-'+chr(end)+']') +  opcode[m.start()+1:]
-
-
-
-            m = re.search('\?', opcode)
-
-
-        try:
-            opcode = unhexlify(opcode)
-        except:
-            raise RopperError('Invalid characters in opcode string')
-
-
-        r = Ropper(self.binary)
-        gadgets = {}
-        for section in self.binary.executableSections:
-            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-            gadgets[section]=(
-                r.searchOpcode(section.bytes, opcode, vaddr,0x0, section=section, badbytes=unhexlify(self.__options.badbytes)))
-
-        self.binary.printer.printTableHeader('Opcode')
-        counter = 0
-        for section, gadget in gadgets.items():
-            for g in gadget:
-                vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-                g.imageBase = vaddr
-                self.__cprinter.println(g.simpleString())
-                counter += 1
-        self.__cprinter.println('')
-        self.__cprinter.println('%d times opcode found' % counter)
+        r = Ropper(self.binary, self.__cprinter)
+        gadgets = r.searchOpcode(opcode, badbytes=self.__options.badbytes)
+        self.__printGadgets(gadgets, header='Opcode')
+       
 
     def __searchPopPopRet(self):
-        r = Ropper(self.binary)
-
-        self.binary.printer.printTableHeader('POP;POP;RET Instructions')
-        for section in self.binary.executableSections:
-
-            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-            pprs = r.searchPopPopRet(section.bytes, vaddr, 0x0, section=section, badbytes=unhexlify(self.__options.badbytes))
-            for ppr in pprs:
-                ppr.imageBase = vaddr
-                self.__printGadget(ppr)
-        self.__cprinter.println('')
+        r = Ropper(self.binary, self.__cprinter)
+        pprs = r.searchPopPopRet(self.__options.badbytes)
+        self.__printGadgets(pprs, header='POP;POP;RET Instructions')
 
 
-    def __printRopGadgets(self, gadgets, category=None):
-        self.binary.printer.printTableHeader('Gadgets')
-        counter = 0
-        for section, gadget in gadgets.items():
-            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-            for g in gadget:
-                if not category or category == g.category[0]:
-                    g.imageBase = vaddr
-                    self.__printGadget(g)
-                    counter +=1
-            #print('')
-        self.__cprinter.println('\n%d gadgets found' % counter)
+    def __printGadgets(self, gadgets, category=None, header='Gadgets', detailed=False):
+        self.binary.printer.printTableHeader(header)
+
+        for g in gadgets:
+            if not category or category == g.category[0]:
+                self.__printGadget(g, detailed=detailed)
+
+        self.__cprinter.println('\n%d gadgets found' % len(gadgets))
 
     def __searchGadgets(self, binary):
-        gadgets = {}
-        r = Ropper(binary)
-        for section in binary.executableSections:
-            vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
-            self.__printInfo('Loading gadgets for section: ' + section.name)
-            newGadgets = r.searchRopGadgets(
-                section.bytes, section.offset,vaddr, badbytes=unhexlify(self.__options.badbytes), depth=self.__options.depth, section=section, gtype=GadgetType[self.__options.type.upper()], pprinter=self.__cprinter, all=self.__options.all)
+        r = Ropper(binary, self.__cprinter)
+        newGadgets=r.searchRopGadgets(
+                 badbytes=self.__options.badbytes, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], all=self.__options.all)
 
-            gadgets[section] = (newGadgets)
+        gadgets = (newGadgets)
+        
         return gadgets
-
-
 
     def __loadGadgets(self):
         self.binary.loaded = True
         self.binary.gadgets = self.__searchGadgets(self.binary)
-        self.__filterBadBytes()
 
     def __loadAllGadgets(self):
 
@@ -265,9 +186,6 @@ class Console(cmd.Cmd):
                 binary.gadgets = self.__searchGadgets(binary)
                 binary.loaded = True
 
-    def __filterBadBytes(self):
-        self.binary.gadgets = self.binary.gadgets
-
     def __searchAndPrintGadgets(self):
 
         gadgets = self.binary.gadgets
@@ -275,7 +193,7 @@ class Console(cmd.Cmd):
             gadgets = self.__search(self.binary.gadgets, self.__options.search, self.__options.quality)
         elif self.__options.filter:
             gadgets = self.__filter(self.binary.gadgets, self.__options.filter)
-        self.__printRopGadgets(gadgets)
+        self.__printGadgets(gadgets, detailed=self.__options.detailed)
 
     def __filter(self, gadgets, filter):
         self.__printInfo('Filtering gadgets: '+filter)
@@ -369,14 +287,14 @@ class Console(cmd.Cmd):
         printTable('Strings',(cstr('Address'), cstr('Value')), data)
 
     def __disassemble(self, addr, length):
-        eSections = self.__binary.executableSections
+        eSections = self.binary.executableSections
 
         for section in  eSections:
             if section.virtualAddress <= addr and section.virtualAddress + section.size > addr:
                 ropper = Ropper(self.binary)
 
-                code = bytes(bytearray(section.bytes))
-                g = ropper.disassemble(code, addr, addr - section.virtualAddress, length)
+                
+                g = ropper.disassemble(section, addr, addr - (self.binary.calculateImageBase(section)+section.offset), length)
                 if not g:
                     self.__cprinter.printError('Cannot disassemble address: %s' % toHex(addr))
                     return
@@ -420,7 +338,7 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.stack_pivot:
             self.__loadGadgets()
-            self.__printRopGadgets(self.__binary.gadgets, Category.STACK_PIVOT)
+            self.__printGadgets(self.__binary.gadgets, Category.STACK_PIVOT)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
         elif options.string:
@@ -567,7 +485,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printInfo('Gadgets have to be loaded with load')
             return
 
-        self.__printRopGadgets(self.binary.gadgets)
+        self.__printGadgets(self.binary.gadgets, detailed=self.__options.detailed)
 
     def help_gadgets(self):
         self.__printHelpText('gadgets', 'shows all loaded gadgets')
@@ -598,7 +516,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.help_filter()
             return
 
-        self.__printRopGadgets(self.__filter(self.binary.gadgets, text))
+        self.__printGadgets(self.__filter(self.binary.gadgets, text))
 
     def help_filter(self):
         self.__printHelpText('filter <filter>', 'filters gadgets')
@@ -615,7 +533,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             text = text[len(match.group(0)):].strip()
         for binary in self.__binaries:
             self.__cprinter.printInfo('Search in gadgets of file \'%s\'' % binary.fileName)
-            self.__printRopGadgets(self.__search(binary.gadgets, text, qual))
+            self.__printGadgets(self.__search(binary.gadgets, text, qual))
 
     def help_search(self):
         desc = 'search gadgets.\n\n'
@@ -655,13 +573,15 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_imagebase(self, text):
         if len(text) == 0:
             self.binary.manualImagebase = None
+            self.__printInfo('Imagebase reseted')
         elif isHex(text):
             self.binary.manualImagebase = int(text, 16)
+            self.__printInfo('Imagebase set to %s' % text)
         else:
             self.help_imagebase()
 
     def help_imagebase(self):
-        self.__printHelpText('imagebase <base>', 'sets a new imagebase for searching gadgets')
+        self.__printHelpText('imagebase [<base>]', 'sets a new imagebase. An empty imagebase sets the imagebase to the original value.')
 
     @safe_cmd
     def do_type(self, text):
@@ -787,6 +707,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_arch(self, text):
         if not text:
             self.help_arch()
+            return
         self.__setarch(text)
 
 
@@ -828,7 +749,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_hex(self, text):
         if not text:
-            self.help_text()
+            self.help_hex()
             return
         self.__printSectionInHex(text)
 
@@ -856,7 +777,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText('disassemble <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
 
     def do_stack_pivot(self, text):
-        self.__printRopGadgets(self.binary.gadgets, Category.STACK_PIVOT)
+        self.__printGadgets(self.binary.gadgets, Category.STACK_PIVOT)
 
 
     def do_EOF(self, text):
@@ -867,9 +788,18 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 class ConsolePrinter(object):
 
 
-    def __init__(self, out=stdout):
+    def __init__(self, out=stdout, err=stderr):
         super(ConsolePrinter, self).__init__()
         self._out = out
+        self._err = err
+
+    def putsErr(self, *args):
+        for i, arg in enumerate(args):
+            self._err.write(str(arg))
+            if i != len(args)-1:
+                self._err.write(' ')
+        self._err.flush()
+
 
     def puts(self, *args):
 
@@ -884,8 +814,13 @@ class ConsolePrinter(object):
         self.puts(*args)
         self._out.write('\n')
 
+    def printlnErr(self, *args):
+
+        self.putsErr(*args)
+        self._err.write('\n')
+
     def printMessage(self, mtype, message):
-        self.println(mtype, message)
+        self.printlnErr(mtype, message)
 
     def printError(self, message):
         self.printMessage(cstr('[ERROR]', Color.RED), message)
@@ -898,9 +833,9 @@ class ConsolePrinter(object):
             self.printInfo(message)
 
     def printProgress(self, message, progress):
-        self.puts(cstr('\r') + cstr('[LOAD]', Color.GREEN), message, cstr(int(progress * 100))+cstr('%'))
+        self.putsErr(cstr('\r') + cstr('[LOAD]', Color.GREEN), message, cstr(int(progress * 100))+cstr('%'))
 
     def finishProgress(self, message=None):
-        self.println('')
+        self.printlnErr('')
         if message:
             self.printInfo(message)

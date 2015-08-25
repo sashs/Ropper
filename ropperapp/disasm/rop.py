@@ -74,7 +74,7 @@ class Ropper(object):
             raise RopperError('The length of the opcode has to be a multiple of two')
 
         opcode = opcode.encode('ascii')
-        m = re.search('\?', opcode)
+        m = re.search(b'\?', opcode)
         while m:
 
             if m.start() % 2 == 0:

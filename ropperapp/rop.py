@@ -23,6 +23,7 @@ from ropperapp.common.error import *
 from ropperapp.common.enum import Enum
 from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
+from struct import pack
 import re
 import struct
 import sys
@@ -79,12 +80,16 @@ class Ropper(object):
                 else:
                     raise RopperError('A ? for the highest 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
             elif m.start() % 2 == 1:
-                high = int(opcode[m.start()-1],16)
+                char = opcode[m.start()-1]
+                if type(char) == int:
+                    char = chr(char)
+                high = int(char,16)
                 start = high << 4
                 end  = start + 0xf
-                opcode = opcode[:m.start()-1] + hexlify(b'['+chr(start)+'-'+chr(end)+']') + opcode[m.start()+1:]
+                #import pdb;pdb.set_trace()
+                opcode = opcode[:m.start()-1] + hexlify(b'['+pack('B',start)+b'-'+pack('B',end)+b']') + opcode[m.start()+1:]
 
-            m = re.search('\?', opcode)
+            m = re.search(b'\?', opcode)
         try:
             opcode = unhexlify(opcode)
         except:

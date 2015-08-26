@@ -274,12 +274,13 @@ class Console(cmd.Cmd):
 
     def __printStrings(self, string, sec=None):
         data = []
+        
         if not string or string == '[ -~]{2}[ -~]*':
             string = '[ -~]{2}[ -~]*'
         else:
             string = self.binary.arch.searcher.prepareFilter(string)
         sections = list(self.__binary.dataSections)
-
+        string = string.encode('ascii') # python 3 compatibility
         for section in sections:
             if not sec or sec == str(section.name):
                 b = bytes(bytearray(section.bytes))

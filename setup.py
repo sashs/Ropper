@@ -9,11 +9,17 @@ With ropper you can show information about files in different file formats
 and you can find gadgets to build rop chains for different architectures.
 """.strip()
 
+packages = find_packages
+valid_packages = []
+for p in packages:
+    if p.startswith('ropperapp'):
+        valid_packages.append(p)
+
 setup(
     name=package_name,
     version=version,
     description=package_description,
-    packages=find_packages(),
+    packages=valid_packages,
     license="GPLv2",
     author="Sascha Schirra",
     author_email="sashs@scoding.de",

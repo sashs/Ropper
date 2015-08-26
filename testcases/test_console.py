@@ -94,13 +94,5 @@ class ConsoleTest(unittest.TestCase):
         c.do_stack_pivot('')
 
 
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
     unittest.main()

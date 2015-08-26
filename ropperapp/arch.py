@@ -157,9 +157,9 @@ class ArchitectureMips(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [(b'\x09\xf8\x20\x03', 4),
-                                                (b'\x08\x00\x20\x03', 4),
-                                                (b'\x08\x00\xe0\x03', 4)]
+        self._endings[gadget.GadgetType.JOP] = [(b'\x09\xf8\x20\x03', 4), # jalr t9
+                                                (b'\x08\x00\x20\x03', 4), # jr t9
+                                                (b'\x08\x00\xe0\x03', 4)] # jr ra
 
 
 class ArchitectureMips64(ArchitectureMips):
@@ -209,12 +209,13 @@ class ArchitectureArm64(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4),
-                                                (b'\xc0\x03\x5f\xd6', 4)] # ret <reg>
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # bx <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # blx <reg>
-                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4),
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4), # ret <reg> (x24 - x28) 
+                                                (b'\xc0\x03\x5f\xd6', 4)] # ret 
+
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # br <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # br <reg>
+                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4), # blr <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # blr <reg>
 
 
 
@@ -224,7 +225,7 @@ class ArchitecturePPC(Architecture):
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] #blr
+        self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
         self._endings[gadget.GadgetType.JOP] = []
 
 class ArchitecturePPC64(ArchitecturePPC):

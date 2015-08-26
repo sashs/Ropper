@@ -37,11 +37,14 @@ class DataContainer(object):
 
 class Section(object):
 
-    def __init__(self, name, sectionbytes, virtualAddress, offset):
+    def __init__(self, name, sectionbytes, virtualAddress, offset, struct=None):
+        if type(name) == bytes:
+            name = name.decode('ascii')
         self.name = name
         self.bytes = sectionbytes
         self.virtualAddress = virtualAddress
         self.offset = offset
+        self.struct = struct
 
     @property
     def size(self):
@@ -196,3 +199,11 @@ class Loader(Abstract):
                 f.write(self._bytes)
         except BaseException as e:
             raise LoaderError(e)
+
+    def calculateImageBase(self, section):
+        ib = self.imageBase
+
+        if self.manualImagebase == None:
+            return ib
+
+        return self.manualImagebase

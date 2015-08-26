@@ -19,7 +19,7 @@
 
 from ctypes import *
 from ropperapp.loaders.elf_intern.elf_gen import *
-from ropperapp.disasm.arch import x86_64
+from ropperapp.arch import x86_64
 
 
 Elf64_Addr = c_ulonglong

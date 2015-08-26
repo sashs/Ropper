@@ -69,7 +69,7 @@ class cstr(str):
 
 	def __str__(self):
 		data = str.__str__(self)
-		if ropperapp.app_options.nocolor or not self._color:
+		if (ropperapp.app_options == None or ropperapp.app_options.nocolor) or not self._color:
 			return data
 		return '\x1b[%sm%s\x1b[0m' % (self._color.value, data)
 

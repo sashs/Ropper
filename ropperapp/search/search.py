@@ -37,49 +37,45 @@ class Searcher(object):
         filter = self.prepareFilter(filter)
         filtered = {}
         count = 0
-        max_count = 0
-        for g in gadgets.values():
-            max_count += len(g)
-        for section, gadget in gadgets.items():
-            fg = []
-            for g in gadget:
-                if g.match(filter):
-                    if quality:
-                        if len(g) <= quality+1:
-                            fg.append(g)
-                    else:
+        max_count = len(gadgets)
+        fg = []
+
+        for g in gadgets:
+            if g.match(filter):
+                if quality:
+                    if len(g) <= quality+1:
                         fg.append(g)
-                count += 1
-                if pprinter:
-                    pprinter.printProgress('searching gadgets...', float(count) / max_count)
-            filtered[section] = fg
+                else:
+                    fg.append(g)
+            count += 1
+            if pprinter:
+                pprinter.printProgress('searching gadgets...', float(count) / max_count)
+            
         if pprinter:
             pprinter.finishProgress();
-        return filtered
+        return fg
 
     def filter(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)
         filtered = {}
         count = 0
-        max_count = 0
-        for g in gadgets.values():
-            max_count += len(g)
-        for section, gadget in gadgets.items():
-            fg = []
-            for g in gadget:
-                if not g.match(filter):
-                    if quality:
-                        if len(g) <= quality+1:
-                            fg.append(g)
-                    else:
+        max_count = len(gadgets)
+        
+        fg = []
+        for g in gadgets:
+            if not g.match(filter):
+                if quality:
+                    if len(g) <= quality+1:
                         fg.append(g)
-                count += 1
-                if pprinter:
-                    pprinter.printProgress('filtering gadgets...', float(count) / max_count)
-            filtered[section] = fg
+                else:
+                    fg.append(g)
+            count += 1
+            if pprinter:
+                pprinter.printProgress('filtering gadgets...', float(count) / max_count)
+            
         if pprinter:
             pprinter.finishProgress();
-        return filtered
+        return fg
 
 
 class Searcherx86(Searcher):
@@ -89,3 +85,22 @@ class Searcherx86(Searcher):
         if not re.search('. ptr \\[', filter,  re.IGNORECASE):
             filter = filter.replace('\\[', '.{4,6} ptr \\[')
         return filter
+
+class SearcherARM(Searcher):
+
+    def prepareFilter(self, filter):
+        filter = super(SearcherARM,self).prepareFilter(filter)
+        filter = filter.replace('r9','sb')
+        filter = filter.replace('r10','sl')
+        filter = filter.replace('r11','fp')
+        filter = filter.replace('r12','ip')
+        filter = filter.replace('r13','sp')
+        filter = filter.replace('r14','lr')
+        filter = filter.replace('r15','pc')
+
+        return filter
+
+    def search(self, gadgets, filter, quality = None, pprinter=None):
+        if pprinter:
+            pprinter.printInfo('r9=sb r10=sl r11=fp r12=ip r13=sp r14=lr r15=pc')
+        return super(SearcherARM, self).search(gadgets, filter, quality, pprinter)

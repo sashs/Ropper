@@ -31,7 +31,7 @@ except:
     pass
 
 class Category(enum.Enum):
-    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_SHIFT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
+    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
 
 
 
@@ -41,16 +41,15 @@ class GadgetType(enum.Enum):
 
 class Gadget(object):
 
-    def __init__(self, arch):
+    def __init__(self, binary, section):
         super(Gadget, self).__init__()
-        self.__arch = arch
+        self.__arch = binary.arch
         self.__lines = []
         self._gadget = ''
         self._vaddr = 0x0
         self.__category = None
-        self.__imageBase = 0x0
-        self._binary = None
-        self._section = None
+        self._binary = binary
+        self._section = section
 
     @property
     def lines(self):
@@ -58,11 +57,7 @@ class Gadget(object):
 
     @property
     def imageBase(self):
-        return self.__imageBase
-
-    @imageBase.setter
-    def imageBase(self, base):
-        self.__imageBase = base
+        return self._binary.calculateImageBase(self._section)
 
     @property
     def vaddr(self):
@@ -86,7 +81,7 @@ class Gadget(object):
         line =  self.__lines[0]
         for b in badbytes:
 
-            address = line[0] + self.__imageBase
+            address = line[0] + self.imageBase
             if type(b) == str:
                 b = ord(b)
             for i in range(4):
@@ -109,7 +104,7 @@ class Gadget(object):
         return toReturn
 
     def simpleString(self):
-        toReturn = '%s: ' % cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.RED)
+        toReturn = '%s: ' % cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
         toReturn += self.simpleInstructionString()
         return toReturn
 
@@ -143,16 +138,16 @@ class Gadget(object):
     def disassemblyString(self):
         toReturn = ''
         for line in self.__lines:
-            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
+            toReturn += cstr(toHex(line[0] + self.imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 
         return toReturn
 
     def __str__(self):
         if not len(self.__lines):
             return "empty gadget"
-        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.__imageBase, self.__arch.addressLength), Color.BLUE))
+        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.BLUE))
         for line in self.__lines:
-            toReturn += cstr(toHex(line[0] + self.__imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
+            toReturn += cstr(toHex(line[0] + self.imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 
         return toReturn
 
@@ -165,7 +160,7 @@ class GadgetDAO(object):
 
 
 
-    def save(self, section_gadgets):
+    def save(self, gadgets):
         if 'sqlite3' not in globals():
             self._printer.printError('sqlite is not installed!')
             return
@@ -176,35 +171,35 @@ class GadgetDAO(object):
         c.execute('create table lines(gnr INTEGER, addr INTEGER, inst, mnem, op)')
         scount = 0
         gcount = 0
-        endcount = 0
-        if self._printer:
-            for gadgets in section_gadgets.values():
-                endcount += len(gadgets)
+        endcount = len(gadgets)
+        saved_sections = []        
 
-        for section, gadgets in section_gadgets.items():
-            c.execute('insert into sections values(?, ?,?,?,?)' ,(scount, section.name, section.offset, len(gadgets), hashlib.md5(section.bytes).hexdigest()))
+        for gadget in gadgets:
+            if gadget._section not in saved_sections:
+                section = gadget._section
+                saved_sections.append(section)
+                c.execute('insert into sections values(?, ?,?,?,?)' ,(scount, section.name, section.offset, len(gadgets), hashlib.md5(section.bytes).hexdigest()))
+                scount +=1
+            
+            c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
 
-            for gadget in gadgets:
-                c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
+            for addr, line, mnem, op in gadget.lines:
+                c.execute('insert into lines values(?,?,?,?,?)', (gcount, addr, line, mnem, op))
 
-                for addr, line, mnem, op in gadget.lines:
-                    c.execute('insert into lines values(?,?,?,?,?)', (gcount, addr, line, mnem, op))
-
-                gcount +=1
-                if self._printer:
-                    self._printer.printProgress('saving gadgets...', float(gcount) / endcount)
-            scount += 1
+            gcount +=1
+            if self._printer:
+                self._printer.printProgress('saving gadgets...', float(gcount) / endcount)
         if self._printer:
             self._printer.finishProgress('gadgets saved in: ' + self.__dbname)
         conn.commit()
         conn.close()
 
 
-    def load(self, binary, printer=None):
+    def load(self, binary):
         if 'sqlite3' not in globals():
             self._printer.printError('sqlite is not installed!')
             return
-        toReturn = {}
+       
         execSect = binary.executableSections
         gcount = 0
         lcount = 0
@@ -224,16 +219,17 @@ class GadgetDAO(object):
             for i in sectionrows:
                 endcount += i[3]
 
+        gadgets = []
         for s in sectionrows:
             for section in execSect:
                 if s[1] == section.name and int(s[2]) == section.offset:
                     if s[4] != hashlib.md5(section.bytes).hexdigest():
                         raise RopperError('wrong checksum: '+s[4] + ' and ' + hashlib.md5(section.bytes).hexdigest())
-                    gadgets = []
+                    
                     for g in range(s[3]):
                         grow = gadgetrows[gcount]
                         gcount +=1
-                        gadget = Gadget(binary.arch)
+                        gadget = Gadget(binary, section)
                         gadgets.append(gadget)
 
                         for l in range(grow[2]):
@@ -243,7 +239,7 @@ class GadgetDAO(object):
 
                         if self._printer:
                             self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
-                    toReturn[section] = gadgets
-        self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
+        if self._printer:         
+            self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
         conn.close()
-        return toReturn
+        return gadgets

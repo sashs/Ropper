@@ -83,7 +83,7 @@ def printTable(header, cnames, data, space=2, fmt=None):
 
     print('')
 
-def printHexFormat(data, addr):
+def printHexFormat(data, addr, nocolor=False):
     for i in range((len(data)/16)+1):
         part = data[i*16:i*16+16]
         bytes = cstr('')
@@ -95,7 +95,7 @@ def printHexFormat(data, addr):
                 bytes += cstr(('%.2x%.2x ' % tuple(part[j:j+2])), Color.WHITE if c % 2 else Color.LIGHT_GRAY)
             c += 1
         string = ''
-        if ropperapp.app_options.nocolor:
+        if nocolor:
             if len(bytes) < 40:
                 bytes += ' ' * (40 - len(bytes))
         else:

@@ -17,12 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropperapp.disasm.gadget import Category
+from ropperapp.gadget import Category
 from ropperapp.common.error import *
 from ropperapp.common.utils import *
-from ropperapp.disasm.rop import Ropper
-from ropperapp.disasm.arch import x86
-from ropperapp.disasm.chain.ropchain import *
+from ropperapp.rop import Ropper
+from ropperapp.arch import x86
+from ropperapp.ropchain.ropchain import *
 from ropperapp.loaders.loader import Type
 from re import match
 import itertools
@@ -192,36 +192,36 @@ class RopChainX86(RopChain):
         quali = 1
         while quali < RopChainX86System.MAX_QUALI:
             for binary in self._binaries:
-                for section, gadgets in binary.gadgets.items():
-                    for gadget in gadgets:
-                        if gadget.category[0] == category and gadget.category[1] == quali:
-                            if badSrc and gadget.category[2]['src'] in badSrc:
-                                continue
-                            if badDst and gadget.category[2]['dst'] in badDst:
-                                continue
-                            if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString():
-                                continue
-                            if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
-                                continue
-                            elif not srcEqDst and 'src' in gadget.category[2] and (gadget.category[2]['dst'] == gadget.category[2]['src']):
-                                continue
-                            if self._isModifiedOrDereferencedAccess(gadget, dontModify):
-                                continue
-                            if reg:
-                                if gadget.category[2][srcdst] == reg:
-                                    if (gadget._binary, gadget._section) not in self._usedBinaries:
-                                        self._usedBinaries.append((gadget._binary, gadget._section))
-                                    return gadget
-                                elif switchRegs:
-                                    other = 'src' if srcdst == 'dst' else 'dst'
-                                    if gadget.category[2][other] == reg:
-                                        if (gadget._binary, gadget._section) not in self._usedBinaries:
-                                            self._usedBinaries.append((gadget._binary, gadget._section))
-                                        return gadget
-                            else:
+                for gadget in binary.gadgets:
+                    
+                    if gadget.category[0] == category and gadget.category[1] == quali:
+                        if badSrc and gadget.category[2]['src'] in badSrc:
+                            continue
+                        if badDst and gadget.category[2]['dst'] in badDst:
+                            continue
+                        if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString():
+                            continue
+                        if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
+                            continue
+                        elif not srcEqDst and 'src' in gadget.category[2] and (gadget.category[2]['dst'] == gadget.category[2]['src']):
+                            continue
+                        if self._isModifiedOrDereferencedAccess(gadget, dontModify):
+                            continue
+                        if reg:
+                            if gadget.category[2][srcdst] == reg:
                                 if (gadget._binary, gadget._section) not in self._usedBinaries:
                                     self._usedBinaries.append((gadget._binary, gadget._section))
                                 return gadget
+                            elif switchRegs:
+                                other = 'src' if srcdst == 'dst' else 'dst'
+                                if gadget.category[2][other] == reg:
+                                    if (gadget._binary, gadget._section) not in self._usedBinaries:
+                                        self._usedBinaries.append((gadget._binary, gadget._section))
+                                    return gadget
+                        else:
+                            if (gadget._binary, gadget._section) not in self._usedBinaries:
+                                self._usedBinaries.append((gadget._binary, gadget._section))
+                            return gadget
 
             quali += 1
 
@@ -565,12 +565,11 @@ class RopChainX86(RopChain):
        
 
     def _searchOpcode(self, opcode):
-        r = Ropper(self._binaries[0])
+        r = Ropper()
         gadgets = []
         for section in self._binaries[0].executableSections:
             vaddr = section.virtualAddress
-            gadgets.extend(
-                r.searchOpcode(section.bytes, opcode.decode('hex'), section.offset, True, section=section))
+            gadgets.extend(r.searchOpcode(self._binaries[0],opcode=opcode,disass=True))
 
         if len(gadgets) > 0:
             return gadgets[0]
@@ -605,7 +604,7 @@ class RopChainX86System(RopChainX86):
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
         chain_tmp = '\n'
-        chain_tmp += self._createCommand(cmd,section.struct.sh_offset+0x1000)[0]
+        chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
 
         badregs = []
 
@@ -614,16 +613,16 @@ class RopChainX86System(RopChainX86):
             ret = self._createNumber(0x0, badRegs=badregs)
             chain_tmp += ret[0]
             try:
-                chain_tmp += self._createWriteRegValueWhere(ret[1], section.struct.sh_offset+0x1000+length)[0]
+                chain_tmp += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
                 break
             except BaseException as e:
                 raise e
                 badregs.append(ret[1])
 
         gadgets = []
-        gadgets.append((self._createAddress, [section.struct.sh_offset+0x1000],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
-        gadgets.append((self._createAddress, [section.struct.sh_offset+0x1000+length],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
-        gadgets.append((self._createAddress, [section.struct.sh_offset+0x1000+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
+        gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
+        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
+        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
 
         self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
@@ -672,13 +671,13 @@ class RopChainX86Mprotect(RopChainX86):
     def name(cls):
         return 'mprotect'
 
-    def _createJmp(self, reg='esp'):
-        r = Ropper(self._binaries[0])
+    def _createJmp(self, reg=['esp']):
+        r = Ropper()
         gadgets = []
         for section in self._binaries[0].executableSections:
             vaddr = section.virtualAddress
             gadgets.extend(
-                r.searchJmpReg(section.bytes, reg, vaddr, section=section))
+                r.searchJmpReg(self._binaries[0],reg))
 
 
 
@@ -774,13 +773,13 @@ class RopChainX86VirtualProtect(RopChainX86):
             return '# Add here PUSHAD gadget!'
 
 
-    def _createJmp(self, reg='esp'):
-        r = Ropper(self._binaries[0])
+    def _createJmp(self, reg=['esp']):
+        r = Ropper()
         gadgets = []
         for section in self._binaries[0].executableSections:
             vaddr = section.offset
             gadgets.extend(
-                r.searchJmpReg(section.bytes, reg, vaddr, section=section))
+                r.searchJmpReg(self._binaries[0],reg))
 
 
 

@@ -23,7 +23,10 @@ from ropperapp.common.utils import isHex
 import sys
 
 
+
 class Options(object):
+
+
 
     def __init__(self, argv):
         super(Options, self).__init__()
@@ -77,7 +80,9 @@ epilog="""example uses:
   ropper.py --file /bin/ls --filter "sub eax"
   ropper.py --file /bin/ls --depth 5 --filter "sub eax"
   ropper.py --file /bin/ls --opcode ffe4
-  ropper.py --file /bin/ls --detail
+  ropper.py --file /bin/ls --opcode ffe?
+  ropper.py --file /bin/ls --opcode ??e4
+  ropper.py --file /bin/ls --detailed
   ropper.py --file /bin/ls --ppr --nocolor
   ropper.py --file /bin/ls --jmp esp,eax
   ropper.py --file /bin/ls --type jop
@@ -154,6 +159,8 @@ epilog="""example uses:
         parser.add_argument(
             '-j', '--jmp', help='Searches for \'jmp reg\' instructions (-j reg[,reg...]) [only x86/x86_64]', metavar='<reg>')
         parser.add_argument(
+            '--stack-pivot', help='Prints all stack pivot gadgets',action='store_true')
+        parser.add_argument(
             '--depth', help='Specifies the depth of search (default: 10)', metavar='<n bytes>', type=int)
         parser.add_argument(
             '--search', help='Searches for gadgets', metavar='<regex>')
@@ -162,11 +169,13 @@ epilog="""example uses:
         parser.add_argument(
             '--filter', help='Filters gadgets', metavar='<regex>')
         parser.add_argument(
-            '--opcode', help='Searches for opcodes', metavar='<opcode>')
+            '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(
             '--type', help='Sets the type of gadgets [rop, jop, all] (default: all)', metavar='<type>')
         parser.add_argument(
-            '--detail', help='Prints gadgets more detailed', action='store_true')
+            '--detailed', help='Prints gadgets more detailed', action='store_true')
+        parser.add_argument(
+            '--all', help='Does not remove duplicate gadgets', action='store_true')
         parser.add_argument(
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
         parser.add_argument(
@@ -216,3 +225,64 @@ epilog="""example uses:
             super(Options, self).__setattr__(key, value)
         else:
             vars(self.__args)[key] = value
+
+    def setOption(self, key, value):
+        if key in VALID_OPTIONS:
+            result = VALID_OPTIONS[key](self, value)
+            if result:
+                return result[1]
+
+            else:
+              raise RopperError('Invalid value for option %s: %s' %(key, value))
+        else:
+            raise RopperError('Invalid option')
+
+    def getOption(self, key):
+        if key in VALID_OPTIONS:
+            pass
+        else:
+            raise RopperError('Invalid option: %s ' % key)
+
+
+    def _setAll(self, value):
+        if value.lower() in ('on', 'off'):
+            self.all = bool(value == 'on')
+            return  (True,True)
+        return False
+
+    def _setDepth(self, value):
+        if value.isdigit():
+            self.depth = int(value)
+            return (True,True)
+        return False
+
+    def _setBadbytes(self, value):
+        if len(value) == 0 or isHex('0x'+value):
+            self.badbytes = value
+            return  (True,True)
+        return False
+
+    def _setDetailed(self, value):
+        if value.lower() in ('on', 'off'):
+            self.detailed = bool(value == 'on')
+            return (True, False)
+        return False
+
+    def _setType(self, value):
+        if value in ['rop','jop','all']:
+            self.type = value
+            return  (True,True)
+        return False
+
+    def _setColor(self, value):
+        if value.lower() in ('on', 'off'):
+            self.nocolor = bool(value == 'off')
+            return (True,False)
+        return False
+
+VALID_OPTIONS = {'all' : Options._setAll,
+                     'depth' : Options._setDepth,
+                     'badbytes' : Options._setBadbytes,
+                     'detailed' : Options._setDetailed,
+                     'type' : Options._setType,
+                     'color' : Options._setColor}

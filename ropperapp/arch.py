@@ -21,6 +21,7 @@ from ropperapp.common.abstract import *
 from ropperapp.common.error import NotSupportedError
 from ropperapp.search.search import Searcher
 from ropperapp.search.search import Searcherx86
+from ropperapp.search.search import SearcherARM
 from re import compile
 from capstone import *
 from . import gadget
@@ -111,7 +112,9 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x14\x24]\x24', 3),
             (b'\xff[\x55\x65]\x00', 3),
             (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),
-            (b'\xff\xa4\x24[\x00-\x0ff]{4}', 7),
+            (b'\xff\xa4\x24[\x00-\xff]{4}', 7),
+            (b'\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 3),                             # call [reg + value]
+            (b'\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 3),                             # jmp [reg + value]
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
@@ -119,6 +122,7 @@ class ArchitectureX86(Architecture):
 
     def _initCategories(self):
         self._categories = {
+                gadget.Category.STACK_PIVOT : (('^mov (?P<dst>.sp), .+ ptr \[(?P<src>...)\]$','^mov (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>...), (?P<src>.sp)$','ret.+'),('mov','call','jmp')),
                 gadget.Category.LOAD_MEM : (('mov (?P<dst>...), .+ ptr \[(?P<src>...)\]',),('mov','call','jmp')),
                 gadget.Category.WRITE_MEM : (('^mov .+ ptr \[(?P<dst>...)\], (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.LOAD_REG : (('pop (?P<dst>...)',),('mov','call','jmp')),
@@ -153,9 +157,9 @@ class ArchitectureMips(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [(b'\x09\xf8\x20\x03', 4),
-                                                (b'\x08\x00\x20\x03', 4),
-                                                (b'\x08\x00\xe0\x03', 4)]
+        self._endings[gadget.GadgetType.JOP] = [(b'\x09\xf8\x20\x03', 4), # jalr t9
+                                                (b'\x08\x00\x20\x03', 4), # jr t9
+                                                (b'\x08\x00\xe0\x03', 4)] # jr ra
 
 
 class ArchitectureMips64(ArchitectureMips):
@@ -174,24 +178,26 @@ class ArchitectureArm(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
+        self._searcher = SearcherARM()
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x19\x1e]\xff\x2f\xe1', 4), # bx <reg>
-                                                (b'[\x30-\x39\x3e]\xff\x2f\xe1', 4), # blx <reg>
-                                                (b'[\x01-\xff]\x80\xbd\xe8', 4),
+        self._endings[gadget.GadgetType.ROP] = [(b'[\x01-\xff]\x80\xbd\xe8', 4)] # pop {[reg]*,pc}
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x1e]\xff\x2f\xe1', 4), # bx <reg>
+                                                (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
+
                                                 (b'\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
 class ArchitectureArmThumb(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
+        self._searcher = SearcherARM()
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = []
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x6a\x70]\x47', 2),
-                                                (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\x6a\xf0]\x47', 2),
-                                                (b'[\x00-\xff]\xbd', 2)]
+        self._endings[gadget.GadgetType.ROP] = [(b'[\x00-\xff]\xbd', 2)] # pop {[regs]*,pc}
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00-\x7f]\x47', 2), # bx <reg>
+                                                (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xd0\xd8\xe0\xe8\xf0\xf8]\x47', 2) # blx <reg>
+                                                ]
 
 
 
@@ -203,12 +209,13 @@ class ArchitectureArm64(Architecture):
 
     def _initGadgets(self):
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4),
-                                                (b'\xc0\x03\x5f\xd6', 4)] # ret <reg>
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # bx <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # blx <reg>
-                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4),
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # ldm sp! ,{pc}
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4), # ret <reg> (x24 - x28) 
+                                                (b'\xc0\x03\x5f\xd6', 4)] # ret 
+
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # br <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # br <reg>
+                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4), # blr <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # blr <reg>
 
 
 
@@ -218,7 +225,7 @@ class ArchitecturePPC(Architecture):
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] #blr
+        self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
         self._endings[gadget.GadgetType.JOP] = []
 
 class ArchitecturePPC64(ArchitecturePPC):
@@ -244,4 +251,4 @@ def getArchitecture(archString):
     if isinstance(arch, Architecture):
         return arch
 
-    raise NotSupportedError('Architecture is not supported: ' + archString)
+    raise NotSupportedError('Architecture is not supported: ' + archString + '\nSupported architectures are: x86, x86_64, MIPS, MIPS64, ARM, ARMTHUMB, ARM64, PPC, PPC64')

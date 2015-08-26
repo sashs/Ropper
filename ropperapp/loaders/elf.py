@@ -220,6 +220,8 @@ class ELF(Loader):
             for phdr in self.phdrs:
                 if phdr.p_flags & PF.EXEC > 0:
                     p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
+                    self.assertFileRange(p_tmp.value)
+                    self.assertFileRange(p_tmp.value+phdr.p_memsz)
                     execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
                     self.__execSections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
 
@@ -230,10 +232,12 @@ class ELF(Loader):
         if not self.__dataSections:
             self.__dataSections = []
             for shdr in self.shdrs:
-                if shdr.struct.sh_flags & SHF.ALLOC and not (shdr.struct.sh_flags & SHF.EXECINSTR):
+                if shdr.struct.sh_flags & SHF.ALLOC and not (shdr.struct.sh_flags & SHF.EXECINSTR) and not(shdr.struct.sh_type & SHT.NOBITS):
                     p_tmp = c_void_p(self._bytes_p.value + shdr.struct.sh_offset)
+                    self.assertFileRange(p_tmp.value)
+                    self.assertFileRange(p_tmp.value + shdr.struct.sh_size)
                     dataBytes = cast(p_tmp, POINTER(c_ubyte * shdr.struct.sh_size)).contents
-                    self.__dataSections.append(Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset))
+                    self.__dataSections.append(Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset, shdr.struct))
         return self.__dataSections
 
     @property

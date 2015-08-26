@@ -565,11 +565,11 @@ class RopChainX86(RopChain):
        
 
     def _searchOpcode(self, opcode):
-        r = Ropper(self._binaries[0])
+        r = Ropper()
         gadgets = []
         for section in self._binaries[0].executableSections:
             vaddr = section.virtualAddress
-            gadgets.extend(r.searchOpcode(opcode=opcode,disass=True))
+            gadgets.extend(r.searchOpcode(self._binaries[0],opcode=opcode,disass=True))
 
         if len(gadgets) > 0:
             return gadgets[0]
@@ -672,12 +672,12 @@ class RopChainX86Mprotect(RopChainX86):
         return 'mprotect'
 
     def _createJmp(self, reg=['esp']):
-        r = Ropper(self._binaries[0])
+        r = Ropper()
         gadgets = []
         for section in self._binaries[0].executableSections:
             vaddr = section.virtualAddress
             gadgets.extend(
-                r.searchJmpReg(reg))
+                r.searchJmpReg(self._binaries[0],reg))
 
 
 
@@ -774,12 +774,12 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
     def _createJmp(self, reg=['esp']):
-        r = Ropper(self._binaries[0])
+        r = Ropper()
         gadgets = []
         for section in self._binaries[0].executableSections:
             vaddr = section.offset
             gadgets.extend(
-                r.searchJmpReg(reg))
+                r.searchJmpReg(self._binaries[0],reg))
 
 
 

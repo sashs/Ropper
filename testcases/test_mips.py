@@ -34,8 +34,8 @@ class ELF_Mips(unittest.TestCase):
         
 
     def test_gadgets(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 2482)

@@ -132,20 +132,20 @@ class Console(cmd.Cmd):
             raise ArgumentError('Invalid option: {}'.format(option))
 
     def __searchJmpReg(self, regs):
-        r = Ropper(self.binary)
+        r = Ropper()
         regs = regs.split(',')
-        gadgets = r.searchJmpReg(regs, badbytes=self.__options.badbytes)
+        gadgets = r.searchJmpReg(self.binary,regs, badbytes=self.__options.badbytes)
         self.__printGadgets(gadgets, header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
-        r = Ropper(self.binary, self.__cprinter)
-        gadgets = r.searchOpcode(opcode, badbytes=self.__options.badbytes)
+        r = Ropper(self.__cprinter)
+        gadgets = r.searchOpcode(self.binary,opcode, badbytes=self.__options.badbytes)
         self.__printGadgets(gadgets, header='Opcode')
        
 
     def __searchPopPopRet(self):
-        r = Ropper(self.binary, self.__cprinter)
-        pprs = r.searchPopPopRet(self.__options.badbytes)
+        r = Ropper(self.__cprinter)
+        pprs = r.searchPopPopRet(self.binary, self.__options.badbytes)
         self.__printGadgets(pprs, header='POP;POP;RET Instructions')
 
 
@@ -159,8 +159,8 @@ class Console(cmd.Cmd):
         self.__cprinter.println('\n%d gadgets found' % len(gadgets))
 
     def __searchGadgets(self, binary):
-        r = Ropper(binary, self.__cprinter)
-        newGadgets=r.searchRopGadgets(
+        r = Ropper(self.__cprinter)
+        newGadgets=r.searchRopGadgets(binary, 
                  badbytes=self.__options.badbytes, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], all=self.__options.all)
 
         gadgets = (newGadgets)
@@ -293,10 +293,10 @@ class Console(cmd.Cmd):
 
         for section in  eSections:
             if section.virtualAddress <= addr and section.virtualAddress + section.size > addr:
-                ropper = Ropper(self.binary)
+                ropper = Ropper()
 
                 
-                g = ropper.disassemble(section, addr, addr - (self.binary.calculateImageBase(section)+section.offset), length)
+                g = ropper.disassemble(section, self.binary, addr, addr - (self.binary.calculateImageBase(section)+section.offset), length)
                 if not g:
                     self.__cprinter.printError('Cannot disassemble address: %s' % toHex(addr))
                     return
@@ -310,7 +310,7 @@ class Console(cmd.Cmd):
 
     def __printSectionInHex(self, section):
         section = self.__binary.getSection(section.encode('ASCII'))
-        printHexFormat(section.bytes, section.virtualAddress)
+        printHexFormat(section.bytes, section.virtualAddress, self.__options.nocolor)
 
 
     def __handleOptions(self, options):
@@ -613,10 +613,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_detailed(self, text):
         if text:
-            if text == 'on':
-                self.__options.detailed = True
-            elif text == 'off':
-                self.__options.detailed = False
+            self.__options.setOption('detailed', text)
         else:
             self.__cprinter.println('on' if self.__options.detailed else 'off')
 
@@ -669,10 +666,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printInfo('No color support for windows')
             return
         if text:
-            if text == 'on':
-                self.__options.nocolor = False
-            elif text == 'off':
-                self.__options.nocolor = True
+            self.__options.setOption('color', text)
         else:
             self.__cprinter.println('off' if self.__options.nocolor else 'on')
 

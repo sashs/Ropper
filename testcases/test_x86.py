@@ -34,8 +34,8 @@ class ELF_x86(unittest.TestCase):
         
 
     def test_gadgets(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 1711)
@@ -48,9 +48,9 @@ class ELF_x86(unittest.TestCase):
 
 
     def test_jmpreg(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         regs=['esp']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 10)
         self.assertEqual(gadget.lines[0][0], 0xc63)
@@ -61,9 +61,9 @@ class ELF_x86(unittest.TestCase):
         self.assertEqual(gadget.imageBase, 0x8048000)
 
     def test_ppr(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         
-        gadgets = ropper.searchPopPopRet()
+        gadgets = ropper.searchPopPopRet(self.file)
         
         self.assertEqual(len(gadgets), 109)
         self.assertEqual(gadgets[0].lines[0][0], 0x444a)
@@ -81,8 +81,8 @@ class PE_x86(unittest.TestCase):
         self.assertEqual(self.file.type, Type.PE)
 
     def test_gadgets_pe(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 4878)
@@ -95,15 +95,15 @@ class PE_x86(unittest.TestCase):
 
 
     def test_jmpreg_pe(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         regs=['esp']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 1)
         self.assertEqual(gadget.lines[0][0], 0xc797)
 
         regs=['esp','eax']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         self.assertEqual(len(gadgets), 13)
 
         self.assertEqual(gadget.imageBase, 0x4ad00000)
@@ -113,9 +113,9 @@ class PE_x86(unittest.TestCase):
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_ppr_pe(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         
-        gadgets = ropper.searchPopPopRet()
+        gadgets = ropper.searchPopPopRet(self.file)
         
         self.assertEqual(len(gadgets), 17)
         self.assertEqual(gadgets[0].lines[0][0], 0x1688)

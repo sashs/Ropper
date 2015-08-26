@@ -41,16 +41,15 @@ class GadgetType(enum.Enum):
 
 class Gadget(object):
 
-    def __init__(self, arch):
+    def __init__(self, binary, section):
         super(Gadget, self).__init__()
-        self.__arch = arch
+        self.__arch = binary.arch
         self.__lines = []
         self._gadget = ''
         self._vaddr = 0x0
         self.__category = None
-        self.__imageBase = 0x0
-        self._binary = None
-        self._section = None
+        self._binary = binary
+        self._section = section
 
     @property
     def lines(self):
@@ -59,10 +58,6 @@ class Gadget(object):
     @property
     def imageBase(self):
         return self._binary.calculateImageBase(self._section)
-
-    @imageBase.setter
-    def imageBase(self, base):
-        pass
 
     @property
     def vaddr(self):
@@ -234,9 +229,7 @@ class GadgetDAO(object):
                     for g in range(s[3]):
                         grow = gadgetrows[gcount]
                         gcount +=1
-                        gadget = Gadget(binary.arch)
-                        gadget._binary = binary
-                        gadget._section = section
+                        gadget = Gadget(binary, section)
                         gadgets.append(gadget)
 
                         for l in range(grow[2]):

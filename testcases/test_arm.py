@@ -60,8 +60,8 @@ class ELF_ARM_THUMB(unittest.TestCase):
         self.assertEqual(self.file.type, Type.ELF)
 
     def test_gadgets_pe(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 1726)

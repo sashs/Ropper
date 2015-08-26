@@ -34,8 +34,8 @@ class ELF_x86(unittest.TestCase):
         
 
     def test_gadgets(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 552)
@@ -48,17 +48,17 @@ class ELF_x86(unittest.TestCase):
 
 
     def test_jmpreg(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         regs=['esp']
-        with self.assertRaises(RopperError):
-            gadgets = ropper.searchJmpReg(regs)
+        with self.assertRaises(NotSupportedError):
+            gadgets = ropper.searchJmpReg(self.file, regs)
         
 
     def test_ppr(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         
-        with self.assertRaises(RopperError):
-            gadgets = ropper.searchPopPopRet()
+        with self.assertRaises(NotSupportedError):
+            gadgets = ropper.searchPopPopRet(self.file)
         
 
 

@@ -34,8 +34,8 @@ class ELF_x86_84(unittest.TestCase):
         self.assertEqual(self.file.type, Type.ELF)
         
     def test_gadgets(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 1024)
@@ -47,15 +47,15 @@ class ELF_x86_84(unittest.TestCase):
         self.assertEqual(gadget.imageBase, 0x400000)
 
     def test_jmpreg(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         regs=['rsp']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 18)
         self.assertEqual(gadget.lines[0][0], 0xb1c7)
 
         regs=['rsp','rax']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         self.assertEqual(len(gadgets), 25)
 
         self.assertEqual(gadget.imageBase, 0x400000)
@@ -66,12 +66,12 @@ class ELF_x86_84(unittest.TestCase):
 
         with self.assertRaises(RopperError):
             regs=['invalid']
-            ropper.searchJmpReg(regs)
+            ropper.searchJmpReg(self.file, regs)
 
     def test_ppr(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         
-        gadgets = ropper.searchPopPopRet()
+        gadgets = ropper.searchPopPopRet(self.file)
         
         self.assertEqual(len(gadgets), 18)
         self.assertEqual(gadgets[0].lines[0][0], 0x52f8)
@@ -88,8 +88,8 @@ class PE_x86_84(unittest.TestCase):
         
 
     def test_gadgets(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 1539)
@@ -101,14 +101,15 @@ class PE_x86_84(unittest.TestCase):
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_jmpreg(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         regs=['rsp']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 3)
         self.assertEqual(gadget.lines[0][0], 0x37dd)
+
         regs=['rsp','rax']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         self.assertEqual(len(gadgets), 15)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
         self.file.manualImagebase = 0x0
@@ -117,9 +118,9 @@ class PE_x86_84(unittest.TestCase):
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_ppr(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         
-        gadgets = ropper.searchPopPopRet()
+        gadgets = ropper.searchPopPopRet(self.file)
         
         self.assertEqual(len(gadgets), 113)
         self.assertEqual(gadgets[0].lines[0][0], 0x14ec)
@@ -135,8 +136,8 @@ class MACHO_x86_84(unittest.TestCase):
         self.assertEqual(self.file.type, Type.MACH_O)
         
     def test_gadgets(self):
-        ropper = Ropper(self.file)
-        gadgets = ropper.searchRopGadgets()
+        ropper = Ropper()
+        gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 120)
@@ -148,15 +149,15 @@ class MACHO_x86_84(unittest.TestCase):
         self.assertEqual(gadget.imageBase, 0x100000000)
 
     def test_jmpreg(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         regs=['rax']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         gadget = gadgets[0]
         self.assertEqual(len(gadgets), 4)
         self.assertEqual(gadget.lines[0][0], 0x19bb)
 
         regs=['rcx','rax']
-        gadgets = ropper.searchJmpReg(regs)
+        gadgets = ropper.searchJmpReg(self.file, regs)
         self.assertEqual(len(gadgets), 7)
 
         self.assertEqual(gadget.imageBase, 0x100000000)
@@ -167,12 +168,12 @@ class MACHO_x86_84(unittest.TestCase):
 
         with self.assertRaises(RopperError):
             regs=['invalid']
-            ropper.searchJmpReg(regs)
+            ropper.searchJmpReg(self.file, regs)
 
     def test_ppr(self):
-        ropper = Ropper(self.file)
+        ropper = Ropper()
         
-        gadgets = ropper.searchPopPopRet()
+        gadgets = ropper.searchPopPopRet(self.file)
         
         self.assertEqual(len(gadgets), 16)
         self.assertEqual(gadgets[0].lines[0][0], 0x1cdc)

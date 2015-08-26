@@ -26,7 +26,7 @@ import unittest
 class ELF_x86(unittest.TestCase):
 
     def setUp(self):
-        self.file = Loader.open('test-binaries/scp-ppc')
+        self.file = Loader.open('test-binaries/ls-ppc')
 
     def test_general(self):
         self.assertEqual(self.file.arch, PPC)
@@ -38,8 +38,8 @@ class ELF_x86(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 552)
-        self.assertEqual(gadget.lines[0][0], 0x4fb4)
+        self.assertEqual(len(gadgets), 1502)
+        self.assertEqual(gadget.lines[0][0], 0x11ba0)
         self.assertEqual(gadget.imageBase, 0x10000000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

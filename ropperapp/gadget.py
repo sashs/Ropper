@@ -172,16 +172,16 @@ class GadgetDAO(object):
         scount = 0
         gcount = 0
         endcount = len(gadgets)
-        saved_sections = []        
+        saved_sections = {}        
 
         for gadget in gadgets:
             if gadget._section not in saved_sections:
                 section = gadget._section
-                saved_sections.append(section)
+                saved_sections[section] = scount
                 c.execute('insert into sections values(?, ?,?,?,?)' ,(scount, section.name, section.offset, len(gadgets), hashlib.md5(section.bytes).hexdigest()))
                 scount +=1
             
-            c.execute('insert into gadgets values(?,?,?)', (gcount, scount, len(gadget.lines)))
+            c.execute('insert into gadgets values(?,?,?)', (gcount, saved_sections[gadget._section], len(gadget.lines)))
 
             for addr, line, mnem, op in gadget.lines:
                 c.execute('insert into lines values(?,?,?,?,?)', (gcount, addr, line, mnem, op))
@@ -220,25 +220,29 @@ class GadgetDAO(object):
                 endcount += i[3]
 
         gadgets = []
+        sections = {}
         for s in sectionrows:
             for section in execSect:
                 if s[1] == section.name and int(s[2]) == section.offset:
                     if s[4] != hashlib.md5(section.bytes).hexdigest():
                         raise RopperError('wrong checksum: '+s[4] + ' and ' + hashlib.md5(section.bytes).hexdigest())
-                    
-                    for g in range(s[3]):
-                        grow = gadgetrows[gcount]
-                        gcount +=1
-                        gadget = Gadget(binary, section)
-                        gadgets.append(gadget)
+                    else:
+                        sections[s[0]] = section
 
-                        for l in range(grow[2]):
-                            lrow = linerows[lcount]
-                            lcount += 1
-                            gadget.append(int(lrow[1]), lrow[3], lrow[4])
+        for g in range(s[3]):
+            grow = gadgetrows[gcount]
+            gcount +=1
 
-                        if self._printer:
-                            self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
+            gadget = Gadget(binary, sections[grow[1]])
+            gadgets.append(gadget)
+
+            for l in range(grow[2]):
+                lrow = linerows[lcount]
+                lcount += 1
+                gadget.append(int(lrow[1]), lrow[3], lrow[4])
+
+            if self._printer:
+                self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
         if self._printer:         
             self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
         conn.close()

@@ -152,11 +152,13 @@ class Console(cmd.Cmd):
     def __printGadgets(self, gadgets, category=None, header='Gadgets', detailed=False):
         self.binary.printer.printTableHeader(header)
 
+        counter = 0
         for g in gadgets:
             if not category or category == g.category[0]:
                 self.__printGadget(g, detailed=detailed)
+                counter += 1
 
-        self.__cprinter.println('\n%d gadgets found' % len(gadgets))
+        self.__cprinter.println('\n%d gadgets found' % counter)
 
     def __searchGadgets(self, binary):
         r = Ropper(self.__cprinter)

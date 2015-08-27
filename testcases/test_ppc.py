@@ -23,7 +23,7 @@ from ropper.arch import *
 
 import unittest
 
-class ELF_x86(unittest.TestCase):
+class ELF_PPC(unittest.TestCase):
 
     def setUp(self):
         self.file = Loader.open('test-binaries/ls-ppc')

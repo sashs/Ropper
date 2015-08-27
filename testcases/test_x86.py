@@ -38,8 +38,8 @@ class ELF_x86(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1711)
-        self.assertEqual(gadget.lines[0][0], 0x8567)
+        self.assertGreater(len(gadgets), 1700)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x8048000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
@@ -85,8 +85,8 @@ class PE_x86(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 4878)
-        self.assertEqual(gadget.lines[0][0], 0x6227)
+        self.assertGreater(len(gadgets), 4800)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

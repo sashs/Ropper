@@ -64,8 +64,8 @@ class ELF_ARM_THUMB(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1726)
-        self.assertEqual(gadget.lines[0][0], 0x7ee4)
+        self.assertGreater(len(gadgets), 1700)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x00008000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

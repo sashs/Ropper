@@ -38,8 +38,8 @@ class ELF_x86_84(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1024)
-        self.assertEqual(gadget.lines[0][0], 0x1adfd)
+        self.assertGreater(len(gadgets), 1000)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x400000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
@@ -92,8 +92,8 @@ class PE_x86_84(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1539)
-        self.assertEqual(gadget.lines[0][0], 0x5b33)
+        self.assertGreater(len(gadgets), 1500)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
@@ -140,8 +140,8 @@ class MACHO_x86_84(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 120)
-        self.assertEqual(gadget.lines[0][0], 0x3a29)
+        self.assertGreater(len(gadgets), 110)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x100000000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

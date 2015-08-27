@@ -7,5 +7,4 @@ from testcases.test_ppc import *
 from testcases.test_console import *
 import unittest
 
-print('Testcases are working with capstone 3.0.4')
 unittest.main()

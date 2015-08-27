@@ -38,8 +38,8 @@ class ELF_Mips(unittest.TestCase):
         gadgets = ropper.searchRopGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 2482)
-        self.assertEqual(gadget.lines[0][0], 0x143c4)
+        self.assertGreater(len(gadgets), 2450)
+        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x400000)
         self.file.manualImagebase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

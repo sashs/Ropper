@@ -56,12 +56,20 @@ class Gadget(object):
         return self.__lines
 
     @property
+    def section(self):
+        return self._section
+
+    @property
+    def binary(self):
+        return self._binary    
+
+    @property
     def imageBase(self):
         return self._binary.calculateImageBase(self._section)
 
     @property
     def vaddr(self):
-        return self._vaddr
+        return self.imageBase + self.lines[0][0]
 
     def append(self, address, mnem, args=''):
         if args:

@@ -17,11 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropperapp.loaders.loader import *
-from ropperapp.rop import Ropper
-from ropperapp.gadget import GadgetDAO
-from ropperapp.arch import *
-from ropperapp.common.error import *
+from ropper.loaders.loader import *
+from ropper.rop import Ropper
+from ropper.gadget import GadgetDAO
+from ropper.arch import *
+from ropper.common.error import *
 
 from sys import version_info
 import unittest

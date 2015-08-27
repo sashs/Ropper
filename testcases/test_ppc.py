@@ -17,9 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropperapp.loaders.loader import *
-from ropperapp.rop import Ropper
-from ropperapp.arch import *
+from ropper.loaders.loader import *
+from ropper.rop import Ropper
+from ropper.arch import *
 
 import unittest
 

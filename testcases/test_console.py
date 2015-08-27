@@ -1,5 +1,5 @@
-from ropperapp.console import Console
-from ropperapp.options import Options
+from ropper.console import Console
+from ropper.options import Options
 
 import unittest
 

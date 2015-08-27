@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
-import ropperapp
+import ropper
 
-version = ropperapp.VERSION
+version = ropper.VERSION
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
@@ -12,7 +12,7 @@ and you can find gadgets to build rop chains for different architectures.
 packages = find_packages()
 valid_packages = []
 for p in packages:
-    if p.startswith('ropperapp'):
+    if p.startswith('ropper'):
         valid_packages.append(p)
 
 setup(

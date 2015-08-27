@@ -18,8 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from ropper.common.enum import Enum
 from sys import version_info
-import ropper
-
 
 class Color(Enum):
 	RED = '0;31'
@@ -38,6 +36,8 @@ class Color(Enum):
 	WHITE = '1;37'
 
 class cstr(str):
+
+	COLOR = True
 
 	def __new__(cls, data='', color=Color.LIGHT_GRAY):
 		if isinstance(data, cstr):
@@ -69,7 +69,7 @@ class cstr(str):
 
 	def __str__(self):
 		data = str.__str__(self)
-		if (ropper.app_options == None or ropper.app_options.nocolor) or not self._color:
+		if not cstr.COLOR or not self._color:
 			return data
 		return '\x1b[%sm%s\x1b[0m' % (self._color.value, data)
 

@@ -20,6 +20,7 @@
 import argparse
 from ropper.common.error import *
 from ropper.common.utils import isHex
+from ropper.common.coloredstring import cstr
 import sys
 
 
@@ -190,7 +191,7 @@ epilog="""example uses:
             self.__argv.append('--console')
         self.__args = self.__parser.parse_args(self.__argv)
 
-        self.__args.nocolor = self.__args.nocolor and not self.isWindows()
+        self.nocolor = self.__args.nocolor and not self.isWindows()
 
         if not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
@@ -224,6 +225,8 @@ epilog="""example uses:
         if key.startswith('_'):
             super(Options, self).__setattr__(key, value)
         else:
+            if key == 'nocolor':
+              cstr.COLOR = not value
             vars(self.__args)[key] = value
 
     def setOption(self, key, value):

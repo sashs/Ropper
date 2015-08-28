@@ -89,9 +89,11 @@ class Gadget(object):
         line =  self.__lines[0]
         for b in badbytes:
 
-            address = line[0] + self.imageBase
+            address = self.vaddr
             if type(b) == str:
                 b = ord(b)
+
+            # TODO: This should be changed. Only 4 bytes are checked
             for i in range(4):
                 if (address & 0xff) == b:
 

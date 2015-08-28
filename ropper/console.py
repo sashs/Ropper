@@ -150,6 +150,7 @@ class Console(cmd.Cmd):
 
 
     def __printGadgets(self, gadgets, category=None, header='Gadgets', detailed=False):
+        gadgets = Ropper().filterBadBytesGadgets(gadgets, self.__options.badbytes)
         self.binary.printer.printTableHeader(header)
 
         counter = 0
@@ -162,8 +163,7 @@ class Console(cmd.Cmd):
 
     def __searchGadgets(self, binary):
         r = Ropper(self.__cprinter)
-        newGadgets=r.searchRopGadgets(binary, 
-                 badbytes=self.__options.badbytes, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], all=self.__options.all)
+        newGadgets=r.searchRopGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], all=self.__options.all)
 
         gadgets = (newGadgets)
         

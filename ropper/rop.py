@@ -43,7 +43,7 @@ class Ropper(object):
             gadgets = self._searchJmpReg(section, binary, regs, badbytes=self._formatBadBytes(badbytes))
             toReturn.extend(gadgets)
 
-        return toReturn
+        return self.filterBadBytesGadgets(toReturn, badbytes)
 
 
     def _searchJmpReg(self, section, binary, regs,  badbytes=''):
@@ -64,6 +64,7 @@ class Ropper(object):
                 toReturn.extend(self._searchOpcode(section, binary, inst, True, badbytes=badbytes))
 
         return sorted(toReturn, key=lambda x: str(x))
+
 
 
     def _formatOpcodeString(self, opcode):
@@ -112,7 +113,8 @@ class Ropper(object):
         for section in binary.executableSections:
             gadgets.extend(self._searchOpcode(section, binary, opcode, badbytes=self._formatBadBytes(badbytes)))
         
-        return gadgets
+        return self.filterBadBytesGadgets(gadgets, badbytes)
+
 
     def _searchOpcode(self, section, binary, opcode, disass=False, badbytes=''):
 
@@ -121,7 +123,6 @@ class Ropper(object):
         code = bytearray(section.bytes)
         offset = section.offset
         for match in re.finditer(opcode, code):
-            c = 0
             opcodeGadget = Gadget(binary, section)
 
             if (offset + match.start()) % binary.arch.align == 0:
@@ -134,9 +135,7 @@ class Ropper(object):
                         offset + match.start(), hexlify(match.group(0)).decode('utf-8'))
             else:
                 continue
-            if c == 0 and opcodeGadget.addressesContainsBytes(badbytes):
-                continue
-            c += 1
+            
             toReturn.append(opcodeGadget)
 
         return toReturn
@@ -148,7 +147,9 @@ class Ropper(object):
 
             pprs = self._searchPopPopRet(section,binary, badbytes=self._formatBadBytes(badbytes))
             toReturn.extend(pprs)
-        return toReturn
+
+
+        return self.filterBadBytesGadgets(pprs, badbytes)
 
     def _searchPopPopRet(self, section, binary, badbytes=''):
         if binary.arch.arch != CS_ARCH_X86:
@@ -163,15 +164,12 @@ class Ropper(object):
         for index in range(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
                 ppr = Gadget(binary,section)
-                c = 0
                 for (address, size, mnemonic, op_str) in disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
                     if mnemonic != 'pop' and mnemonic != 'ret':
                         break
                     ppr.append(
                         address, mnemonic , op_str)
-                    if c == 0 and ppr.addressesContainsBytes(badbytes):
-                        break
-                    c += 1
+                    
                     if mnemonic.startswith('ret'):
                         break
                 if len(ppr) == 3:
@@ -179,7 +177,7 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, binary, badbytes='', depth=10, gtype=GadgetType.ALL, all=False):
+    def searchRopGadgets(self, binary, depth=10, gtype=GadgetType.ALL, all=False):
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.calculateImageBase(section)
@@ -187,42 +185,22 @@ class Ropper(object):
             if self.printer:
                 self.printer.printInfo('Loading gadgets for section: ' + section.name)
             
-            newGadgets = self._searchRopGadgets(section=section, binary=binary, badbytes=self._formatBadBytes(badbytes), depth=depth, gtype=gtype)
+            newGadgets = self._searchRopGadgets(section=section, binary=binary, depth=depth, gtype=gtype)
             gadgets.extend(newGadgets)
 
         if not all:
             gadgets = self.__deleteDuplicates(gadgets)
         return gadgets
 
-    def _searchRopGadgets(self, section, binary, badbytes='',depth=10, gtype=GadgetType.ALL):
+    def _searchRopGadgets(self, section, binary, depth=10, gtype=GadgetType.ALL):
 
         toReturn = []
         code = bytes(bytearray(section.bytes))
         offset = section.offset
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        
         arch = binary.arch
-        def createGadget(code_str, codeStartAddress, ending):
-            gadget = Gadget(binary, section)
-            hasret = False
-            c = 0
-            for i in disassembler.disasm(code_str, codeStartAddress):
-                if i.mnemonic not in binary.arch.badInstructions:
-                    gadget.append(
-                        i.address, i.mnemonic,i.op_str)
-                    if c == 0 and gadget.addressesContainsBytes(badbytes):
-                        return None
-                    c += 1
-                elif len(gadget) > 0:
-                    break
-
-                if re.match(ending[0], i.bytes):
-                    hasret = True
-                    break
-
-            if hasret and len(gadget) > 0:
-                return gadget
-
-        max_prog = len(code) * len(arch.endings[gtype])
+        
+        max_progress = len(code) * len(arch.endings[gtype])
         for ending in arch.endings[gtype]:
             offset_tmp = 0
             tmp_code = code[:]
@@ -235,8 +213,8 @@ class Ropper(object):
                 if offset_tmp % arch.align == 0:
                     for x in range(1, (depth + 1) * arch.align):
                         code_part = tmp_code[index - x:index + ending[1]]
-                        gadget = createGadget(
-                            code_part, offset + offset_tmp - x, ending)
+                        gadget = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
+
                         if gadget:
                             toReturn.append(gadget)
 
@@ -247,7 +225,7 @@ class Ropper(object):
                 
                 if self.printer:
                     progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-                    self.printer.printProgress('loading gadgets...', float(progress) / max_prog)
+                    self.printer.printProgress('loading gadgets...', float(progress) / max_progress)
 
         if self.printer:
             self.printer.printProgress('loading gadgets...', 1)
@@ -255,6 +233,41 @@ class Ropper(object):
         
         return toReturn
 
+
+    def __createGadget(self, binary, section, code_str, codeStartAddress, ending):
+            gadget = Gadget(binary, section)
+            hasret = False
+
+            disassembler = Cs(binary.arch.arch, binary.arch.mode)
+
+            for i in disassembler.disasm(code_str, codeStartAddress):
+                if i.mnemonic not in binary.arch.badInstructions:
+                    gadget.append(
+                        i.address, i.mnemonic,i.op_str)
+                    
+                elif len(gadget) > 0:
+                    break
+
+                if re.match(ending[0], i.bytes):
+                    hasret = True
+                    break
+
+            if hasret and len(gadget) > 0:
+                return gadget
+
+
+    def filterBadBytesGadgets(self, gadgets, badbytes):
+        if not badbytes:
+            return gadgets
+
+        toReturn = []
+        badbytes = self._formatBadBytes(badbytes)
+
+        for gadget in gadgets:
+            if not gadget.addressesContainsBytes(badbytes):
+                toReturn.append(gadget)
+
+        return toReturn
 
     def __disassembleBackward(self, section, binary, vaddr,offset, count):
         gadget = Gadget(binary, section)

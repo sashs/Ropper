@@ -149,7 +149,7 @@ class Ropper(object):
             toReturn.extend(pprs)
 
 
-        return self.filterBadBytesGadgets(pprs, badbytes)
+        return self.filterBadBytesGadgets(toReturn, badbytes)
 
     def _searchPopPopRet(self, section, binary, badbytes=''):
         if binary.arch.arch != CS_ARCH_X86:

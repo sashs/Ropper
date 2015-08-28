@@ -56,6 +56,7 @@ class Console(cmd.Cmd):
         self.__options = options
         self.__binary = None
         self.__binaries = []
+        self.__gadgets = {}
         self.__cprinter = ConsolePrinter()
         self.prompt = cstr('(ropper) ', Color.YELLOW)
 
@@ -134,23 +135,25 @@ class Console(cmd.Cmd):
     def __searchJmpReg(self, regs):
         r = Ropper()
         regs = regs.split(',')
-        gadgets = r.searchJmpReg(self.binary,regs, badbytes=self.__options.badbytes)
+        gadgets = r.searchJmpReg(self.binary,regs)
+        gadgets = ropper.filterBadBytesGadgets(gadgets, self.__options.badbytes)
         self.__printGadgets(gadgets, header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
         r = Ropper(self.__cprinter)
-        gadgets = r.searchOpcode(self.binary,opcode, badbytes=self.__options.badbytes)
+        gadgets = r.searchOpcode(self.binary,opcode)
         self.__printGadgets(gadgets, header='Opcode')
        
 
     def __searchPopPopRet(self):
         r = Ropper(self.__cprinter)
-        pprs = r.searchPopPopRet(self.binary, self.__options.badbytes)
+        pprs = r.searchPopPopRet(self.binary)
+        pprs = ropper.filterBadBytesGadgets(pprs, self.__options.badbytes)
         self.__printGadgets(pprs, header='POP;POP;RET Instructions')
 
 
     def __printGadgets(self, gadgets, category=None, header='Gadgets', detailed=False):
-        gadgets = Ropper().filterBadBytesGadgets(gadgets, self.__options.badbytes)
+        gadgets = ropper.filterBadBytesGadgets(gadgets, self.__options.badbytes)
         self.binary.printer.printTableHeader(header)
 
         counter = 0
@@ -163,37 +166,36 @@ class Console(cmd.Cmd):
 
     def __searchGadgets(self, binary):
         r = Ropper(self.__cprinter)
-        newGadgets=r.searchRopGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()], all=self.__options.all)
-
-        gadgets = (newGadgets)
-        
-        return gadgets
+        gadgets = r.searchRopGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+        binary.loaded = True
+        binary.gadgets = gadgets
+        self.__gadgets[binary] = ropper.deleteDuplicates(ropper.filterBadBytesGadgets(gadgets, self.__options.badbytes))
+        return self.__gadgets[binary]
 
     def __loadGadgets(self):
-        self.binary.loaded = True
-        self.binary.gadgets = self.__searchGadgets(self.binary)
+        self.__searchGadgets(self.binary)
 
     def __loadAllGadgets(self):
 
         for binary in self.__binaries:
             self.__cprinter.printInfo('Load %s' % binary.fileName)
-            binary.gadgets = self.__searchGadgets(binary)
-            binary.loaded = True
+            self.__searchGadgets(binary)
+            
 
     def __loadUnloadedGadgets(self):
 
         for binary in self.__binaries:
             if not binary.loaded:
-                binary.gadgets = self.__searchGadgets(binary)
-                binary.loaded = True
+                self.__searchGadgets(binary)
+                
 
     def __searchAndPrintGadgets(self):
 
-        gadgets = self.binary.gadgets
+        gadgets = self.__gadgets[self.binary]
         if self.__options.search:
-            gadgets = self.__search(self.binary.gadgets, self.__options.search, self.__options.quality)
+            gadgets = self.__search(self.__gadgets[self.binary], self.__options.search, self.__options.quality)
         elif self.__options.filter:
-            gadgets = self.__filter(self.binary.gadgets, self.__options.filter)
+            gadgets = self.__filter(self.__gadgets[self.binary], self.__options.filter)
         self.__printGadgets(gadgets, detailed=self.__options.detailed)
 
     def __filter(self, gadgets, filter):
@@ -273,6 +275,8 @@ class Console(cmd.Cmd):
 
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
+
+        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytesGadgets(self.binary.gadgets))
 
     def __printStrings(self, string, sec=None):
         data = []
@@ -366,7 +370,7 @@ class Console(cmd.Cmd):
          #   self.__checksec()
         elif options.chain:
             self.__loadGadgets()
-            self.__generateChain(self.binary.gadgets, options.chain)
+            self.__generateChain(self.__gadgets[self.binary], options.chain)
         elif options.db:
             self.__loaddb(options.db)
             self.__searchAndPrintGadgets()
@@ -490,7 +494,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printInfo('Gadgets have to be loaded with load')
             return
 
-        self.__printGadgets(self.binary.gadgets, detailed=self.__options.detailed)
+        self.__printGadgets(self.__gadgets[self.binary], detailed=self.__options.detailed)
 
     def help_gadgets(self):
         self.__printHelpText('gadgets', 'shows all loaded gadgets')
@@ -521,7 +525,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.help_filter()
             return
 
-        self.__printGadgets(self.__filter(self.binary.gadgets, text))
+        self.__printGadgets(self.__filter(self.__gadgets[self.binary], text))
 
     def help_filter(self):
         self.__printHelpText('filter <filter>', 'filters gadgets')
@@ -658,6 +662,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printInfo('badbytes cleared')
 
         self.__options.setOption('badbytes',text)
+
+        self.__cprinter.printInfo('Filter gadgets of all opened files')
+        for binary in self.__binaries:
+            if binary.loaded:
+                self.__gadgets[binary] = ropper.filterBadBytesGadgets(binary.gadgets, self.__options.badbytes)
+
+        self.__cprinter.printInfo('Filtering gadgets finished')
         self.__printInfo('Gadgets have to be reloaded')
 
     def help_badbytes(self):
@@ -776,7 +787,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText('disassemble <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
 
     def do_stack_pivot(self, text):
-        self.__printGadgets(self.binary.gadgets, Category.STACK_PIVOT)
+        self.__printGadgets(self.__gadgets[self.binary], Category.STACK_PIVOT)
 
 
     def do_EOF(self, text):

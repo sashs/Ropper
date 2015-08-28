@@ -20,6 +20,8 @@
 from .console import Console
 from .options import Options
 from .common.error import RopperError
+from binascii import unhexlify
+from ropper.gadget import Gadget
 
 app_options = None
 VERSION='1.8_dev'
@@ -31,3 +33,47 @@ def start(args):
         Console(app_options).start()
     except RopperError as e:
         print(e)
+
+
+def deleteDuplicates(gadgets):
+    toReturn = []
+    inst = []
+    gadgetString = None
+    for i,gadget in enumerate(gadgets):
+        gadgetString = gadget._gadget
+        gadgetHash = hash(gadgetString)
+        if gadgetHash not in inst:
+            inst.append(gadgetHash)
+            toReturn.append(gadget)
+    #     if self.printer:
+    #         self.printer.printProgress('clearing up...', float(i) / len(gadgets))
+    # if self.printer:
+    #     self.printer.printProgress('clearing up...', 1)
+    #     self.printer.finishProgress()
+
+    return toReturn
+
+
+def formatBadBytes(badbytes):
+    if len(badbytes) % 2 > 0:
+        raise RopperError('The length of badbytes has to be a multiple of two')
+
+    try:
+        badbytes = unhexlify(badbytes)
+    except:
+        raise RopperError('Invalid characters in badbytes string')
+    return badbytes
+
+def filterBadBytesGadgets(gadgets, badbytes):
+    if not badbytes:
+        return gadgets
+
+    toReturn = []
+    
+    badbytes = formatBadBytes(badbytes)
+
+    for gadget in gadgets:
+        if not gadget.addressesContainsBytes(badbytes):
+            toReturn.append(gadget)
+
+    return toReturn

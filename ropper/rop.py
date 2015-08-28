@@ -36,17 +36,17 @@ class Ropper(object):
         self.printer = printer
         
 
-    def searchJmpReg(self, binary, regs, badbytes=''):
+    def searchJmpReg(self, binary, regs):
         toReturn = []
         for section in binary.executableSections:
 
-            gadgets = self._searchJmpReg(section, binary, regs, badbytes=self._formatBadBytes(badbytes))
+            gadgets = self._searchJmpReg(section, binary, regs)
             toReturn.extend(gadgets)
 
-        return self.filterBadBytesGadgets(toReturn, badbytes)
+        return toReturn
 
 
-    def _searchJmpReg(self, section, binary, regs,  badbytes=''):
+    def _searchJmpReg(self, section, binary, regs):
         if binary.arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'jmp <reg>\' only supported on x86/x86_64')
@@ -61,7 +61,7 @@ class Ropper(object):
             insts = [toBytes(0xff , 0xe0 | Register[reg_tmp]), toBytes(0xff, 0xd0 | Register[reg_tmp]),  toBytes(0x50 | Register[reg_tmp] , 0xc3)]
             
             for inst in insts:
-                toReturn.extend(self._searchOpcode(section, binary, inst, True, badbytes=badbytes))
+                toReturn.extend(self._searchOpcode(section, binary, inst, True))
 
         return sorted(toReturn, key=lambda x: str(x))
 
@@ -97,26 +97,18 @@ class Ropper(object):
             raise RopperError('Invalid characters in opcode string')
         return opcode
 
-    def _formatBadBytes(self, badbytes):
-        if len(badbytes) % 2 > 0:
-            raise RopperError('The length of badbytes has to be a multiple of two')
+    
 
-        try:
-            badbytes = unhexlify(badbytes)
-        except:
-            raise RopperError('Invalid characters in badbytes string')
-        return badbytes
-
-    def searchOpcode(self, binary, opcode, disass=False, badbytes=''):
+    def searchOpcode(self, binary, opcode, disass=False):
         opcode = self._formatOpcodeString(opcode)
         gadgets = []
         for section in binary.executableSections:
-            gadgets.extend(self._searchOpcode(section, binary, opcode, badbytes=self._formatBadBytes(badbytes)))
+            gadgets.extend(self._searchOpcode(section, binary, opcode))
         
-        return self.filterBadBytesGadgets(gadgets, badbytes)
+        return gadgets
 
 
-    def _searchOpcode(self, section, binary, opcode, disass=False, badbytes=''):
+    def _searchOpcode(self, section, binary, opcode, disass=False):
 
         disassembler = Cs(binary.arch.arch, binary.arch.mode)
         toReturn = []
@@ -141,17 +133,17 @@ class Ropper(object):
         return toReturn
 
 
-    def searchPopPopRet(self, binary, badbytes=''):
+    def searchPopPopRet(self, binary):
         toReturn = []
         for section in binary.executableSections:
 
-            pprs = self._searchPopPopRet(section,binary, badbytes=self._formatBadBytes(badbytes))
+            pprs = self._searchPopPopRet(section,binary)
             toReturn.extend(pprs)
 
 
-        return self.filterBadBytesGadgets(toReturn, badbytes)
+        return toReturn
 
-    def _searchPopPopRet(self, section, binary, badbytes=''):
+    def _searchPopPopRet(self, section, binary):
         if binary.arch.arch != CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'pop pop ret\' is only supported on x86/x86_64')
@@ -177,7 +169,7 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, binary, depth=10, gtype=GadgetType.ALL, all=False):
+    def searchRopGadgets(self, binary, depth=10, gtype=GadgetType.ALL):
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.calculateImageBase(section)
@@ -188,9 +180,7 @@ class Ropper(object):
             newGadgets = self._searchRopGadgets(section=section, binary=binary, depth=depth, gtype=gtype)
             gadgets.extend(newGadgets)
 
-        if not all:
-            gadgets = self.__deleteDuplicates(gadgets)
-        return gadgets
+        return sorted(gadgets, key=Gadget.simpleInstructionString)
 
     def _searchRopGadgets(self, section, binary, depth=10, gtype=GadgetType.ALL):
 
@@ -235,39 +225,26 @@ class Ropper(object):
 
 
     def __createGadget(self, binary, section, code_str, codeStartAddress, ending):
-            gadget = Gadget(binary, section)
-            hasret = False
+        gadget = Gadget(binary, section)
+        hasret = False
 
-            disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = Cs(binary.arch.arch, binary.arch.mode)
 
-            for i in disassembler.disasm(code_str, codeStartAddress):
-                if i.mnemonic not in binary.arch.badInstructions:
-                    gadget.append(
-                        i.address, i.mnemonic,i.op_str)
-                    
-                elif len(gadget) > 0:
-                    break
+        for i in disassembler.disasm(code_str, codeStartAddress):
+            if i.mnemonic not in binary.arch.badInstructions:
+                gadget.append(
+                    i.address, i.mnemonic,i.op_str)
+                
+            elif len(gadget) > 0:
+                break
 
-                if re.match(ending[0], i.bytes):
-                    hasret = True
-                    break
+            if re.match(ending[0], i.bytes):
+                hasret = True
+                break
 
-            if hasret and len(gadget) > 0:
-                return gadget
+        if hasret and len(gadget) > 0:
+            return gadget
 
-
-    def filterBadBytesGadgets(self, gadgets, badbytes):
-        if not badbytes:
-            return gadgets
-
-        toReturn = []
-        badbytes = self._formatBadBytes(badbytes)
-
-        for gadget in gadgets:
-            if not gadget.addressesContainsBytes(badbytes):
-                toReturn.append(gadget)
-
-        return toReturn
 
     def __disassembleBackward(self, section, binary, vaddr,offset, count):
         gadget = Gadget(binary, section)
@@ -322,23 +299,7 @@ class Ropper(object):
         return gadget
 
 
-    def __deleteDuplicates(self, gadgets):
-        toReturn = []
-        inst = []
-        gadgetString = None
-        for i,gadget in enumerate(gadgets):
-            gadgetString = gadget._gadget
-            gadgetHash = hash(gadgetString)
-            if gadgetHash not in inst:
-                inst.append(gadgetHash)
-                toReturn.append(gadget)
-            if self.printer:
-                self.printer.printProgress('clearing up...', float(i) / len(gadgets))
-        if self.printer:
-            self.printer.printProgress('clearing up...', 1)
-            self.printer.finishProgress()
-
-        return sorted(toReturn, key=Gadget.simpleInstructionString)
+    
 
 
 def toBytes(*b):

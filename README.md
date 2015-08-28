@@ -25,7 +25,7 @@ You can also install Ropper with pip
 
 If you want, you can use Ropper without installation
 
-    $ ./ropper.py
+    $ ./Ropper.py
 
 
 Usage

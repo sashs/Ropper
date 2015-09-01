@@ -37,7 +37,7 @@ class Color(Enum):
 
 class cstr(str):
 
-	COLOR = True
+	COLOR = False
 
 	def __new__(cls, data='', color=Color.LIGHT_GRAY):
 		if isinstance(data, cstr):

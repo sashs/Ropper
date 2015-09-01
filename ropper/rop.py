@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from capstone import *
 from ropper.common.utils import *
 from ropper.common.error import *
 from ropper.common.enum import Enum
@@ -27,6 +26,7 @@ from struct import pack
 import re
 import struct
 import sys
+import capstone
 
 
 class Ropper(object):
@@ -47,10 +47,10 @@ class Ropper(object):
 
 
     def _searchJmpReg(self, section, binary, regs):
-        if binary.arch.arch != CS_ARCH_X86:
+        if binary.arch.arch != capstone.CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'jmp <reg>\' only supported on x86/x86_64')
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
         toReturn = []
         Register = Enum('Register', 'ax cx dx bx sp bp si di')
         
@@ -110,7 +110,7 @@ class Ropper(object):
 
     def _searchOpcode(self, section, binary, opcode, disass=False):
 
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
         toReturn = []
         code = bytearray(section.bytes)
         offset = section.offset
@@ -144,11 +144,11 @@ class Ropper(object):
         return toReturn
 
     def _searchPopPopRet(self, section, binary):
-        if binary.arch.arch != CS_ARCH_X86:
+        if binary.arch.arch != capstone.CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'pop pop ret\' is only supported on x86/x86_64')
 
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
         code = section.bytes
         offset = section.offset
         toReturn = []
@@ -228,7 +228,7 @@ class Ropper(object):
         gadget = Gadget(binary, section)
         hasret = False
 
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         for i in disassembler.disasm(code_str, codeStartAddress):
             if i.mnemonic not in binary.arch.badInstructions:
@@ -251,7 +251,7 @@ class Ropper(object):
         counter = 0
         toReturn = None
         code = bytes(bytearray(section.bytes))
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         while len(gadget) < count:
             gadget = Gadget(binary, section)
@@ -282,7 +282,7 @@ class Ropper(object):
             raise RopperError('The address doesn\'t have the correct alignment')
 
         code = bytes(bytearray(section.bytes))
-        disassembler = Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         if count < 0:
             return self.__disassembleBackward(section, binary, vaddr, offset, count*-1)

@@ -21,7 +21,12 @@ from .console import Console
 from .options import Options
 from .common.error import RopperError
 from binascii import unhexlify
-from ropper.gadget import Gadget
+from ropper.rop import Ropper
+from ropper.loaders import elf
+from ropper.loaders import pe
+from ropper.loaders import mach_o
+from ropper.loaders.loader import Loader
+
 
 app_options = None
 VERSION='1.8_dev'
@@ -64,7 +69,7 @@ def formatBadBytes(badbytes):
         raise RopperError('Invalid characters in badbytes string')
     return badbytes
 
-def filterBadBytesGadgets(gadgets, badbytes):
+def filterBadBytes(gadgets, badbytes):
     if not badbytes:
         return gadgets
 
@@ -77,3 +82,4 @@ def filterBadBytesGadgets(gadgets, badbytes):
             toReturn.append(gadget)
 
     return toReturn
+

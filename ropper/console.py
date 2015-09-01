@@ -136,7 +136,7 @@ class Console(cmd.Cmd):
         r = Ropper()
         regs = regs.split(',')
         gadgets = r.searchJmpReg(self.binary,regs)
-        gadgets = ropper.filterBadBytesGadgets(gadgets, self.__options.badbytes)
+        gadgets = ropper.filterBadBytes(gadgets, self.__options.badbytes)
         self.__printGadgets(gadgets, header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
@@ -148,12 +148,12 @@ class Console(cmd.Cmd):
     def __searchPopPopRet(self):
         r = Ropper(self.__cprinter)
         pprs = r.searchPopPopRet(self.binary)
-        pprs = ropper.filterBadBytesGadgets(pprs, self.__options.badbytes)
+        pprs = ropper.filterBadBytes(pprs, self.__options.badbytes)
         self.__printGadgets(pprs, header='POP;POP;RET Instructions')
 
 
     def __printGadgets(self, gadgets, category=None, header='Gadgets', detailed=False):
-        gadgets = ropper.filterBadBytesGadgets(gadgets, self.__options.badbytes)
+        gadgets = ropper.filterBadBytes(gadgets, self.__options.badbytes)
         self.binary.printer.printTableHeader(header)
 
         counter = 0
@@ -169,7 +169,7 @@ class Console(cmd.Cmd):
         gadgets = r.searchRopGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
         binary.gadgets = gadgets
-        self.__gadgets[binary] = ropper.deleteDuplicates(ropper.filterBadBytesGadgets(gadgets, self.__options.badbytes))
+        self.__gadgets[binary] = ropper.deleteDuplicates(ropper.filterBadBytes(gadgets, self.__options.badbytes))
         return self.__gadgets[binary]
 
     def __loadGadgets(self):
@@ -276,7 +276,7 @@ class Console(cmd.Cmd):
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
 
-        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytesGadgets(self.binary.gadgets))
+        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets))
 
     def __printStrings(self, string, sec=None):
         data = []
@@ -666,7 +666,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__cprinter.printInfo('Filter gadgets of all opened files')
         for binary in self.__binaries:
             if binary.loaded:
-                self.__gadgets[binary] = ropper.filterBadBytesGadgets(binary.gadgets, self.__options.badbytes)
+                self.__gadgets[binary] = ropper.filterBadBytes(binary.gadgets, self.__options.badbytes)
 
         self.__cprinter.printInfo('Filtering gadgets finished')
         self.__printInfo('Gadgets have to be reloaded')

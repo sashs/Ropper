@@ -55,28 +55,28 @@ class GeneralTests(unittest.TestCase):
 
         badbytes = 'adfd'
         gadgets = r.searchRopGadgets(self.file)
-        gadgets = ropper.filterBadBytesGadgets(gadgets, badbytes)
+        gadgets = ropper.filterBadBytes(gadgets, badbytes)
         gadget = gadgets[0]
         self.assertNotEqual(gadget.lines[0][0], 0x1adfd)
 
         badbytes = '52f8'
         gadgets = r.searchPopPopRet(self.file)
-        gadgets = ropper.filterBadBytesGadgets(gadgets, badbytes)
+        gadgets = ropper.filterBadBytes(gadgets, badbytes)
         self.assertNotEqual(gadgets[0].lines[0][0], 0x52f8)
 
         badbytes = 'b1c7'
         gadgets = r.searchJmpReg(self.file, ['rsp'])
-        gadgets = ropper.filterBadBytesGadgets(gadgets, badbytes)
+        gadgets = ropper.filterBadBytes(gadgets, badbytes)
         gadget = gadgets[0]
         self.assertNotEqual(gadget.lines[0][0], 0xb1c7)
 
         with self.assertRaises(RopperError):
             badbytes = 'b1c'
-            gadgets = ropper.filterBadBytesGadgets(gadgets, badbytes)
+            gadgets = ropper.filterBadBytes(gadgets, badbytes)
 
         with self.assertRaises(RopperError):
             badbytes = 'qwer'
-            gadgets = ropper.filterBadBytesGadgets(gadgets, badbytes)
+            gadgets = ropper.filterBadBytes(gadgets, badbytes)
 
     def test_opcode_failures(self):
         r = Ropper()

@@ -21,7 +21,7 @@ from ctypes import *
 from ropper.common.enum import Enum
 from struct import pack_into
 from ropper.common.error import *
-
+import re
 
 class Type(Enum):
     _enum_ = 'ELF PE MACH_O RAW NONE'
@@ -189,6 +189,39 @@ class Loader(Abstract):
     def assertFileRange(self, value):
         assert value >= self._bytes_p.value and value <= (
             self._bytes_p.value + len(self._bytes)), 'Pointer not in file range'
+
+    def _searchString(self, sections, string=None, length=0):
+        toReturn = []
+        if not string or string == '[ -~]{2}[ -~]*':
+            string = '[ -~]{2}[ -~]*'
+        else:
+            string = self.arch.searcher.prepareFilter(string)
+        
+        string = string.encode('ascii') # python 3 compatibility
+        for section in sections:
+            
+            b = bytes(bytearray(section.bytes))
+            for match in re.finditer(string, b):
+                if length > 0:
+                    if len(match.group()) >= length:   
+                        toReturn.append((self.calculateImageBase(section) + section.offset + match.start(), match.group()))
+                else:
+                    toReturn.append((self.calculateImageBase(section) + section.offset + match.start(), match.group()))
+
+        return toReturn
+
+    def searchDataString(self, string=None, length=0):
+        return self._searchString(list(self.dataSections), string, length)
+
+    def searchString(self, string=None, length=0, sectionName=None):
+        sections = list(self.dataSections)
+        sections.extend(self.executableSections)
+        if sectionName != None:
+            for section in sections:
+                if section.name == sectionName:
+                    return self._searchString([section], string, length)
+        else:
+            return self._searchString(sections, string, length)
 
     def save(self, fileName=None):
 

@@ -19,7 +19,7 @@
 
 from .console import Console
 from .options import Options
-from .common.error import RopperError
+from .common.error import *
 from binascii import unhexlify
 from ropper.rop import Ropper
 from ropper.loaders import elf

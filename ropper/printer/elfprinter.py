@@ -79,7 +79,8 @@ class ELFPrinter(FileDataPrinter):
         phdrs = elffile.phdrs
 
         data = []
-        for phdr in phdrs:
+        for phdrData in phdrs:
+            phdr = phdrData.struct
             ptype = 'Not available'
             if phdr.p_type in PT:
                 ptype = PT[phdr.p_type]

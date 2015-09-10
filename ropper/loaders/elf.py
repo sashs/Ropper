@@ -90,7 +90,8 @@ class ELF(Loader):
         for i in range(self.ehdr.e_phnum):
             self.assertFileRange(p_tmp.value)
             phdr = cast(p_tmp, POINTER(self.__elf_module.Phdr)).contents
-            self.phdrs.append(phdr)
+            phdrData = PhdrData(struct=phdr)
+            self.phdrs.append(phdrData)
 
             p_tmp.value += self.ehdr.e_phentsize
 
@@ -204,7 +205,7 @@ class ELF(Loader):
 
     @property
     def imageBase(self):
-        return self.phdrs[0].p_vaddr - self.phdrs[0].p_offset
+        return self.phdrs[0].struct.p_vaddr - self.phdrs[0].struct.p_offset
 
 
     def _loadDefaultArch(self):
@@ -218,12 +219,12 @@ class ELF(Loader):
         if not self.__execSections:
             self.__execSections = []
             for phdr in self.phdrs:
-                if phdr.p_flags & PF.EXEC > 0:
-                    p_tmp = c_void_p(self._bytes_p.value + phdr.p_offset)
+                if phdr.struct.p_flags & PF.EXEC > 0:
+                    p_tmp = c_void_p(self._bytes_p.value + phdr.struct.p_offset)
                     self.assertFileRange(p_tmp.value)
-                    self.assertFileRange(p_tmp.value+phdr.p_memsz)
-                    execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.p_memsz)).contents
-                    self.__execSections.append(Section(name=str(PT[phdr.p_type]), sectionbytes=execBytes, virtualAddress=phdr.p_vaddr, offset=phdr.p_offset))
+                    self.assertFileRange(p_tmp.value+phdr.struct.p_memsz)
+                    execBytes = cast(p_tmp, POINTER(c_ubyte * phdr.struct.p_memsz)).contents
+                    self.__execSections.append(Section(name=str(PT[phdr.struct.p_type]), sectionbytes=execBytes, virtualAddress=phdr.struct.p_vaddr, offset=phdr.struct.p_offset))
 
         return self.__execSections
 
@@ -244,8 +245,8 @@ class ELF(Loader):
     def codeVA(self):
 
         for phdr in self.phdrs:
-            if phdr.p_type == PT.INTERP:
-                return phdr.p_vaddr
+            if phdr.struct.p_type == PT.INTERP:
+                return phdr.struct.p_vaddr
         return 0
 
     @property
@@ -260,8 +261,8 @@ class ELF(Loader):
         phdrs = self.phdrs
 
         for phdr in phdrs:
-            if phdr.p_type == PT.GNU_STACK:
-                phdr.p_flags = perm
+            if phdr.struct.p_type == PT.GNU_STACK:
+                phdr.struct.p_flags = perm
 
         self.save()
 

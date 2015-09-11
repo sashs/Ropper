@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropper.loaders.loader import Loader
+from ropper.loaders.loader import Loader,Type
 from ropper.printer.printer import FileDataPrinter
 from ropper.rop import Ropper
 from ropper.common.error import *
@@ -786,6 +786,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def help_disassemble(self):
         self.__printHelpText('disassemble <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
 
+    @safe_cmd
     def do_stack_pivot(self, text):
         self.__printGadgets(self.__gadgets[self.binary], Category.STACK_PIVOT)
 
@@ -793,6 +794,24 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_EOF(self, text):
         self.__cprinter.println('')
         self.do_quit(text);
+
+    @safe_cmd
+    def do_edit(self, text):
+        cmd = None
+        if self.binary.type == Type.ELF:
+            cmd = ELFConsole(self.binary, self.__cprinter)
+        elif self.binary.type == Type.PE:
+            cmd = PEConsole(self.binary, self.__cprinter)
+        elif self.binary.type == Type.MACH_O:
+            cmd = MachOConsole(self.binary, self.__cprinter)
+        else:
+            self.printError('This type is currently not supported: %s' % self.binary.type)
+            return
+        if cmd:
+            cmd.cmdloop()
+
+    def help_edit(self):
+        self.__printHelpText('edit', 'edits a file ***experimental***')
 
 
 class ConsolePrinter(object):
@@ -829,6 +848,9 @@ class ConsolePrinter(object):
         self.putsErr(*args)
         self._err.write('\n')
 
+    def printHelpText(self, cmd, desc):
+        self.println('{}  -  {}\n'.format(cmd, desc))
+
     def printMessage(self, mtype, message):
         self.printlnErr(mtype, message)
 
@@ -849,3 +871,103 @@ class ConsolePrinter(object):
         self.printlnErr('')
         if message:
             self.printInfo(message)
+
+class EditConsoleMixin(object):
+
+    def __init__(self, binary, printer):
+        cmd.Cmd.__init__(self)
+        self._binary = binary
+        self._printer = printer
+        self.prompt = cstr('(edit:%s) ' % str(binary.type).lower(), Color.RED)
+        self.intro = cstr('***EXPERIMENTAL***')
+
+    @property
+    def binary(self):
+        return self._binary
+
+    @property
+    def printer(self):
+        return self._printer
+
+    @safe_cmd
+    def do_save(self, text):
+        self.binary.save()
+
+    def help_save(self):
+        self.printer.printHelpText('save', 'Saves the changes in the opened file.')
+
+    def do_exit(self, text):
+        self.printer.println()
+        return True
+
+    do_EOF = do_exit
+
+class ELFConsole(EditConsoleMixin,cmd.Cmd):
+
+    def __init__(self, binary, printer):
+        EditConsoleMixin.__init__(self, binary, printer)
+        cmd.Cmd.__init__(self)
+
+    @safe_cmd
+    def do_ehdr(self, text):
+        if not text:
+            ehdr = self._binary.ehdr
+
+            self._printer.println('ehdr')
+            
+            for field in ehdr._fields_:
+                self._printer.println('    %s' % field[0],'=',(bytes(ehdr.__getattribute__(field[0]))))
+
+    @safe_cmd
+    def do_phdr(self, text):
+        if not text:
+            phdrs = self._binary.phdrs
+
+            for i in range(len(phdrs)):
+                self._printer.println('phdr [%d]' % i)
+                phdr = phdrs[i].struct
+                for field in phdr._fields_:
+                    self._printer.println('    %s' % field[0],'=',hex(phdr.__getattribute__(field[0]))[:-1])
+
+    @safe_cmd
+    def do_shdr(self, text):
+        shdrs = self._binary.shdrs
+        if not text:
+            
+
+            for i in range(len(shdrs)):
+                self._printer.println('shdr [%d]' % i)
+                shdr = shdrs[i].struct
+                for field in shdr._fields_:
+                    self._printer.println('    %s' % field[0],'=',hex(shdr.__getattribute__(field[0]))[:-1])
+        else:
+            if ' ' in text:
+                number, field = text.split()
+                number = int(number)
+                if '=' in field:
+                    shdr = shdrs[number].struct
+                    field, value = field.split('=')
+                    shdr.__setattr__(field, int(value))
+            elif text.isdigit():
+                index = int(text)
+                self.printer.println('shdr [%d]' % index)
+                shdr = shdrs[index].struct
+                for field in shdr._fields_:
+                    self._printer.println('    %s' % field[0],'=',hex(shdr.__getattribute__(field[0]))[:-1])
+
+  
+
+
+
+class PEConsole(EditConsoleMixin,cmd.Cmd):
+
+    def __init__(self, binary, printer):
+        EditConsoleMixin.__init__(self, binary, printer)
+        cmd.Cmd.__init__(self)
+
+
+class MachOConsole(EditConsoleMixin,cmd.Cmd):
+
+    def __init__(self, binary, printer):
+        EditConsoleMixin.__init__(self, binary, printer)
+        cmd.Cmd.__init__(self)

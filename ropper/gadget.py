@@ -50,6 +50,7 @@ class Gadget(object):
         self.__category = None
         self._binary = binary
         self._section = section
+        self._bytes = bytearray()
 
     @property
     def lines(self):
@@ -64,6 +65,14 @@ class Gadget(object):
         return self._binary    
 
     @property
+    def bytes(self):
+        return self._bytes
+   
+    @bytes.setter 
+    def bytes(self, bytes):
+        self._bytes = bytes
+
+    @property
     def imageBase(self):
         return self._binary.calculateImageBase(self._section)
 
@@ -71,13 +80,16 @@ class Gadget(object):
     def vaddr(self):
         return self.imageBase + self.lines[0][0]
 
-    def append(self, address, mnem, args=''):
+    def append(self, address, mnem, args='', bytes=None):
         if args:
             self.__lines.append((address, mnem + ' ' + args, mnem ,args))
             self._gadget += mnem + ' ' + args + '; '
         else:
             self.__lines.append((address, mnem, mnem,args))
             self._gadget += mnem + '; '
+
+        if bytes:
+            self.bytes += bytes
         
 
     def match(self, filter):

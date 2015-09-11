@@ -121,10 +121,10 @@ class Ropper(object):
                 if disass:
                     for i in disassembler.disasm(struct.pack('B' * len(opcode), *code[match.start():match.end()]), offset + match.start()):
                         opcodeGadget.append(
-                            i.address, i.mnemonic , i.op_str)
+                            i.address, i.mnemonic , i.op_str, bytes=i.bytes)
                 else:
                     opcodeGadget.append(
-                        offset + match.start(), hexlify(match.group(0)).decode('utf-8'))
+                        offset + match.start(), hexlify(match.group(0)).decode('utf-8'),bytes=match.group())
             else:
                 continue
             
@@ -156,13 +156,13 @@ class Ropper(object):
         for index in range(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
                 ppr = Gadget(binary,section)
-                for (address, size, mnemonic, op_str) in disassembler.disasm_lite(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
-                    if mnemonic != 'pop' and mnemonic != 'ret':
+                for i in disassembler.disasm(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
+                    if i.mnemonic != 'pop' and i.mnemonic != 'ret':
                         break
                     ppr.append(
-                        address, mnemonic , op_str)
+                        i.address, i.mnemonic , i.op_str, bytes=i.bytes)
                     
-                    if mnemonic.startswith('ret'):
+                    if i.mnemonic.startswith('ret'):
                         break
                 if len(ppr) == 3:
                     
@@ -233,7 +233,7 @@ class Ropper(object):
         for i in disassembler.disasm(code_str, codeStartAddress):
             if i.mnemonic not in binary.arch.badInstructions:
                 gadget.append(
-                    i.address, i.mnemonic,i.op_str)
+                    i.address, i.mnemonic,i.op_str, bytes=i.bytes)
                 
             elif len(gadget) > 0:
                 break
@@ -256,7 +256,7 @@ class Ropper(object):
         while len(gadget) < count:
             gadget = Gadget(binary, section)
             for i in disassembler.disasm(struct.pack('B' * len(code[offset - counter:]), *bytearray(code[offset - counter:])), vaddr-counter):
-                gadget.append(i.address, i.mnemonic , i.op_str)
+                gadget.append(i.address, i.mnemonic , i.op_str, i.bytes)
                 if i.address == vaddr:
                     toReturn = gadget
                     break
@@ -290,7 +290,7 @@ class Ropper(object):
         c = 0
 
         for i in disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), offset):
-            gadget.append(i.address, i.mnemonic , i.op_str)
+            gadget.append(i.address, i.mnemonic , i.op_str,bytes=i.bytes)
             c += 1
             if c == count:
                 break

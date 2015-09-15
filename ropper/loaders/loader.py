@@ -61,7 +61,7 @@ class Loader(Abstract):
         self._bytes_p = None
         self._arch = None
 
-        
+
         self._gadgets = {}
 
         self._printer = None
@@ -144,7 +144,7 @@ class Loader(Abstract):
         return False
 
     @classmethod
-    def open(cls, fileName, raw=False):
+    def open(cls, fileName, raw=False, arch=None):
         sc = Loader.__subclasses__()
         Raw = None
         for subclass in sc:
@@ -155,7 +155,9 @@ class Loader(Abstract):
                 Raw = subclass
 
         if Raw:
-            return Raw(fileName)
+            if not arch:
+                raise ArgumentError('Architecture has to be set, if raw file should be loaded')
+            return Raw(fileName, arch=arch)
         else:
             raise LoaderError('Not supported file type')
 

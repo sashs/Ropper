@@ -35,7 +35,7 @@ class ELF_x86_84(unittest.TestCase):
         
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1000)
@@ -89,7 +89,7 @@ class PE_x86_84(unittest.TestCase):
 
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1500)
@@ -137,7 +137,7 @@ class MACHO_x86_84(unittest.TestCase):
         
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 110)

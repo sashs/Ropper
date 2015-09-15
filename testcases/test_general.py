@@ -38,7 +38,7 @@ class GeneralTests(unittest.TestCase):
     def test_search(self):
         r = Ropper()
 
-        gadgets = r.searchRopGadgets(self.file)
+        gadgets = r.searchGadgets(self.file)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [rax]')
         self.assertEqual(len(found_gadgets), 1)
@@ -54,7 +54,7 @@ class GeneralTests(unittest.TestCase):
         r = Ropper()
 
         badbytes = 'adfd'
-        gadgets = r.searchRopGadgets(self.file)
+        gadgets = r.searchGadgets(self.file)
         gadgets = ropper.filterBadBytes(gadgets, badbytes)
         gadget = gadgets[0]
         self.assertNotEqual(gadget.lines[0][0], 0x1adfd)
@@ -112,7 +112,7 @@ class GeneralTests(unittest.TestCase):
 
         dao = GadgetDAO(db)
 
-        gadgets = r.searchRopGadgets(self.file)
+        gadgets = r.searchGadgets(self.file)
 
         dao.save(gadgets)
         self.assertTrue(os.path.exists(db))

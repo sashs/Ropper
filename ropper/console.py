@@ -54,6 +54,7 @@ class Console(cmd.Cmd):
     def __init__(self, options):
         cmd.Cmd.__init__(self)
         self.__options = options
+        options.addOptionChangedCallback(self.optionChanged)
         self.__binary = None
         self.__binaries = []
         self.__gadgets = {}
@@ -166,10 +167,13 @@ class Console(cmd.Cmd):
 
     def __searchGadgets(self, binary):
         r = Ropper(self.__cprinter)
-        gadgets = r.searchRopGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+        gadgets = r.searchGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
         binary.gadgets = gadgets
-        self.__gadgets[binary] = ropper.deleteDuplicates(ropper.filterBadBytes(gadgets, self.__options.badbytes))
+        self.__gadgets[binary] = ropper.filterBadBytes(gadgets, self.__options.badbytes)
+        if not self.__options.all:
+            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
+
         return self.__gadgets[binary]
 
     def __loadGadgets(self):
@@ -377,6 +381,20 @@ class Console(cmd.Cmd):
         else:
             self.__loadGadgets()
             self.__searchAndPrintGadgets()
+
+    def optionChanged(self, option, old, new):
+        if option in ['all', 'badbytes']:
+            for binary in self.__binaries:
+                if binary.loaded:
+                    if self.__options.badbytes:
+                        self.__gadgets[binary] = ropper.filterBadBytes(binary.gadgets, self.__options.badbytes)
+                    else:
+                        self.__gadgets[binary] = binary.gadgets
+                    if not self.__options.all:
+                        self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
+        
+
+
 
 ####### cmd commands ######
     @safe_cmd
@@ -664,9 +682,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__options.setOption('badbytes',text)
 
         self.__cprinter.printInfo('Filter gadgets of all opened files')
-        for binary in self.__binaries:
-            if binary.loaded:
-                self.__gadgets[binary] = ropper.filterBadBytes(binary.gadgets, self.__options.badbytes)
+        # for binary in self.__binaries:
+        #     if binary.loaded:
+        #         self.__gadgets[binary] = ropper.filterBadBytes(binary.gadgets, self.__options.badbytes)
+
+        #         if not self.__options.all:
+        #             self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
+
 
         self.__cprinter.printInfo('Filtering gadgets finished')
         self.__printInfo('Gadgets have to be reloaded')

@@ -169,7 +169,7 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchRopGadgets(self, binary, depth=10, gtype=GadgetType.ALL):
+    def searchGadgets(self, binary, depth=10, gtype=GadgetType.ALL):
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.imageBase
@@ -177,12 +177,12 @@ class Ropper(object):
             if self.printer:
                 self.printer.printInfo('Loading gadgets for section: ' + section.name)
             
-            newGadgets = self._searchRopGadgets(section=section, binary=binary, depth=depth, gtype=gtype)
+            newGadgets = self._searchGadgets(section=section, binary=binary, depth=depth, gtype=gtype)
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
 
-    def _searchRopGadgets(self, section, binary, depth=10, gtype=GadgetType.ALL):
+    def _searchGadgets(self, section, binary, depth=10, gtype=GadgetType.ALL):
 
         toReturn = []
         code = bytes(bytearray(section.bytes))

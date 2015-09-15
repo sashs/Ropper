@@ -36,6 +36,7 @@ class Options(object):
         self.__args = None
         self.__parser = self._createArgParser()
         self._analyseArguments()
+        self.__callbacks = []
 
     def _createArgParser(self):
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -231,7 +232,9 @@ epilog="""example uses:
 
     def setOption(self, key, value):
         if key in VALID_OPTIONS:
+            old = self.getOption(key)
             result = VALID_OPTIONS[key](self, value)
+            self.notifyOptionChanged(key, old, value)
             if result:
                 return result[1]
 
@@ -242,10 +245,19 @@ epilog="""example uses:
 
     def getOption(self, key):
         if key in VALID_OPTIONS:
-            pass
+            return self.__getattr__(key)
         else:
             raise RopperError('Invalid option: %s ' % key)
 
+    def addOptionChangedCallback(self, func):
+        self.__callbacks.append(func)
+
+    def removeOptionChangedCallback(self, func):
+        del self.__callbacks[self.__callbacks.index(func)]
+
+    def notifyOptionChanged(self, option, old, new):
+        for cb in self.__callbacks:
+            cb(option, old, new)
 
     def _setAll(self, value):
         if value.lower() in ('on', 'off'):

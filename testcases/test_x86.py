@@ -35,7 +35,7 @@ class ELF_x86(unittest.TestCase):
 
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1700)
@@ -82,7 +82,7 @@ class PE_x86(unittest.TestCase):
 
     def test_gadgets_pe(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 4800)

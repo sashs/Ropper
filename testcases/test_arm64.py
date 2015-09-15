@@ -35,7 +35,7 @@ class ELF_ARM64(unittest.TestCase):
 
     def test_gadgets_pe(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 2350)

@@ -46,7 +46,6 @@ class Gadget(object):
         self.__arch = binary.arch
         self.__lines = []
         self._gadget = ''
-        self._vaddr = 0x0
         self.__category = None
         self._binary = binary
         self._section = section
@@ -77,7 +76,7 @@ class Gadget(object):
         return self._binary.imageBase
 
     @property
-    def vaddr(self):
+    def address(self):
         return self.imageBase + self.lines[0][0]
 
     def append(self, address, mnem, args='', bytes=None):
@@ -101,7 +100,7 @@ class Gadget(object):
         line =  self.__lines[0]
         for b in badbytes:
 
-            address = self.vaddr
+            address = self.address
             if type(b) == str:
                 b = ord(b)
 

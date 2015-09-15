@@ -39,7 +39,7 @@ class ELF_x86_84(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1000)
-        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x400000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
@@ -93,7 +93,7 @@ class PE_x86_84(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1500)
-        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
@@ -141,7 +141,7 @@ class MACHO_x86_84(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 110)
-        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x100000000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

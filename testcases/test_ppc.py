@@ -39,7 +39,7 @@ class ELF_PPC(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1500)
-        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x10000000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

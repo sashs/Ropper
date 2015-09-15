@@ -65,7 +65,7 @@ class ELF_ARM_THUMB(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1700)
-        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x00008000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

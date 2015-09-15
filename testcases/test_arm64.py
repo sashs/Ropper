@@ -39,7 +39,7 @@ class ELF_ARM64(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 2350)
-        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x00400000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)

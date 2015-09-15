@@ -19,12 +19,14 @@
 
 from ropper.loaders.loader import *
 from ropper.common.error import LoaderError
+from ropper.arch import x86
 
 class Raw(Loader):
 
-    def __init__(self, filename):
+    def __init__(self, filename, arch=x86):
         self.__codeSection = None
         super(Raw, self).__init__(filename)
+        self.arch = arch
 
     
     def entryPoint(self):

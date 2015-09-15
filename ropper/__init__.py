@@ -25,7 +25,10 @@ from ropper.rop import Ropper
 from ropper.loaders import elf
 from ropper.loaders import pe
 from ropper.loaders import mach_o
-from ropper.loaders.loader import Loader
+from ropper.loaders import raw
+from ropper.loaders.loader import Loader, Type
+from ropper.gadget import Gadget, GadgetType
+from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
 
 
 app_options = None
@@ -59,17 +62,21 @@ def deleteDuplicates(gadgets):
     return toReturn
 
 
-def formatBadBytes(badbytes):
-    if len(badbytes) % 2 > 0:
-        raise RopperError('The length of badbytes has to be a multiple of two')
 
-    try:
-        badbytes = unhexlify(badbytes)
-    except:
-        raise RopperError('Invalid characters in badbytes string')
-    return badbytes
 
 def filterBadBytes(gadgets, badbytes):
+
+    def formatBadBytes(badbytes):
+        if len(badbytes) % 2 > 0:
+            raise RopperError('The length of badbytes has to be a multiple of two')
+
+        try:
+            badbytes = unhexlify(badbytes)
+        except:
+            raise RopperError('Invalid characters in badbytes string')
+    return badbytes
+
+
     if not badbytes:
         return gadgets
 
@@ -82,4 +89,14 @@ def filterBadBytes(gadgets, badbytes):
             toReturn.append(gadget)
 
     return toReturn
+
+def search(gadgets, searchString):
+    if not gadgets:
+        return []
+
+    searcher = gadgets[0].binary.arch.searcher
+    return searcher.search(gadgets, searchString)
+
+
+
 

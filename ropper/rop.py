@@ -172,7 +172,7 @@ class Ropper(object):
     def searchRopGadgets(self, binary, depth=10, gtype=GadgetType.ALL):
         gadgets = []
         for section in binary.executableSections:
-            vaddr = binary.calculateImageBase(section)
+            vaddr = binary.imageBase
 
             if self.printer:
                 self.printer.printInfo('Loading gadgets for section: ' + section.name)

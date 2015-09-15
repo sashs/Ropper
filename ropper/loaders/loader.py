@@ -61,21 +61,19 @@ class Loader(Abstract):
         self._bytes_p = None
         self._arch = None
 
-        self._loadFile()
-        self._parseFile()
-        self._arch = self._loadDefaultArch()
+        
         self._gadgets = {}
 
         self._printer = None
-        self._manual_imagebase = None
+        self._manualImageBase = None
         self.loaded = False
+
+        self._loadFile()
+        self._parseFile()
+        self._arch = self._loadDefaultArch()
 
     @abstractproperty
     def entryPoint(self):
-        return None
-
-    @abstractproperty
-    def imageBase(self):
         return None
 
     @property
@@ -103,6 +101,10 @@ class Loader(Abstract):
         pass
 
     @abstractmethod
+    def _getImageBase():
+        pass
+
+    @abstractmethod
     def getSection(self, name):
         pass
 
@@ -121,6 +123,17 @@ class Loader(Abstract):
     @abstractmethod
     def checksec(self):
         pass
+
+    @property
+    def imageBase(self):
+        if self._manualImageBase == None:
+            return self._getImageBase()
+
+        return self._manualImageBase
+
+    @imageBase.setter
+    def imageBase(self, imageBase):
+        self._manualImageBase = imageBase
 
     @property
     def fileName(self):
@@ -170,14 +183,6 @@ class Loader(Abstract):
     def gadgets(self, new_gadgets):
         self._gadgets = new_gadgets
 
-    @property
-    def manualImagebase(self):
-        return self._manual_imagebase
-
-    @manualImagebase.setter
-    def manualImagebase(self, new_imagebase):
-        self._manual_imagebase = new_imagebase
-
     def _loadFile(self):
         with open(self.fileName, 'rb') as binFile:
             b = binFile.read()
@@ -204,9 +209,9 @@ class Loader(Abstract):
             for match in re.finditer(string, b):
                 if length > 0:
                     if len(match.group()) >= length:   
-                        toReturn.append((self.calculateImageBase(section) + section.offset + match.start(), match.group()))
+                        toReturn.append((self.imageBase + section.offset + match.start(), match.group()))
                 else:
-                    toReturn.append((self.calculateImageBase(section) + section.offset + match.start(), match.group()))
+                    toReturn.append((self.imageBase + section.offset + match.start(), match.group()))
 
         return toReturn
 
@@ -233,10 +238,10 @@ class Loader(Abstract):
         except BaseException as e:
             raise LoaderError(e)
 
-    def calculateImageBase(self, section):
-        ib = self.imageBase
+    # def calculateImageBase(self, section):
+    #     ib = self.imageBase
 
-        if self.manualImagebase == None:
-            return ib
+    #     if self.manualImagebase == None:
+    #         return ib
 
-        return self.manualImagebase
+    #     return self.manualImagebase

@@ -41,9 +41,9 @@ import unittest
 #         self.assertEqual(len(gadgets), 1711)
 #         self.assertEqual(gadget.lines[0][0], 0x8567)
 #         self.assertEqual(gadget.imageBase, 0x8048000)
-#         self.file.manualImagebase = 0x0
+#         self.file.imageBase = 0x0
 #         self.assertEqual(gadget.imageBase, 0x0)
-#         self.file.manualImagebase = None
+#         self.file.imageBase = None
 #         self.assertEqual(gadget.imageBase, 0x8048000)
 
 
@@ -65,11 +65,11 @@ class ELF_ARM_THUMB(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1700)
-        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x00008000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x00008000)
 
 

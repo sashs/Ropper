@@ -39,11 +39,11 @@ class ELF_x86(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 1700)
-        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x8048000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x8048000)
 
 
@@ -55,9 +55,9 @@ class ELF_x86(unittest.TestCase):
         self.assertEqual(len(gadgets), 10)
         self.assertEqual(gadget.lines[0][0], 0xc63)
         self.assertEqual(gadget.imageBase, 0x8048000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x8048000)
 
     def test_ppr(self):
@@ -86,11 +86,11 @@ class PE_x86(unittest.TestCase):
 
         gadget = gadgets[0]
         self.assertGreater(len(gadgets), 4800)
-        self.assertEqual(gadget.lines[0][0] + self.file.calculateImageBase(gadget.section), gadget.vaddr)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.vaddr)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
 
@@ -107,9 +107,9 @@ class PE_x86(unittest.TestCase):
         self.assertEqual(len(gadgets), 13)
 
         self.assertEqual(gadget.imageBase, 0x4ad00000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_ppr_pe(self):

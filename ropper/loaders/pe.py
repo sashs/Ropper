@@ -130,8 +130,7 @@ class PE(Loader):
             self.imageNtHeaders.OptionalHeader.DllCharacteristics &= ~ImageDllCharacteristics.DYNAMIC_BASE
         self.save()
 
-    @property
-    def imageBase(self):
+    def _getImageBase(self):
         return self.imageNtHeaders.OptionalHeader.ImageBase
 
     def __parseSections(self, p_bytes):

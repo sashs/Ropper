@@ -25,6 +25,12 @@ import importlib
 import os
 
 
+class EhdrData(DataContainer):
+    """
+    struct = SectionHeader
+    bytes = c_byte_array (section bytes)
+    """
+
 class ShdrData(DataContainer):
 
     """
@@ -38,6 +44,7 @@ class PhdrData(DataContainer):
 
     """
     struct = ProgrammHeader
+    bytes = c_byte_array (section bytes)
     """
 
 
@@ -203,8 +210,8 @@ class ELF(Loader):
     def entryPoint(self):
         return self.ehdr.e_entry
 
-    @property
-    def imageBase(self):
+    
+    def _getImageBase(self):
         return self.phdrs[0].struct.p_vaddr - self.phdrs[0].struct.p_offset
 
 

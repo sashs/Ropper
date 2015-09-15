@@ -30,7 +30,7 @@ class Raw(Loader):
     def entryPoint(self):
         return 0x0
 
-    def imageBase(self):
+    def _getImageBase(self):
         return 0x0
 
     @property    

@@ -303,7 +303,7 @@ class Console(cmd.Cmd):
                 ropper = Ropper()
 
                 
-                g = ropper.disassemble(section, self.binary, addr, addr - (self.binary.calculateImageBase(section)+section.offset), length)
+                g = ropper.disassemble(section, self.binary, addr, addr - (self.binary.imageBase+section.offset), length)
                 if not g:
                     self.__cprinter.printError('Cannot disassemble address: %s' % toHex(addr))
                     return

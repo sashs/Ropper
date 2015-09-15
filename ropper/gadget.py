@@ -74,7 +74,7 @@ class Gadget(object):
 
     @property
     def imageBase(self):
-        return self._binary.calculateImageBase(self._section)
+        return self._binary.imageBase
 
     @property
     def vaddr(self):

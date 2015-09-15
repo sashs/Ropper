@@ -56,8 +56,8 @@ class MachO(Loader):
     def entryPoint(self):
         return 0x0
 
-    @property
-    def imageBase(self):
+    
+    def _getImageBase(self):
         if self.__imageBase == None:
             es = self.executableSections[0]
             if es != None:

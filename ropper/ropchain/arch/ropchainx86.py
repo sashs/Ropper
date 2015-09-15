@@ -48,7 +48,7 @@ class RopChainX86(RopChain):
         toReturn = ''
         
         for binary,section in self._usedBinaries:
-            imageBase = binary.manualImagebase + section.offset if binary.manualImagebase != None else section.virtualAddress
+            imageBase = binary.imageBase
             toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase , 4), binary.fileName))
             toReturn += ('rebase_%d = lambda x : p(x + IMAGE_BASE_%d)\n\n'% (self._usedBinaries.index((binary, section)),self._usedBinaries.index((binary, section))))
         return toReturn

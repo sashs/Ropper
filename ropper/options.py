@@ -214,6 +214,8 @@ epilog="""example uses:
         raise ArgumentError('Missing argument: %s' % arg)
 
     def __getattr__(self, key):
+        if key == 'color':
+            key = 'nocolor'
         if key.startswith('_'):
             return super(Options, self).__getattr__(key)
         else:

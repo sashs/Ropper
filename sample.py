@@ -80,4 +80,9 @@ withouthBadBytes = filterBadBytes(gadgets, '000a0d')
 # delete duplicates
 withoutDuplicates = deleteDuplicates(gadgets)
 
+strings = binary_elf.searchDataString('bin%')
+for address, string in strings:
+
+    print "0x%x: %s" % (address, string)
+
 

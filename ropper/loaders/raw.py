@@ -28,7 +28,7 @@ class Raw(Loader):
         super(Raw, self).__init__(filename)
         self.arch = arch
 
-    
+    @property
     def entryPoint(self):
         return 0x0
 

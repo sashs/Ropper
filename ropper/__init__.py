@@ -74,7 +74,7 @@ def filterBadBytes(gadgets, badbytes):
             badbytes = unhexlify(badbytes)
         except:
             raise RopperError('Invalid characters in badbytes string')
-    return badbytes
+        return badbytes
 
 
     if not badbytes:

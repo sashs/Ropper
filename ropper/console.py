@@ -83,7 +83,7 @@ class Console(cmd.Cmd):
     def __loadFile(self, file):
         self.__binary = Loader.open(file, self.__options.raw, self.__options.arch)
         self.__binaries.append(self.__binary)
-        self.__binary.manualImagebase = self.__options.I
+        self.__binary.imageBase = self.__options.I
         if self.__options.arch:
             self.__setarch(self.__options.arch)
         if self.__binaries[0] != self.__binary and self.__binaries[0].arch != self.__binary.arch:

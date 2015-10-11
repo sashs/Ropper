@@ -599,10 +599,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_imagebase(self, text):
         if len(text) == 0:
-            self.binary.manualImagebase = None
+            self.binary.imageBase = None
             self.__printInfo('Imagebase reseted')
         elif isHex(text):
-            self.binary.manualImagebase = int(text, 16)
+            self.binary.imageBase = int(text, 16)
             self.__printInfo('Imagebase set to %s' % text)
         else:
             self.help_imagebase()

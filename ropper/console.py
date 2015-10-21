@@ -295,7 +295,7 @@ class Console(cmd.Cmd):
             if not sec or sec == str(section.name):
                 b = bytes(bytearray(section.bytes))
                 for match in re.finditer(string, b):
-                    vaddr = self.binary.manualImagebase + section.offset if self.binary.manualImagebase != None else section.virtualAddress
+                    vaddr = self.binary.imageBase + section.offset if self.binary.imageBase != None else section.virtualAddress
                     data.append( (cstr(toHex(match.start() + vaddr), Color.RED) , cstr(match.group(), Color.LIGHT_GRAY)))
         printTable('Strings',(cstr('Address'), cstr('Value')), data)
 

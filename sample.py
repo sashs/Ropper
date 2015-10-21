@@ -57,7 +57,7 @@ opcode_gadgets = rop.searchOpcode(binary_elf, '??e4')
 binary_elf.imageBase = 0x0
 
 # reset image base
-binary_elf.imagebase = None
+binary_elf.imageBase = None
 
 # print a gadget
 print gadgets[0]

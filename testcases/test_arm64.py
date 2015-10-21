@@ -23,43 +23,28 @@ from ropper.arch import *
 
 import unittest
 
-class ELF_PPC(unittest.TestCase):
+class ELF_ARM64(unittest.TestCase):
 
     def setUp(self):
-        self.file = Loader.open('test-binaries/ls-ppc')
-
-    def test_general(self):
-        self.assertEqual(self.file.arch, PPC)
-        self.assertEqual(self.file.type, Type.ELF)
+        self.file = Loader.open('test-binaries/ls-arm64')
         
 
-    def test_gadgets(self):
+    def test_general(self):
+        self.assertEqual(self.file.arch, ARM64)
+        self.assertEqual(self.file.type, Type.ELF)
+
+    def test_gadgets_pe(self):
         ropper = Ropper()
         gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertGreater(len(gadgets), 1500)
+        self.assertGreater(len(gadgets), 2350)
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
-        self.assertEqual(gadget.imageBase, 0x10000000)
+        self.assertEqual(gadget.imageBase, 0x00400000)
         self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        self.assertEqual(gadget.imageBase, 0x10000000)
-
-
-    def test_jmpreg(self):
-        ropper = Ropper()
-        regs=['esp']
-        with self.assertRaises(NotSupportedError):
-            gadgets = ropper.searchJmpReg(self.file, regs)
-        
-
-    def test_ppr(self):
-        ropper = Ropper()
-        
-        with self.assertRaises(NotSupportedError):
-            gadgets = ropper.searchPopPopRet(self.file)
-        
+        self.assertEqual(gadget.imageBase, 0x00400000)
 
 
 if __name__ == '__main__':

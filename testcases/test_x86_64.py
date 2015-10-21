@@ -17,10 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropperapp.loaders.loader import *
-from ropperapp.rop import Ropper
-from ropperapp.arch import *
-from ropperapp.common.error import *
+from ropper.loaders.loader import *
+from ropper.rop import Ropper
+from ropper.arch import *
+from ropper.common.error import *
 
 import unittest
 
@@ -35,15 +35,15 @@ class ELF_x86_84(unittest.TestCase):
         
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1024)
-        self.assertEqual(gadget.lines[0][0], 0x1adfd)
+        self.assertGreater(len(gadgets), 1000)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x400000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x400000)
 
     def test_jmpreg(self):
@@ -59,9 +59,9 @@ class ELF_x86_84(unittest.TestCase):
         self.assertEqual(len(gadgets), 25)
 
         self.assertEqual(gadget.imageBase, 0x400000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x400000)
 
         with self.assertRaises(RopperError):
@@ -89,15 +89,15 @@ class PE_x86_84(unittest.TestCase):
 
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1539)
-        self.assertEqual(gadget.lines[0][0], 0x5b33)
+        self.assertGreater(len(gadgets), 1500)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_jmpreg(self):
@@ -112,9 +112,9 @@ class PE_x86_84(unittest.TestCase):
         gadgets = ropper.searchJmpReg(self.file, regs)
         self.assertEqual(len(gadgets), 15)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_ppr(self):
@@ -137,15 +137,15 @@ class MACHO_x86_84(unittest.TestCase):
         
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 120)
-        self.assertEqual(gadget.lines[0][0], 0x3a29)
+        self.assertGreater(len(gadgets), 110)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x100000000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x100000000)
 
     def test_jmpreg(self):
@@ -161,9 +161,9 @@ class MACHO_x86_84(unittest.TestCase):
         self.assertEqual(len(gadgets), 7)
 
         self.assertEqual(gadget.imageBase, 0x100000000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x100000000)
 
         with self.assertRaises(RopperError):

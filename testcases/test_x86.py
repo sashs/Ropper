@@ -17,9 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropperapp.loaders.loader import *
-from ropperapp.rop import Ropper
-from ropperapp.arch import *
+from ropper.loaders.loader import *
+from ropper.rop import Ropper
+from ropper.arch import *
 
 import unittest
 
@@ -35,15 +35,15 @@ class ELF_x86(unittest.TestCase):
 
     def test_gadgets(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 1711)
-        self.assertEqual(gadget.lines[0][0], 0x8567)
+        self.assertGreater(len(gadgets), 1700)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x8048000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x8048000)
 
 
@@ -55,9 +55,9 @@ class ELF_x86(unittest.TestCase):
         self.assertEqual(len(gadgets), 10)
         self.assertEqual(gadget.lines[0][0], 0xc63)
         self.assertEqual(gadget.imageBase, 0x8048000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x8048000)
 
     def test_ppr(self):
@@ -82,15 +82,15 @@ class PE_x86(unittest.TestCase):
 
     def test_gadgets_pe(self):
         ropper = Ropper()
-        gadgets = ropper.searchRopGadgets(self.file)
+        gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertEqual(len(gadgets), 4878)
-        self.assertEqual(gadget.lines[0][0], 0x6227)
+        self.assertGreater(len(gadgets), 4800)
+        self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
 
@@ -107,9 +107,9 @@ class PE_x86(unittest.TestCase):
         self.assertEqual(len(gadgets), 13)
 
         self.assertEqual(gadget.imageBase, 0x4ad00000)
-        self.file.manualImagebase = 0x0
+        self.file.imageBase = 0x0
         self.assertEqual(gadget.imageBase, 0x0)
-        self.file.manualImagebase = None
+        self.file.imageBase = None
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
     def test_ppr_pe(self):

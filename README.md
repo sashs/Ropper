@@ -149,7 +149,7 @@ Usage
       0x00006d6f: mov ebx, esi; mov esi, dword ptr [esp + 0x18]; add esp, 0x1c; ret ;
       0x000076f8: mov eax, dword ptr [eax]; mov byte ptr [eax + edx], 0; add esp, 0x18; pop ebx; ret ;
 
-      ropper.py --file /bin/ls --search "mov [%], ecx"
+      ropper.py --file /bin/ls --search "mov [%], edx"
       0x000067ed: mov dword ptr [esp + 4], edx; mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;
       0x00006f4e: mov dword ptr [ecx + 0x14], edx; add esp, 0x2c; pop ebx; pop esi; pop edi; pop ebp; ret ;
       0x000084b8: mov dword ptr [eax], edx; ret ;

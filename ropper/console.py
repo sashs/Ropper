@@ -573,12 +573,12 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         desc += '0x00006d03: mov eax, esi; pop ebx; pop esi; pop edi; pop ebp; ret ;\n'
         desc += '0x00006d6f: mov ebx, esi; mov esi, dword ptr [esp + 0x18]; add esp, 0x1c; ret ;\n'
         desc += '0x000076f8: mov eax, dword ptr [eax]; mov byte ptr [eax + edx], 0; add esp, 0x18; pop ebx; ret ;\n\n\n'
-        desc += 'search mov [%], ecx\n\n'
+        desc += 'search mov [%], edx\n\n'
         desc += '0x000067ed: mov dword ptr [esp + 4], edx; mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;\n'
         desc += '0x00006f4e: mov dword ptr [ecx + 0x14], edx; add esp, 0x2c; pop ebx; pop esi; pop edi; pop ebp; ret ;\n'
         desc += '0x000084b8: mov dword ptr [eax], edx; ret ;\n'
         desc += '0x00008d9b: mov dword ptr [eax], edx; add esp, 0x18; pop ebx; ret ;\n\n\n'
-        desc += 'search /1/ mov [%], ecx\n\n'
+        desc += 'search /1/ mov [%], edx\n\n'
         desc += '0x000084b8: mov dword ptr [eax], edx; ret ;\n'
 
 

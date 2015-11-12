@@ -280,7 +280,7 @@ class Console(cmd.Cmd):
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
 
-        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets))
+        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets, self.__options.badbytes))
 
     def __printStrings(self, string, sec=None):
         data = []

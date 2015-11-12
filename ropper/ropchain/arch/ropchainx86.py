@@ -776,10 +776,11 @@ class RopChainX86VirtualProtect(RopChainX86):
     def _createJmp(self, reg=['esp']):
         r = Ropper()
         gadgets = []
-        for section in self._binaries[0].executableSections:
-            vaddr = section.offset
-            gadgets.extend(
-                r.searchJmpReg(self._binaries[0],reg))
+        for binary in self._binaries:
+            for section in binary.executableSections:
+                vaddr = section.offset
+                gadgets.extend(
+                    r.searchJmpReg(self._binaries[0],reg))
 
 
 
@@ -788,7 +789,7 @@ class RopChainX86VirtualProtect(RopChainX86):
                 self._usedBinaries.append((gadgets[0]._binary, gadgets[0]._section))
             return gadgets[0]
         else:
-            return ''
+            return None
 
     def __extract(self, param):
         if (not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param)) and (not match('0x[0-9a-fA-F]+', param)):
@@ -866,7 +867,8 @@ class RopChainX86VirtualProtect(RopChainX86):
         
         gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
         gadgets.append((self._createAddress, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']+to_extend))
-        gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
+        if jmp_esp:
+            gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
         gadgets.append((self._createNumber, [0x40],{'reg':'edx'},['edx', 'dx', 'dh', 'dl']+to_extend))
         
         gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))

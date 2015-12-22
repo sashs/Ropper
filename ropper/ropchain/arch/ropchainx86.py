@@ -192,7 +192,7 @@ class RopChainX86(RopChain):
         quali = 1
         while quali < RopChainX86System.MAX_QUALI:
             for binary in self._binaries:
-                for gadget in binary.gadgets:
+                for gadget in self._gadgets[binary]:
                     
                     if gadget.category[0] == category and gadget.category[1] == quali:
                         if badSrc and gadget.category[2]['src'] in badSrc:

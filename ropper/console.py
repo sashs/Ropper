@@ -219,7 +219,7 @@ class Console(cmd.Cmd):
         self.__options.nocolor = True
 
         try:
-            generator = RopChain.get(self.__binaries,split[0], self.__cprinter)
+            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter)
 
             self.__printInfo('generating rop chain')
             #self.__printSeparator(behind='\n\n')

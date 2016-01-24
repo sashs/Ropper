@@ -275,7 +275,7 @@ class ELF(Loader):
 
     def getSection(self, name):
         for shdr in self.shdrs:
-            if str(shdr.name) == name:
+            if shdr.name.decode('ASCII') == name.decode('ASCII'):
                 p_tmp = c_void_p(self._bytes_p.value + shdr.struct.sh_offset)
                 dataBytes = cast(p_tmp, POINTER(c_ubyte * shdr.struct.sh_size)).contents
                 return Section(shdr.name, dataBytes, shdr.struct.sh_addr, shdr.struct.sh_offset)

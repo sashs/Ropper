@@ -231,16 +231,18 @@ class Ropper(object):
         disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         for i in disassembler.disasm(code_str, codeStartAddress):
-            if i.mnemonic not in binary.arch.badInstructions:
+            if re.match(ending[0], i.bytes):
+                hasret = True
+                
+            if hasret or i.mnemonic not in binary.arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
                 
-            elif len(gadget) > 0:
+            if hasret:
                 break
 
-            if re.match(ending[0], i.bytes):
-                hasret = True
-                break
+
+            
 
         if hasret and len(gadget) > 0:
             return gadget

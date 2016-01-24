@@ -173,7 +173,7 @@ epilog="""example uses:
         parser.add_argument(
             '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(
-            '--type', help='Sets the type of gadgets [rop, jop, all] (default: all)', metavar='<type>')
+            '--type', help='Sets the type of gadgets [rop, jop, sys, all] (default: all)', metavar='<type>')
         parser.add_argument(
             '--detailed', help='Prints gadgets more detailed', action='store_true')
         parser.add_argument(
@@ -286,7 +286,7 @@ epilog="""example uses:
         return False
 
     def _setType(self, value):
-        if value in ['rop','jop','all']:
+        if value in ['rop','jop','sys','all']:
             self.type = value
             return  (True,True)
         return False

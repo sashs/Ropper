@@ -621,7 +621,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
 
     def help_type(self):
-        self.__printHelpText('type <type>', 'sets the gadget type (rop, jop, all, default:all)')
+        self.__printHelpText('type <type>', 'sets the gadget type (rop, jop, sys, all, default:all)')
 
     @safe_cmd
     def do_jmp(self, text):

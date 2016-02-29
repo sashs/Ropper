@@ -28,9 +28,9 @@ class ELFPrinter(FileDataPrinter):
         return Type.ELF
 
     def printInformation(self, binary):
-        ehdr = binary.ehdr
-        data = [(cstr('Class', Color.BLUE), cstr(ELFCLASS[ehdr.e_ident[EI.CLASS]], Color.WHITE)),
-                (cstr('Machine', Color.BLUE), cstr(EM[ehdr.e_machine], Color.WHITE)),
+        ehdr = binary._binary.elfHeader.header
+        data = [(cstr('Class', Color.BLUE), cstr(elf.ELFCLASS[ehdr.e_ident[elf.EI.CLASS]], Color.WHITE)),
+                (cstr('Machine', Color.BLUE), cstr(elf.EM[ehdr.e_machine], Color.WHITE)),
                 (cstr('Version', Color.BLUE), cstr(ehdr.e_version, Color.WHITE)),
                 (cstr('EntryPoint', Color.BLUE), cstr(self._toHex(
                     ehdr.e_entry,binary.arch.addressLength), Color.WHITE)),
@@ -46,28 +46,29 @@ class ELFPrinter(FileDataPrinter):
         self._printTable('ELF Header', (cstr('Name', Color.LIGHT_GRAY), cstr('Value',Color.LIGHT_GRAY)), data)
 
     def printSymbols(self, binary):
-
-        for section, symbols in binary.symbols.items():
-            data = []
-            for idx in range(len(symbols)):
-                symbol = symbols[idx]
-                data.append((cstr(idx, Color.BLUE),
-                            cstr(STT[symbol.type], Color.GREEN),
-                            cstr(STB[symbol.bind], Color.LIGHT_GRAY),
-                            cstr(symbol.name, Color.WHITE)))
-            self._printTable('Symbols from %s' % section,
-                            (cstr('Nr', Color.LIGHT_GRAY),
-                                cstr('Type', Color.LIGHT_GRAY),
-                                cstr('Bind', Color.LIGHT_GRAY),
-                                cstr('Name', Color.LIGHT_GRAY)),
-                            data)
+        for section in binary._binary.sections:
+            if section.name in ('.symtab','.dynsym'):  
+                data = []
+                symbols = section.symbols
+                for idx in range(len(symbols)):
+                    symbol = symbols[idx]
+                    data.append((cstr(idx, Color.BLUE),
+                                cstr(elf.STT[symbol.type], Color.GREEN),
+                                cstr(elf.STB[symbol.bind], Color.LIGHT_GRAY),
+                                cstr(symbol.name, Color.WHITE)))
+                self._printTable('Symbols from %s' % section.name,
+                                (cstr('Nr', Color.LIGHT_GRAY),
+                                    cstr('Type', Color.LIGHT_GRAY),
+                                    cstr('Bind', Color.LIGHT_GRAY),
+                                    cstr('Name', Color.LIGHT_GRAY)),
+                                data)
 
     def printSections(self, binary):
         data = []
-        for index in range(len(binary.shdrs)):
+        for index in range(len(binary._binary.sections)):
             data.append((cstr('[%.2d]' % index, Color.BLUE),
-                        cstr(binary.shdrs[index].name, Color.WHITE),
-                        cstr(SHT[binary.shdrs[index].struct.sh_type], Color.YELLOW)))
+                        cstr(binary._binary.sections[index].name, Color.WHITE),
+                        cstr(elf.SHT[binary._binary.sections[index].header.sh_type], Color.YELLOW)))
 
         self._printTable('Sections',
                         (cstr('Nr', Color.LIGHT_GRAY),
@@ -76,20 +77,20 @@ class ELFPrinter(FileDataPrinter):
                         data)
 
     def printSegments(self, elffile):
-        phdrs = elffile.phdrs
+        phdrs = elffile._binary.segments
 
         data = []
         for phdrData in phdrs:
-            phdr = phdrData.struct
+            phdr = phdrData.header
             ptype = 'Not available'
-            if phdr.p_type in PT:
-                ptype = PT[phdr.p_type]
+            if phdr.p_type in elf.PT:
+                ptype = elf.PT[phdr.p_type]
             data.append((cstr(ptype, Color.BLUE),
                         cstr(self._toHex(phdr.p_offset), Color.WHITE),
                         cstr(self._toHex(phdr.p_paddr, int(elffile.arch.addressLength)), Color.LIGHT_GRAY),
                         cstr(self._toHex(phdr.p_filesz), Color.WHITE),
                         cstr(self._toHex(phdr.p_memsz), Color.LIGHT_GRAY),
-                        cstr(PF.shortString(phdr.p_flags), (Color.GREEN if phdr.p_flags & PF.EXEC == 0 else Color.RED) )))
+                        cstr(elf.PF.shortString(phdr.p_flags), (Color.GREEN if phdr.p_flags & elf.PF.EXEC == 0 else Color.RED) )))
 
         self._printTable('Segments',
                         (cstr('Type', Color.LIGHT_GRAY),
@@ -114,20 +115,23 @@ class ELFPrinter(FileDataPrinter):
         self._printLine(str(binary.type))
 
     def printImports(self, elffile):
+        printed = False
+        for section in elffile._binary.sections:
+            if section.name in ('.rel','.rela'):  
+                relocs = section.relocations
+                data = []
 
-        for section, relocs in elffile.relocations.items():
-            data = []
+                for reloc in relocs:
+                    data.append((cstr(self._toHex(reloc.header.r_offset, elffile.arch.addressLength), Color.BLUE),
+                                cstr(R_386[reloc.type], Color.YELLOW),
+                                cstr(reloc.symbol.name, Color.WHITE)))
 
-            for reloc in relocs:
-                data.append((cstr(self._toHex(reloc.struct.r_offset, elffile.arch.addressLength), Color.BLUE),
-                            cstr(R_386[reloc.type], Color.YELLOW),
-                            cstr(reloc.symbol.name, Color.WHITE)))
+                self._printTable('Relocation section: %s' % section,
+                                (cstr('Offset', Color.LIGHT_GRAY),
+                                    cstr('Type', Color.LIGHT_GRAY),
+                                    cstr('Name', Color.LIGHT_GRAY)),
+                                data)
+                printed = True
 
-            self._printTable('Relocation section: %s' % section,
-                            (cstr('Offset', Color.LIGHT_GRAY),
-                                cstr('Type', Color.LIGHT_GRAY),
-                                cstr('Name', Color.LIGHT_GRAY)),
-                            data)
-
-        if len(elffile.relocations.items()) ==0:
+        if not printed:
             self._printLine('no imorts!')

@@ -21,6 +21,7 @@ from ctypes import *
 from ropper.common.enum import Enum
 from struct import pack_into
 from ropper.common.error import *
+from ropper.arch import *
 import re
 
 class Type(Enum):
@@ -68,9 +69,13 @@ class Loader(Abstract):
         self._manualImageBase = None
         self.loaded = False
 
-        self._loadFile()
-        self._parseFile()
+        self.__binary = self._loadFile(filename)
         self._arch = self._loadDefaultArch()
+
+    @property
+    def _binary(self):
+        return self.__binary
+    
 
     @abstractproperty
     def entryPoint(self):
@@ -95,10 +100,6 @@ class Loader(Abstract):
     @abstractproperty
     def dataSections(self):
         return None
-
-    @abstractmethod
-    def _parseFile(self):
-        pass
 
     @abstractmethod
     def _getImageBase():
@@ -185,13 +186,8 @@ class Loader(Abstract):
     def gadgets(self, new_gadgets):
         self._gadgets = new_gadgets
 
-    def _loadFile(self):
-        with open(self.fileName, 'rb') as binFile:
-            b = binFile.read()
-            self._bytes = (c_ubyte * len(b))()
-            pack_into('%ds' % len(b), self._bytes, 0, b)
-
-        self._bytes_p = cast(pointer(self._bytes), c_void_p)
+    def _loadFile(self, fileName):
+        pass
 
     def assertFileRange(self, value):
         assert value >= self._bytes_p.value and value <= (
@@ -236,7 +232,7 @@ class Loader(Abstract):
             fileName = self.fileName
         try:
             with open(fileName, 'wb') as f:
-                f.write(self._bytes)
+                f.write(self._binary._bytes)
         except BaseException as e:
             raise LoaderError(e)
 

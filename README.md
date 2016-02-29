@@ -13,6 +13,10 @@ Install
 Install [Capstone](http://www.capstone-engine.org) with PyPi:
 
     $ sudo pip install capstone
+
+Install [filebytes](https://github.com/sashs/filebytes) with PyPi:
+    
+    $ sudo pip install filebytes
     
 Install and execute Ropper
 
@@ -27,6 +31,13 @@ If you want, you can use Ropper without installation
 
     $ ./Ropper.py
 
+If you don't want to install filebytes, filebytes is a submodule of the ropper repository. This means you don't need to install filebytes and ropper.
+
+    $ git clone https://github.com/sashs/ropper.git
+    $ cd ropper
+    $ git submodule init
+    $ git submodule update
+    $ ./Ropper.py
 
 Usage
 -----

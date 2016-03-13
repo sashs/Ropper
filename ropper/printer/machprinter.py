@@ -19,6 +19,7 @@
 
 from ropper.printer.printer import  *
 from ropper.loaders.mach_o import *
+from filebytes.mach_o import *
 
 
 class MachOPrinter(FileDataPrinter):
@@ -28,7 +29,7 @@ class MachOPrinter(FileDataPrinter):
         return Type.MACH_O
 
     def printInformation(self, binary):
-        hdr = binary.header
+        hdr = binary._binary.machHeader.header
         data = [(cstr('CPU', Color.BLUE), cstr(CpuType[hdr.cputype], Color.WHITE)),
                 (cstr('Subtype', Color.BLUE), cstr(CPU_SUBTYPE_X86[hdr.cpusubtype], Color.WHITE)),
                 (cstr('Filetype', Color.BLUE), cstr(self._toHex(hdr.filetype), Color.WHITE)),
@@ -39,11 +40,11 @@ class MachOPrinter(FileDataPrinter):
         self._printTable('Mach-O Header', (cstr('Name', Color.LIGHT_GRAY), cstr('Value', Color.LIGHT_GRAY)), data)
 
     def printSegments(self, binary):
-        lcs = binary.loaderCommands
+        lcs = binary._binary.loadCommands
         data = []
 
         for lc in lcs:
-            lc = lc.struct
+            lc = lc.header
             if lc.cmd == LC.SEGMENT or lc.cmd == LC.SEGMENT_64:
                 data.append((cstr(lc.segname, Color.BLUE),
                 cstr(self._toHex(lc.vmaddr, binary.arch.addressLength), Color.WHITE),
@@ -63,13 +64,13 @@ class MachOPrinter(FileDataPrinter):
                                             cstr('Initprot', Color.LIGHT_GRAY)), data)
 
     def printSections(self, binary):
-        lcs = binary.loaderCommands
+        lcs = binary._binary.loadCommands
         data = []
 
         for lc in lcs:
-            if lc.struct.cmd == LC.SEGMENT or lc.struct.cmd == LC.SEGMENT_64:
+            if lc.header.cmd == LC.SEGMENT or lc.header.cmd == LC.SEGMENT_64:
                 for section in lc.sections:
-                    section = section.struct
+                    section = section.header
                     data.append((cstr(section.sectname, Color.BLUE),
                     cstr(section.segname, Color.WHITE),
                     cstr(self._toHex(section.addr, binary.arch.addressLength), Color.LIGHT_GRAY),
@@ -92,11 +93,11 @@ class MachOPrinter(FileDataPrinter):
 
 
     def printLoadCommands(self, binary):
-        lcs = binary.loaderCommands
+        lcs = binary._binary.loadCommands
         data = []
 
         for lc in lcs:
-            lc = lc.struct
+            lc = lc.header
             data.append((cstr(LC[lc.cmd], Color.BLUE), cstr(self._toHex(lc.cmdsize), Color.WHITE)))
 
         self._printTable('Loader Commands', (cstr('Type', Color.LIGHT_GRAY), cstr('Size', Color.LIGHT_GRAY)), data)

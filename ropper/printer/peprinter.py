@@ -19,6 +19,7 @@
 
 from ropper.printer.printer import *
 from ropper.loaders.pe import *
+from filebytes.pe import *
 import datetime
 
 
@@ -34,12 +35,12 @@ class PEPrinter(FileDataPrinter):
         self.__printOptionalHeaders(binary)
 
     def __printImageHeaders(self, pefile):
-        fh = pefile.imageNtHeaders.FileHeader
+        fh = pefile._binary.imageNtHeaders.header.FileHeader
         data = [
             (cstr('Characteristics', Color.BLUE),
                 cstr(self._toHex(fh.Characteristics), Color.WHITE)),
             (cstr('Machine', Color.BLUE),
-                cstr(IMAGE_FILE_MACHINE[fh.Machine], Color.WHITE)),
+                cstr(pe.IMAGE_FILE_MACHINE[fh.Machine], Color.WHITE)),
             (cstr('NumberOfSections', Color.BLUE),
                 cstr((fh.NumberOfSections), Color.WHITE)),
             (cstr('PointerToSymbolTable', Color.BLUE),
@@ -55,7 +56,7 @@ class PEPrinter(FileDataPrinter):
         self._printTable('Image Headers', (cstr('Name',Color.LIGHT_GRAY), cstr('Value',Color.LIGHT_GRAY)), data)
 
     def __printOptionalHeaders(self, pefile):
-        oh = pefile.imageNtHeaders.OptionalHeader
+        oh = pefile._binary.imageNtHeaders.header.OptionalHeader
         addressLength = pefile.arch.addressLength
         data = [
             (cstr('AddressOfEntryPoint', Color.BLUE),
@@ -115,7 +116,7 @@ class PEPrinter(FileDataPrinter):
         self._printTable('Image Optional Headers', (cstr('Name', Color.LIGHT_GRAY), cstr('Value',Color.LIGHT_GRAY)), data)
 
     def printDllCharacteristics(self, pefile):
-        dllc = pefile.imageNtHeaders.OptionalHeader.DllCharacteristics
+        dllc = pefile._binary.imageNtHeaders.header.OptionalHeader.DllCharacteristics
         yes = cstr('Yes', Color.YELLOW)
         no = cstr('NO', Color.GREEN)
         data = [
@@ -147,15 +148,21 @@ class PEPrinter(FileDataPrinter):
             self._toHex(binary.imageBase, binary.arch.addressLength))
 
     def printImports(self, pefile):
-        if '.idata' in pefile.sections:
-            s = pefile.sections['.idata']
+        imports = pefile._binary.dataDirectory[pe.ImageDirectoryEntry.IMPORT]
+        if imports:
             data = []
-            for descriptorData in s.importDescriptorTable:
-                for function in descriptorData.functions:
-                    data.append((cstr(descriptorData.dll, Color.BLUE),
-                                cstr(self._toHex(pefile.imageNtHeaders.OptionalHeader.ImageBase + function[2],pefile.arch.addressLength), Color.CYAN),
-                                cstr(hex(function[0]), Color.LIGHT_GRAY),
-                                cstr(function[1], Color.WHITE)))
+            for descriptorData in imports:
+                for function in descriptorData.importNameTable:
+                    if function.ordinal:
+                        data.append((cstr(descriptorData.dllName, Color.BLUE),
+                                cstr(self._toHex(pefile._binary.imageBase + function.rva,pefile.arch.addressLength), Color.CYAN),
+                                cstr(hex(function.ordinal), Color.LIGHT_GRAY),
+                                cstr('', Color.WHITE)))
+                    else:
+                        data.append((cstr(descriptorData.dllName, Color.BLUE),
+                                cstr(self._toHex(pefile._binary.imageBase + function.rva,pefile.arch.addressLength), Color.CYAN),
+                                cstr(hex(function.importByName.hint), Color.LIGHT_GRAY),
+                                cstr(function.importByName.name, Color.WHITE)))
 
             self._printTable(
                 'Imports', (cstr('DLL', Color.LIGHT_GRAY), cstr('Address', Color.LIGHT_GRAY), cstr('Hint/Ordinal', Color.LIGHT_GRAY), cstr('Function', Color.LIGHT_GRAY)), data)
@@ -165,13 +172,13 @@ class PEPrinter(FileDataPrinter):
     def printSections(self, pefile):
 
         data = []
-        for section in pefile.sectionHeader:
-            data.append((cstr(section.Name, Color.BLUE),
-                        cstr(self._toHex(section.VirtualAddress,pefile.arch.addressLength), Color.CYAN),
-                        cstr(self._toHex(section.SizeOfRawData), Color.LIGHT_GRAY),
-                        cstr(self._toHex(section.PointerToRawData,pefile.arch.addressLength), Color.WHITE),
-                        cstr(self._toHex(section.PointerToRelocations,pefile.arch.addressLength), Color.LIGHT_GRAY),
-                        cstr(self._toHex(section.NumberOfRelocations), Color.WHITE),))
+        for section in pefile._binary.sections:
+            data.append((cstr(section.header.Name, Color.BLUE),
+                        cstr(self._toHex(section.header.VirtualAddress,pefile.arch.addressLength), Color.CYAN),
+                        cstr(self._toHex(section.header.SizeOfRawData), Color.LIGHT_GRAY),
+                        cstr(self._toHex(section.header.PointerToRawData,pefile.arch.addressLength), Color.WHITE),
+                        cstr(self._toHex(section.header.PointerToRelocations,pefile.arch.addressLength), Color.LIGHT_GRAY),
+                        cstr(self._toHex(section.header.NumberOfRelocations), Color.WHITE),))
 
         self._printTable(
             'Section Header', (cstr('Name', Color.LIGHT_GRAY), cstr('VAddr', Color.LIGHT_GRAY), cstr('RawDataSize', Color.LIGHT_GRAY), cstr('RawDataPtr', Color.LIGHT_GRAY), cstr('RelocPtr', Color.LIGHT_GRAY), cstr('NrOfReloc', Color.LIGHT_GRAY)), data)

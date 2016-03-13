@@ -41,8 +41,8 @@ class PE(Loader):
 
     @property
     def entryPoint(self):
-        return self._binary.imageNtHeaders.header.OptionalHeader.ImageBase + self.imageNtHeaders.OptionalHeader.AddressOfEntryPoint
-
+        return self._binary.entryPoint
+        
     def _loadDefaultArch(self):
         return getArch(self._binary.imageNtHeaders.header.FileHeader.Machine)
 

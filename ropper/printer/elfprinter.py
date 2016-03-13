@@ -118,7 +118,6 @@ class ELFPrinter(FileDataPrinter):
         printed = False
         for section in elffile._binary.sections:
             if section.header.sh_type in (elf.SHT.REL,elf.SHT.REL):  
-                print(dir(section))
                 relocs = section.relocations
                 data = []
 

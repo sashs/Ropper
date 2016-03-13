@@ -41,13 +41,13 @@ class GeneralTests(unittest.TestCase):
         gadgets = r.searchGadgets(self.file)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [rax]')
-        self.assertEqual(len(found_gadgets), 1)
+        self.assertEqual(len(found_gadgets), 8)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [r?x]')
-        self.assertEqual(len(found_gadgets), 7)
+        self.assertEqual(len(found_gadgets), 31)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [r?x%]')
-        self.assertEqual(len(found_gadgets), 9)
+        self.assertEqual(len(found_gadgets), 83)
 
 
     def test_badbytes(self):

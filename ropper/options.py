@@ -76,11 +76,11 @@ epilog="""example uses:
   ropper.py --file /bin/ls --unset nx
 
   [Gadgets]
-  ropper.py --file /bin/ls --depth 5
+  ropper.py --file /bin/ls --inst-count 5
   ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
   ropper.py --file /bin/ls --search "sub eax" --detail
   ropper.py --file /bin/ls --filter "sub eax"
-  ropper.py --file /bin/ls --depth 5 --filter "sub eax"
+  ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
   ropper.py --file /bin/ls --opcode ffe4
   ropper.py --file /bin/ls --opcode ffe?
   ropper.py --file /bin/ls --opcode ??e4
@@ -163,7 +163,7 @@ epilog="""example uses:
         parser.add_argument(
             '--stack-pivot', help='Prints all stack pivot gadgets',action='store_true')
         parser.add_argument(
-            '--depth', help='Specifies the depth of search (default: 10)', metavar='<n bytes>', type=int)
+            '--inst-count', help='Specifies the max count of instructions in a gadget (default: 10)', metavar='<n bytes>', type=int, default=10)
         parser.add_argument(
             '--search', help='Searches for gadgets', metavar='<regex>')
         parser.add_argument(
@@ -173,7 +173,7 @@ epilog="""example uses:
         parser.add_argument(
             '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(
-            '--type', help='Sets the type of gadgets [rop, jop, sys, all] (default: all)', metavar='<type>')
+            '--type', help='Sets the type of gadgets [rop, jop, sys, all] (default: all)', metavar='<type>', default='all')
         parser.add_argument(
             '--detailed', help='Prints gadgets more detailed', action='store_true')
         parser.add_argument(
@@ -196,12 +196,6 @@ epilog="""example uses:
 
         if not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
-
-        if not self.__args.depth:
-            self.__args.depth = 10
-
-        if not self.__args.type:
-            self.__args.type = 'all'
 
         if self.__args.I:
             if not isHex(self.__args.I):
@@ -267,9 +261,9 @@ epilog="""example uses:
             return  (True,True)
         return False
 
-    def _setDepth(self, value):
+    def _setInstCount(self, value):
         if value.isdigit():
-            self.depth = int(value)
+            self.inst_count = int(value)
             return (True,True)
         return False
 
@@ -298,7 +292,7 @@ epilog="""example uses:
         return False
 
 VALID_OPTIONS = {'all' : Options._setAll,
-                     'depth' : Options._setDepth,
+                     'inst_count' : Options._setInstCount,
                      'badbytes' : Options._setBadbytes,
                      'detailed' : Options._setDetailed,
                      'type' : Options._setType,

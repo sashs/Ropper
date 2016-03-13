@@ -167,7 +167,7 @@ class Console(cmd.Cmd):
 
     def __searchGadgets(self, binary):
         r = Ropper(self.__cprinter)
-        gadgets = r.searchGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+        gadgets = r.searchGadgets(binary, instructionCount=self.__options.inst_count, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
         binary.gadgets = gadgets
         self.__gadgets[binary] = ropper.filterBadBytes(gadgets, self.__options.badbytes)
@@ -560,7 +560,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             text = text[len(match.group(0)):].strip()
         for binary in self.__binaries:
             self.__cprinter.printInfo('Search in gadgets of file \'%s\'' % binary.fileName)
-            self.__printGadgets(self.__search(binary.gadgets, text, qual))
+            if self.binary in self.__gadgets:
+                self.__printGadgets(self.__search(self.__gadgets[self.binary], text, qual))
 
     def help_search(self):
         desc = 'search gadgets.\n\n'
@@ -664,7 +665,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 (cstr('all') , cstr('on' if self.__options.all else 'off')),
                 (cstr('badbytes') , cstr(self.__options.badbytes)),
                 (cstr('color') , cstr('off' if self.__options.nocolor else 'on')),
-                (cstr('depth') , cstr(self.__options.depth)),
+                (cstr('inst-count') , cstr(self.__options.inst_count)),
                 (cstr('detailed') , cstr('on' if self.__options.detailed else 'off')),
                 (cstr('type') , cstr(self.__options.type))]
 

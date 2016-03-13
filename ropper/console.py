@@ -412,7 +412,7 @@ class Console(cmd.Cmd):
             desc += ('Available informations:\n' +
                      ('\n'.join(self.binary.printer.availableInformations)))
         self.__printHelpText(
-            'show <info>', 'shows informations about the loaded file')
+            'show <info>', desc)
 
     def complete_show(self, text, line, begidx, endidx):
         if self.binary:

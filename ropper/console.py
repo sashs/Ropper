@@ -100,7 +100,7 @@ class Console(cmd.Cmd):
             self.__cprinter.println(gadget.simpleString())
 
     def __printData(self, data):
-        self.binary.printer.printData(self.binary, data)
+        self.binary.printer.printData(self.binary._binary, data)
 
     def __printVersion(self):
         self.__cprinter.println("Version: Ropper %s" % ropper.VERSION)

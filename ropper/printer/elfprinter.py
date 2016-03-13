@@ -117,13 +117,14 @@ class ELFPrinter(FileDataPrinter):
     def printImports(self, elffile):
         printed = False
         for section in elffile._binary.sections:
-            if section.name in ('.rel','.rela'):  
+            if section.header.sh_type in (elf.SHT.REL,elf.SHT.REL):  
+                print(dir(section))
                 relocs = section.relocations
                 data = []
 
                 for reloc in relocs:
                     data.append((cstr(self._toHex(reloc.header.r_offset, elffile.arch.addressLength), Color.BLUE),
-                                cstr(R_386[reloc.type], Color.YELLOW),
+                                cstr(elf.R_386[reloc.type], Color.YELLOW),
                                 cstr(reloc.symbol.name, Color.WHITE)))
 
                 self._printTable('Relocation section: %s' % section,

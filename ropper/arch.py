@@ -108,6 +108,7 @@ class ArchitectureX86(Architecture):
 
         self._endings[gadget.GadgetType.SYS] = [(b'\xcd\x80', 2),                           # int 0x80
                                                 (b'\x0f\x0f',2),                            # syscall
+                                                (b'\x0f\x34',2),                            # sysenter
                                                 (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]     
 
         self._endings[gadget.GadgetType.JOP] = [(

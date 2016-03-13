@@ -91,7 +91,7 @@ class MachOPrinter(FileDataPrinter):
 
 
 
-    def printLoaderCommands(self, binary):
+    def printLoadCommands(self, binary):
         lcs = binary.loaderCommands
         data = []
 

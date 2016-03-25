@@ -190,23 +190,23 @@ http://scoding.de/ropper
 Screenshots
 ------------------------------------
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/load.jpg" alt="load"></img>
+<img src="https://scoding.de/uploads/load.jpg" alt="load"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/x86.jpg" alt="x86"></img>
+<img src="https://scoding.de/uploads/x86.jpg" alt="x86"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/arm.jpg" alt="arm"></img>
+<img src="https://scoding.de/uploads/arm.jpg" alt="arm"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/mips.jpg" alt="mips"></img>
+<img src="https://scoding.de/uploads/mips.jpg" alt="mips"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/ppc.jpg" alt="ppc"></img>
+<img src="https://scoding.de/uploads/ppc.jpg" alt="ppc"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/ropchain.jpg" alt="ropchain"></img>
+<img src="https://scoding.de/uploads/ropchain.jpg" alt="ropchain"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/header.jpg" alt="header"></img>
+<img src="https://scoding.de/uploads/header.jpg" alt="header"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/disass.jpg" alt="disassembler"></img>
+<img src="https://scoding.de/uploads/disass.jpg" alt="disassembler"></img>
 
-<img src="https://scoding.de/wp-content/uploads/2014/08/hex.jpg" alt="hex"></img>
+<img src="https://scoding.de/uploads/hex.jpg" alt="hex"></img>
 
 
 

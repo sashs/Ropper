@@ -51,4 +51,4 @@ class RopChain(Abstract):
                 for gen in gens:
                     if gen.name() == name:
                         return gen(binaries, gadgets, printer)
-        raise RopChainError('generator %s is for arch %s not available' % (name, binaries[0].arch.__class__.__name__))
+        

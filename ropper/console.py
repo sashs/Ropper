@@ -221,6 +221,11 @@ class Console(cmd.Cmd):
         try:
             generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter)
 
+            if not generator:
+                self.__options.nocolor = old
+                self.__cprinter.printInfo('%s does not have support for %s chain generation at the moment. Its a future feature.' % (self.binary.arch.__class__.__name__, split[0]))
+                return
+
             self.__printInfo('generating rop chain')
             #self.__printSeparator(behind='\n\n')
 

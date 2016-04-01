@@ -107,7 +107,7 @@ class ArchitectureX86(Architecture):
                                                 (b'\xc2[\x00-\xff]{2}', 3)]             # ret xxx
 
         self._endings[gadget.GadgetType.SYS] = [(b'\xcd\x80', 2),                           # int 0x80
-                                                (b'\x0f\x0f',2),                            # syscall
+                                                (b'\x0f\x05',2),                            # syscall
                                                 (b'\x0f\x34',2),                            # sysenter
                                                 (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]     
 
@@ -126,7 +126,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe', 'int', 'ret', 'call', 'jmp', 'syscall']
+        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe', 'int', 'ret', 'call', 'jmp']
 
     def _initCategories(self):
         self._categories = {
@@ -136,7 +136,7 @@ class ArchitectureX86(Architecture):
                 gadget.Category.LOAD_REG : (('pop (?P<dst>...)',),('mov','call','jmp')),
                 gadget.Category.JMP : (('^jmp (?P<dst>...)$',),()),
                 gadget.Category.CALL : (('^call (?P<dst>...)$',),('mov','call','jmp')),
-                gadget.Category.INC_REG : (('^inc (?P<dst>...)$',),('mov','call','jmp')),
+                gadget.Category.INC_REG : (('^inc (?P<dst>...)$', '^add (?P<dst>e?..), 1$'),('mov','call','jmp')),
                 gadget.Category.CLEAR_REG : (('^xor (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.SUB_REG : (('^sub (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
@@ -152,12 +152,31 @@ class ArchitectureX86_64(ArchitectureX86):
     def __init__(self):
         ArchitectureX86.__init__(self)
 
-        self._endings[gadget.GadgetType.SYS] = [(b'\x0f\x0f',2)]                            # syscall
+        self._endings[gadget.GadgetType.SYS] = [(b'\x0f\x05',2),
+                                                (b'\x0f\x05\xc3',3)]                            # syscall
 
         self._mode = CS_MODE_64
 
         self._addressLength = 8
 
+    def _initCategories(self):
+        self._categories = {
+                gadget.Category.STACK_PIVOT : (('^mov (?P<dst>.sp), .+ ptr \[(?P<src>...)\]$','^mov (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>...), (?P<src>.sp)$','ret.+'),('mov','call','jmp')),
+                gadget.Category.LOAD_MEM : (('mov (?P<dst>r..), .+ ptr \[(?P<src>r..)\]',),('mov','call','jmp')),
+                gadget.Category.WRITE_MEM : (('^mov .+ ptr \[(?P<dst>r..)\], (?P<src>r..)$',),('mov','call','jmp')),
+                gadget.Category.LOAD_REG : (('pop (?P<dst>r..)',),('mov','call','jmp')),
+                gadget.Category.JMP : (('^jmp (?P<dst>r..)$',),()),
+                gadget.Category.CALL : (('^call (?P<dst>r..)$',),('mov','call','jmp')),
+                gadget.Category.INC_REG : (('^inc (?P<dst>...)$', '^add (?P<dst>[er]?..), 1$'),('mov','call','jmp')),
+                gadget.Category.CLEAR_REG : (('^xor (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.SUB_REG : (('^sub (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.XCHG_REG : (('^xchg (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.PUSHAD : (('^pushal$',),('mov','call','jmp')),
+                gadget.Category.NEG_REG : (('^neg (?P<dst>...)$',),('mov','call','jmp')),
+                gadget.Category.SYSCALL : (('^syscall$',),('mov','call','jmp'))}
+                
+        
 
 
 

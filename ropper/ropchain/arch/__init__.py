@@ -17,3 +17,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from ropper.ropchain.arch.ropchainx86 import *
+from ropper.ropchain.arch.ropchainx86_64 import *

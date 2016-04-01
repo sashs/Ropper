@@ -58,8 +58,8 @@ supported architectures:
   PowerPC [PPC, PPC64]
 
 available rop chain generators:
-  execve (execve[=<cmd>], default /bin/sh) [Linux x86]
-  mprotect  (mprotect=<address>:<size>) [Linux x86]
+  execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
+  mprotect  (mprotect=<address>:<size>) [Linux x86, x86_64]
   virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 """,
 epilog="""example uses:

@@ -42,14 +42,15 @@ If you don't want to install filebytes, filebytes is a submodule of the ropper r
 Usage
 -----
 
-    usage: ropper.py [-h] [-v] [--console] [-f <file>] [--db <dbfile>] [-a <arch>]
-                     [--section <section>] [--string [<string>]] [--hex]
-                     [--disassemble <address:length>] [-i] [-e] [--imagebase] [-c]
-                     [-s] [-S] [--imports] [--symbols] [--set <option>]
-                     [--unset <option>] [-I <imagebase>] [-p] [-j <reg>]
-                     [--depth <n bytes>] [--search <regex>] [--quality <quality>]
-                     [--filter <regex>] [--opcode <opcode>] [--type <type>]
-                     [--detail] [--chain <generator>] [-b <badbytes>] [--nocolor]
+    usage: Ropper.py [-h] [-v] [--console] [-f <file>] [-r] [--db <dbfile>]
+                 [-a <arch>] [--section <section>] [--string [<string>]]
+                 [--hex] [--disassemble <address:length>] [-i] [-e]
+                 [--imagebase] [-c] [-s] [-S] [--imports] [--symbols]
+                 [--set <option>] [--unset <option>] [-I <imagebase>] [-p]
+                 [-j <reg>] [--stack-pivot] [--inst-count <n bytes>]
+                 [--search <regex>] [--quality <quality>] [--filter <regex>]
+                 [--opcode <opcode>] [--type <type>] [--detailed] [--all]
+                 [--chain <generator>] [-b <badbytes>] [--nocolor]
 
     You can use ropper to display information about binary files in different file formats
         and you can search for gadgets to build rop chains for different architectures
@@ -69,8 +70,8 @@ Usage
       PowerPC [PPC, PPC64]
 
     available rop chain generators:
-      execve (execve[=<cmd>], default /bin/sh) [Linux x86]
-      mprotect  (mprotect=<address>:<size>) [Linux x86]
+      execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
+      mprotect  (mprotect=<address>:<size>) [Linux x86, x86_64]
       virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 
     optional arguments:
@@ -79,6 +80,7 @@ Usage
       --console             Starts interactive commandline
       -f <file>, --file <file>
                             The file to load
+      -r, --raw             Loads the file as raw file
       --db <dbfile>         The dbfile to load
       -a <arch>, --arch <arch>
                             The architecture of the loaded file
@@ -106,15 +108,19 @@ Usage
       -j <reg>, --jmp <reg>
                             Searches for 'jmp reg' instructions (-j reg[,reg...])
                             [only x86/x86_64]
-      --depth <n bytes>     Specifies the depth of search (default: 10)
+      --stack-pivot         Prints all stack pivot gadgets
+      --inst-count <n bytes>
+                            Specifies the max count of instructions in a gadget
+                            (default: 10)
       --search <regex>      Searches for gadgets
       --quality <quality>   The quality for gadgets which are found by search (1 =
                             best)
       --filter <regex>      Filters gadgets
-      --opcode <opcode>     Searches for opcodes
-      --type <type>         Sets the type of gadgets [rop, jop, all] (default:
-                            all)
-      --detail              Prints gadgets more detailed
+      --opcode <opcode>     Searchs for opcodes (e.g. ffe4 or ffe? or ff??)
+      --type <type>         Sets the type of gadgets [rop, jop, sys, all]
+                            (default: all)
+      --detailed            Prints gadgets more detailed
+      --all                 Does not remove duplicate gadgets
       --chain <generator>   Generates a ropchain [generator=parameter]
       -b <badbytes>, --badbytes <badbytes>
                             Set bytes which should not contains in gadgets
@@ -134,13 +140,15 @@ Usage
       ropper.py --file /bin/ls --unset nx
 
       [Gadgets]
-      ropper.py --file /bin/ls --depth 5
+      ropper.py --file /bin/ls --inst-count 5
       ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
       ropper.py --file /bin/ls --search "sub eax" --detail
       ropper.py --file /bin/ls --filter "sub eax"
-      ropper.py --file /bin/ls --depth 5 --filter "sub eax"
+      ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
       ropper.py --file /bin/ls --opcode ffe4
-      ropper.py --file /bin/ls --detail
+      ropper.py --file /bin/ls --opcode ffe?
+      ropper.py --file /bin/ls --opcode ??e4
+      ropper.py --file /bin/ls --detailed
       ropper.py --file /bin/ls --ppr --nocolor
       ropper.py --file /bin/ls --jmp esp,eax
       ropper.py --file /bin/ls --type jop
@@ -168,8 +176,7 @@ Usage
 
       ropper.py --file /bin/ls --search "mov [%], edx" --quality 1
       0x000084b8: mov dword ptr [eax], edx; ret ;
-
-
+  
 
 
 Planned features for future versions

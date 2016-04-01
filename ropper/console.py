@@ -172,9 +172,17 @@ class Console(cmd.Cmd):
         binary.gadgets = gadgets
         self.__gadgets[binary] = ropper.filterBadBytes(gadgets, self.__options.badbytes)
         if not self.__options.all:
-            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
+            self.__cprinter.printInfo('deleting double gadgets...')
+            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary], self.__printProgress)
 
         return self.__gadgets[binary]
+
+    def __printProgress(self, gadget, gnr, count):
+        if gnr >= 0:
+            self.__cprinter.printProgress('clearing up...', float(gnr) / count)
+        else:
+            self.__cprinter.printProgress('clearing up...', 1)
+            self.__cprinter.finishProgress()
 
     def __loadGadgets(self):
         self.__searchGadgets(self.binary)
@@ -284,8 +292,11 @@ class Console(cmd.Cmd):
 
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
+        if not self.__options.all:
+            self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets, self.__options.badbytes), self.__printProgress)
+        else:
+            self.__gadgets[self.binary] = self.binary.gadgets
 
-        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets, self.__options.badbytes))
 
     def __printStrings(self, string, sec=None):
         data = []

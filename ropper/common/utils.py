@@ -84,7 +84,7 @@ def printTable(header, cnames, data, space=2, fmt=None):
     print('')
 
 def printHexFormat(data, addr, nocolor=False):
-    for i in range((len(data)/16)+1):
+    for i in range((int(len(data)/16))+1):
         part = data[i*16:i*16+16]
         bytes = cstr('')
         c = 0
@@ -101,7 +101,7 @@ def printHexFormat(data, addr, nocolor=False):
         else:
             if len(bytes) < 227:
                 
-                bytes += ' ' * ((8-len(bytes)/29)*5)
+                bytes += ' ' * ((8-int(len(bytes)/29)) *5)
         for b in part:
             if b < 32 or b > 126:
                 string += '.'

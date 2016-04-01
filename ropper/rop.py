@@ -169,7 +169,7 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchGadgets(self, binary, depth=10, gtype=GadgetType.ALL):
+    def searchGadgets(self, binary, instructionCount=10, gtype=GadgetType.ALL):
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.imageBase
@@ -177,12 +177,12 @@ class Ropper(object):
             if self.printer:
                 self.printer.printInfo('Loading gadgets for section: ' + section.name)
             
-            newGadgets = self._searchGadgets(section=section, binary=binary, depth=depth, gtype=gtype)
+            newGadgets = self._searchGadgets(section=section, binary=binary, instructionCount=instructionCount, gtype=gtype)
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
 
-    def _searchGadgets(self, section, binary, depth=10, gtype=GadgetType.ALL):
+    def _searchGadgets(self, section, binary, instructionCount=10, gtype=GadgetType.ALL):
 
         toReturn = []
         code = bytes(bytearray(section.bytes))
@@ -191,6 +191,8 @@ class Ropper(object):
         arch = binary.arch
         
         max_progress = len(code) * len(arch.endings[gtype])
+        
+        vaddrs = set() # to prevent that the gadget is added several times
         for ending in arch.endings[gtype]:
             offset_tmp = 0
             tmp_code = code[:]
@@ -201,12 +203,24 @@ class Ropper(object):
                 index = match.start()
 
                 if offset_tmp % arch.align == 0:
-                    for x in range(1, (depth + 1) * arch.align):
+                    #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
+                    none_count = 0
+                    
+                    for x in range(0, index, arch.align):
                         code_part = tmp_code[index - x:index + ending[1]]
-                        gadget = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
-
+                        gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
                         if gadget:
-                            toReturn.append(gadget)
+                            if leng > instructionCount:
+                                break
+                            if gadget:
+                                if gadget.address not in vaddrs:
+                                    vaddrs.update([gadget.address])
+                                    toReturn.append(gadget)
+                            none_count = 0
+                        else:
+                            none_count += 1
+                            if none_count == 5:
+                                break
 
                 tmp_code = tmp_code[index+arch.align:]
                 offset_tmp += arch.align
@@ -231,19 +245,22 @@ class Ropper(object):
         disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         for i in disassembler.disasm(code_str, codeStartAddress):
-            if i.mnemonic not in binary.arch.badInstructions:
+            if re.match(ending[0], i.bytes):
+                hasret = True
+                
+            if hasret or i.mnemonic not in binary.arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
                 
-            elif len(gadget) > 0:
+            if hasret:
                 break
 
-            if re.match(ending[0], i.bytes):
-                hasret = True
-                break
 
-        if hasret and len(gadget) > 0:
-            return gadget
+            
+        leng = len(gadget)
+        if hasret and leng > 0:
+            return gadget,leng
+        return None, -1
 
 
     def __disassembleBackward(self, section, binary, vaddr,offset, count):

@@ -36,7 +36,7 @@ class Category(enum.Enum):
 
 
 class GadgetType(enum.Enum):
-    _enum_ = 'ROP JOP ALL'
+    _enum_ = 'ROP JOP SYS ALL'
 
 
 class Gadget(object):

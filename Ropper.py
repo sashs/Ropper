@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+sys.path.append("filebytes")
 
-
-
-__import__('ropper').start(__import__('sys').argv[1:])
+__import__('ropper').start(sys.argv[1:])

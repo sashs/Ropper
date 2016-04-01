@@ -20,12 +20,13 @@
 from ropper.loaders.loader import *
 from ropper.common.error import LoaderError
 from ropper.arch import x86
+from filebytes.binary import Binary
 
 class Raw(Loader):
 
     def __init__(self, filename, arch=x86):
-        self.__codeSection = None
         super(Raw, self).__init__(filename)
+        self.__codeSection = Section('bytes', self._binary._bytes, 0x0, 0x0)
         self.arch = arch
 
     @property
@@ -50,13 +51,12 @@ class Raw(Loader):
     def getSection(self, name):
         raise RopperError('No such secion: %s' % name) 
 
-    def _parseFile(self):
-        self.__codeSection = Section('bytes', self._bytes, 0x0, 0x0)
-
     def _loadDefaultArch(self):
         return None
 
-  
+    def _loadFile(self, fileName):
+        return RawBinary(fileName)
+
     def setNX(self, enable):
         raise LoaderError('Not available for raw files')
 
@@ -73,3 +73,9 @@ class Raw(Loader):
     def isSupportedFile(cls, fileName):
         return True
 
+
+class RawBinary(Binary):
+    
+    @classmethod
+    def isSupportedContent(cls, fileContent):
+        return True

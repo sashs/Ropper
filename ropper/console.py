@@ -167,14 +167,22 @@ class Console(cmd.Cmd):
 
     def __searchGadgets(self, binary):
         r = Ropper(self.__cprinter)
-        gadgets = r.searchGadgets(binary, depth=self.__options.depth, gtype=GadgetType[self.__options.type.upper()])
+        gadgets = r.searchGadgets(binary, instructionCount=self.__options.inst_count, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
         binary.gadgets = gadgets
         self.__gadgets[binary] = ropper.filterBadBytes(gadgets, self.__options.badbytes)
         if not self.__options.all:
-            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
+            self.__cprinter.printInfo('deleting double gadgets...')
+            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary], self.__printProgress)
 
         return self.__gadgets[binary]
+
+    def __printProgress(self, gadget, gnr, count):
+        if gnr >= 0:
+            self.__cprinter.printProgress('clearing up...', float(gnr) / count)
+        else:
+            self.__cprinter.printProgress('clearing up...', 1)
+            self.__cprinter.finishProgress()
 
     def __loadGadgets(self):
         self.__searchGadgets(self.binary)
@@ -220,6 +228,11 @@ class Console(cmd.Cmd):
 
         try:
             generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter)
+
+            if not generator:
+                self.__options.nocolor = old
+                self.__cprinter.printInfo('%s does not have support for %s chain generation at the moment. Its a future feature.' % (self.binary.arch.__class__.__name__, split[0]))
+                return
 
             self.__printInfo('generating rop chain')
             #self.__printSeparator(behind='\n\n')
@@ -279,8 +292,11 @@ class Console(cmd.Cmd):
 
         self.binary.gadgets = dao.load(self.binary)
         self.binary.loaded = True
+        if not self.__options.all:
+            self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets, self.__options.badbytes), self.__printProgress)
+        else:
+            self.__gadgets[self.binary] = self.binary.gadgets
 
-        self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(self.binary.gadgets, self.__options.badbytes))
 
     def __printStrings(self, string, sec=None):
         data = []
@@ -412,7 +428,7 @@ class Console(cmd.Cmd):
             desc += ('Available informations:\n' +
                      ('\n'.join(self.binary.printer.availableInformations)))
         self.__printHelpText(
-            'show <info>', 'shows informations about the loaded file')
+            'show <info>', desc)
 
     def complete_show(self, text, line, begidx, endidx):
         if self.binary:
@@ -560,7 +576,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             text = text[len(match.group(0)):].strip()
         for binary in self.__binaries:
             self.__cprinter.printInfo('Search in gadgets of file \'%s\'' % binary.fileName)
-            self.__printGadgets(self.__search(binary.gadgets, text, qual))
+            if self.binary in self.__gadgets:
+                self.__printGadgets(self.__search(self.__gadgets[self.binary], text, qual))
 
     def help_search(self):
         desc = 'search gadgets.\n\n'
@@ -621,7 +638,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
 
     def help_type(self):
-        self.__printHelpText('type <type>', 'sets the gadget type (rop, jop, all, default:all)')
+        self.__printHelpText('type <type>', 'sets the gadget type (rop, jop, sys, all, default:all)')
 
     @safe_cmd
     def do_jmp(self, text):
@@ -664,7 +681,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 (cstr('all') , cstr('on' if self.__options.all else 'off')),
                 (cstr('badbytes') , cstr(self.__options.badbytes)),
                 (cstr('color') , cstr('off' if self.__options.nocolor else 'on')),
-                (cstr('depth') , cstr(self.__options.depth)),
+                (cstr('inst-count') , cstr(self.__options.inst_count)),
                 (cstr('detailed') , cstr('on' if self.__options.detailed else 'off')),
                 (cstr('type') , cstr(self.__options.type))]
 

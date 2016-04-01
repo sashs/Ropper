@@ -32,7 +32,7 @@ from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIP
 
 
 app_options = None
-VERSION='1.7.3'
+VERSION='1.8.0'
 
 def start(args):
     try:
@@ -43,7 +43,7 @@ def start(args):
         print(e)
 
 
-def deleteDuplicates(gadgets):
+def deleteDuplicates(gadgets, callback=None):
     toReturn = []
     inst = []
     gadgetString = None
@@ -53,12 +53,10 @@ def deleteDuplicates(gadgets):
         if gadgetHash not in inst:
             inst.append(gadgetHash)
             toReturn.append(gadget)
-    #     if self.printer:
-    #         self.printer.printProgress('clearing up...', float(i) / len(gadgets))
-    # if self.printer:
-    #     self.printer.printProgress('clearing up...', 1)
-    #     self.printer.finishProgress()
-
+        if callback:
+            callback(gadget, i, len(gadgets))
+    if callback:
+        callback(gadget, -1, len(gadgets))
     return toReturn
 
 
@@ -85,7 +83,7 @@ def filterBadBytes(gadgets, badbytes):
     badbytes = formatBadBytes(badbytes)
 
     for gadget in gadgets:
-        if not gadget.addressesContainsBytes(badbytes):
+        if not badbytes or not gadget.addressesContainsBytes(badbytes):
             toReturn.append(gadget)
 
     return toReturn

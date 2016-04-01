@@ -49,10 +49,12 @@ class Architecture(AbstractSingleton):
         self._initCategories()
 
         self._endings[gadget.GadgetType.ALL] = self._endings[
-            gadget.GadgetType.ROP] + self._endings[gadget.GadgetType.JOP]
+            gadget.GadgetType.ROP] + self._endings[gadget.GadgetType.JOP] + self._endings[gadget.GadgetType.SYS]
 
     def _initGadgets(self):
-        pass
+        self._endings[gadget.GadgetType.ROP] = []
+        self._endings[gadget.GadgetType.JOP] = []
+        self._endings[gadget.GadgetType.SYS] = []
 
     def _initBadInstructions(self):
         pass
@@ -100,8 +102,14 @@ class ArchitectureX86(Architecture):
         self._searcher = Searcherx86()
 
     def _initGadgets(self):
-        self._endings[gadget.GadgetType.ROP] = [(b'\xc3', 1),
-                                                (b'\xc2[\x00-\xff]{2}', 3)]
+        super(ArchitectureX86, self)._initGadgets()
+        self._endings[gadget.GadgetType.ROP] = [(b'\xc3', 1),                           # ret
+                                                (b'\xc2[\x00-\xff]{2}', 3)]             # ret xxx
+
+        self._endings[gadget.GadgetType.SYS] = [(b'\xcd\x80', 2),                           # int 0x80
+                                                (b'\x0f\x05',2),                            # syscall
+                                                (b'\x0f\x34',2),                            # sysenter
+                                                (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]     
 
         self._endings[gadget.GadgetType.JOP] = [(
             b'\xff[\x20\x21\x22\x23\x26\x27]', 2),
@@ -118,7 +126,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe']
+        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe', 'int', 'ret', 'call', 'jmp']
 
     def _initCategories(self):
         self._categories = {
@@ -128,7 +136,7 @@ class ArchitectureX86(Architecture):
                 gadget.Category.LOAD_REG : (('pop (?P<dst>...)',),('mov','call','jmp')),
                 gadget.Category.JMP : (('^jmp (?P<dst>...)$',),()),
                 gadget.Category.CALL : (('^call (?P<dst>...)$',),('mov','call','jmp')),
-                gadget.Category.INC_REG : (('^inc (?P<dst>...)$',),('mov','call','jmp')),
+                gadget.Category.INC_REG : (('^inc (?P<dst>...)$', '^add (?P<dst>e?..), 1$'),('mov','call','jmp')),
                 gadget.Category.CLEAR_REG : (('^xor (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.SUB_REG : (('^sub (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
@@ -144,9 +152,32 @@ class ArchitectureX86_64(ArchitectureX86):
     def __init__(self):
         ArchitectureX86.__init__(self)
 
+        self._endings[gadget.GadgetType.SYS] = [(b'\x0f\x05',2),
+                                                (b'\x0f\x05\xc3',3)]                            # syscall
+
         self._mode = CS_MODE_64
 
         self._addressLength = 8
+
+    def _initCategories(self):
+        self._categories = {
+                gadget.Category.STACK_PIVOT : (('^mov (?P<dst>.sp), .+ ptr \[(?P<src>...)\]$','^mov (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>...), (?P<src>.sp)$','ret.+'),('mov','call','jmp')),
+                gadget.Category.LOAD_MEM : (('mov (?P<dst>r..), .+ ptr \[(?P<src>r..)\]',),('mov','call','jmp')),
+                gadget.Category.WRITE_MEM : (('^mov .+ ptr \[(?P<dst>r..)\], (?P<src>r..)$',),('mov','call','jmp')),
+                gadget.Category.LOAD_REG : (('pop (?P<dst>r..)',),('mov','call','jmp')),
+                gadget.Category.JMP : (('^jmp (?P<dst>r..)$',),()),
+                gadget.Category.CALL : (('^call (?P<dst>r..)$',),('mov','call','jmp')),
+                gadget.Category.INC_REG : (('^inc (?P<dst>...)$', '^add (?P<dst>[er]?..), 1$'),('mov','call','jmp')),
+                gadget.Category.CLEAR_REG : (('^xor (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.SUB_REG : (('^sub (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.ADD_REG : (('^add (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.XCHG_REG : (('^xchg (?P<dst>...), (?P<src>...)$',),('mov','call','jmp')),
+                gadget.Category.PUSHAD : (('^pushal$',),('mov','call','jmp')),
+                gadget.Category.NEG_REG : (('^neg (?P<dst>...)$',),('mov','call','jmp')),
+                gadget.Category.SYSCALL : (('^syscall$',),('mov','call','jmp'))}
+                
+        
+
 
 
 
@@ -156,6 +187,7 @@ class ArchitectureMips(Architecture):
         Architecture.__init__(self, CS_ARCH_MIPS, CS_MODE_32, 4, 4)
 
     def _initGadgets(self):
+        super(ArchitectureMips, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = []
         self._endings[gadget.GadgetType.JOP] = [(b'\x09\xf8\x20\x03', 4), # jalr t9
                                                 (b'\x08\x00\x20\x03', 4), # jr t9
@@ -172,7 +204,8 @@ class ArchitectureMips64(ArchitectureMips):
         self._addressLength = 8
 
     def _initGadgets(self):
-        ArchitectureMips._initGadgets(self)
+        super(ArchitectureMips64, self)._initGadgets()
+        
 
 class ArchitectureArm(Architecture):
 
@@ -181,6 +214,7 @@ class ArchitectureArm(Architecture):
         self._searcher = SearcherARM()
 
     def _initGadgets(self):
+        super(ArchitectureArm, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'[\x01-\xff]\x80\xbd\xe8', 4)] # pop {[reg]*,pc}
         self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x1e]\xff\x2f\xe1', 4), # bx <reg>
                                                 (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
@@ -194,6 +228,7 @@ class ArchitectureArmThumb(Architecture):
         self._searcher = SearcherARM()
 
     def _initGadgets(self):
+        super(ArchitectureArmThumb, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00-\xff]\xbd', 2)] # pop {[regs]*,pc}
         self._endings[gadget.GadgetType.JOP] = [(b'[\x00-\x7f]\x47', 2), # bx <reg>
                                                 (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xd0\xd8\xe0\xe8\xf0\xf8]\x47', 2) # blx <reg>
@@ -208,6 +243,7 @@ class ArchitectureArm64(Architecture):
         Architecture.__init__(self, CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
 
     def _initGadgets(self):
+        super(ArchitectureArm64, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
                                                 (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4), # ret <reg> (x24 - x28) 
                                                 (b'\xc0\x03\x5f\xd6', 4)] # ret 
@@ -225,12 +261,14 @@ class ArchitecturePPC(Architecture):
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
 
     def _initGadgets(self):
+        super(ArchitecturePPC, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
         self._endings[gadget.GadgetType.JOP] = []
 
 class ArchitecturePPC64(ArchitecturePPC):
 
     def __init__(self):
+
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
 
 

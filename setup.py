@@ -23,7 +23,7 @@ setup(
     license="GPLv2",
     author="Sascha Schirra",
     author_email="sashs@scoding.de",
-    install_requires=['capstone','filebytes>=0.9.4'],
+    install_requires=['capstone','filebytes>=0.9.9'],
     url="http://scoding.de/ropper/",
     scripts=['script/ropper'],
     classifiers=[

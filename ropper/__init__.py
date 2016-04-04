@@ -56,7 +56,7 @@ def deleteDuplicates(gadgets, callback=None):
         if callback:
             callback(gadget, i, len(gadgets))
     if callback:
-        callback(gadget, -1, len(gadgets))
+        callback(None, -1, len(gadgets))
     return toReturn
 
 

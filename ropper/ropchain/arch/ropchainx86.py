@@ -734,7 +734,7 @@ class RopChainX86Mprotect(RopChainX86):
             self._printer.printInfo('jmp esp found')
             chain_tmp += jmp_esp
         else:
-            self-_printer.printInfo('no jmp esp found')
+            self._printer.printInfo('no jmp esp found')
             chain_tmp += '\n# ADD HERE JMP ESP\n\n'
 
         chain += self._printRebase()

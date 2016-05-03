@@ -25,6 +25,7 @@ from ropper.arch import x86
 from ropper.ropchain.ropchain import *
 from ropper.loaders.loader import Type
 from re import match
+from filebytes.pe import ImageDirectoryEntry
 import itertools
 import math
 
@@ -59,7 +60,7 @@ class RopChainX86(RopChain):
 
     @classmethod
     def availableGenerators(cls):
-        return [RopChainX86System, RopChainX86Mprotect, RopChainX86VirtualProtect]
+        return [RopChainX86System, RopChainX86Mprotect, RopChainX86VirtualProtect,RopChainX86VirtualAlloc]
 
     @classmethod
     def archs(self):
@@ -793,23 +794,19 @@ class RopChainX86VirtualProtect(RopChainX86):
 
     def __extract(self, param):
         if (not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param)) and (not match('0x[0-9a-fA-F]+', param)):
-            raise RopChainError('Parameter have to have the following format: <hexnumber>,<hexnumber> or <hexnumber>')
+            raise RopChainError('Parameter have to have the following format: <hexnumber>')
 
-        split = param.split(',')
-        if len(split) == 2:
-            if isHex(split[1]):
-                return (int(split[0], 16), int(split[1], 16))
-        else:
-            return (None, int(split[0], 16))
+        return (None, int(param, 16))
 
     def __getVirtualProtectEntry(self):
         for binary in self._binaries:
             if binary.type == Type.PE:
-                s = binary.sections['.idata']
-                for descriptorData in s.importDescriptorTable:
-                    for function in descriptorData.functions:
-                        if str(function[1]) == 'VirtualProtect':
-                            return function[2]
+                s = binary._binary.dataDirectory[ImageDirectoryEntry.IMPORT]
+                if not s:
+                    return None 
+                for thunk in s.importNameTable:
+                    if thunk.importByName.name == 'VirtualProtect':
+                            return thunk.rva + binary.imageBase
             else:
                 self._printer.printError('File is not a PE file.')
         return None
@@ -817,13 +814,12 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
     def create(self, param=None):
-        if not param:
-            raise RopChainError('Missing parameter: address,size or size')
-
+        
         self._printer.printInfo('Ropchain Generator for VirtualProtect:\n')
         self._printer.println('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
-
-        address, size = self.__extract(param)
+        address = None
+        if param:
+            address = self.__extract(param)
         given = False
         if not address:
             address = self.__getVirtualProtectEntry()
@@ -843,6 +839,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         gadgets = []
         to_extend = []
         chain_tmp = ''
+        got_jmp_esp = False
         try:
             self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: %s' % address)
             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
@@ -851,10 +848,13 @@ class RopChainX86VirtualProtect(RopChainX86):
             else:
                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
             to_extend = ['esi','si']
+            if jmp_esp:
+                gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
+            got_jmp_esp = True
         except:
             self._printer.printInfo('Cannot create fill esi gadget!')
             self._printer.printInfo('Try to create this chain:\n')
-            self._printer.println('eax Pointer to VirtualProtect\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to jmp [eax]\nedi ret (rop nop)\n')
+            self._printer.println('eax Pointer to VirtualProtect\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (pop ebp;ret)\nesi pointer to jmp [eax]\nedi ret (rop nop)\n')
 
             jmp_eax = self._searchOpcode('ff20') # jmp [eax]
             gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
@@ -862,13 +862,14 @@ class RopChainX86VirtualProtect(RopChainX86):
                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
             else:
                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))                
-
+            pop_ebp = self._searchOpcode('5d')
+            if pop_ebp:
+                gadgets.append((self._createAddress, [pop_ebp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
 
         
-        gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
+        gadgets.append((self._createNumber, [0x1],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
         gadgets.append((self._createAddress, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']+to_extend))
-        if jmp_esp:
-            gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
+        
         gadgets.append((self._createNumber, [0x40],{'reg':'edx'},['edx', 'dx', 'dh', 'dl']+to_extend))
         
         gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))
@@ -878,6 +879,9 @@ class RopChainX86VirtualProtect(RopChainX86):
         
         self._printer.printInfo('Look for pushad gadget')
         chain_tmp += self._createPushad()
+
+        if not got_jmp_esp and jmp_esp:
+            chain_tmp += self._createAddress(jmp_esp.lines[0][0])
         
 
         chain += self._printRebase()
@@ -887,4 +891,145 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain += 'print(rop)\n'
 
         print(chain)
+
+# class RopChainX86VirtualAlloc(RopChainX86):
+#     """
+#     Builds a ropchain for a VirtualProtect call using pushad
+#     eax 0x90909090
+#     ecx old protection (writable addr)
+#     edx 0x40 (RWE)
+#     ebx size
+#     esp address
+#     ebp return address (jmp esp)
+#     esi pointer to VirtualProtect
+#     edi ret (rop nop)
+#     """
+
+
+#     @classmethod
+#     def name(cls):
+#         return 'virtualalloc'
+
+
+#     def _createPushad(self):
+#         pushad = self._find(Category.PUSHAD)
+#         if pushad:
+#             return self._printRopInstruction(pushad)
+#         else:
+#             self._printer.printInfo('No pushad found!')
+#             return '# Add here PUSHAD gadget!'
+
+
+#     def _createJmp(self, reg=['esp']):
+#         r = Ropper()
+#         gadgets = []
+#         for binary in self._binaries:
+#             for section in binary.executableSections:
+#                 vaddr = section.offset
+#                 gadgets.extend(
+#                     r.searchJmpReg(self._binaries[0],reg))
+
+
+
+#         if len(gadgets) > 0:
+#             if (gadgets[0]._binary, gadgets[0]._section) not in self._usedBinaries:
+#                 self._usedBinaries.append((gadgets[0]._binary, gadgets[0]._section))
+#             return gadgets[0]
+#         else:
+#             return None
+
+#     def __extract(self, param):
+#         if (not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param)) and (not match('0x[0-9a-fA-F]+', param)):
+#             raise RopChainError('Parameter have to have the following format: <hexnumber>,<hexnumber> or <hexnumber>')
+
+#         split = param.split(',')
+#         if len(split) == 2:
+#             if isHex(split[1]):
+#                 return (int(split[0], 16), int(split[1], 16))
+#         else:
+#             return (None, int(split[0], 16))
+
+#     def __getVirtualProtectEntry(self):
+#         for binary in self._binaries:
+#             if binary.type == Type.PE:
+#                 s = binary._binary.dataDirectory[ImageDirectoryEntry.IMPORT]
+#                 for thunk in s.importNameTable:
+#                     if thunk.importByName.name == 'VirtualAlloc':
+#                             return thunk.rva + binary.imageBase
+#             else:
+#                 self._printer.printError('File is not a PE file.')
+#         return None
+
+
+
+#     def create(self, param=None):
+#         if not param:
+#             raise RopChainError('Missing parameter: address,size or size')
+
+#         self._printer.printInfo('Ropchain Generator for VirtualProtect:\n')
+#         self._printer.println('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
+
+#         address, size = self.__extract(param)
+#         given = False
+#         if not address:
+#             address = self.__getVirtualProtectEntry()
+#             if not address:
+#                 self._printer.printError('No IAT-Entry for VirtualProtect found!')
+#                 raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
+#         else:
+#             given = True
+        
+#         jmp_esp = self._createJmp()
+#         ret_addr = self._searchOpcode('c3')
+
+#         chain = self._printHeader()
+        
+#         chain += '\n\nshellcode = \'\\xcc\'*100\n\n'
+#         gadgets = []
+#         to_extend = []
+#         chain_tmp = ''
+#         try:
+#             self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: %s' % address)
+#             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
+#             if given:
+#                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+#             else:
+#                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+#             to_extend = ['esi','si']
+#         except:
+#             self._printer.printInfo('Cannot create fill esi gadget!')
+#             self._printer.printInfo('Try to create this chain:\n')
+#             self._printer.println('eax Pointer to VirtualProtect\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to jmp [eax]\nedi ret (rop nop)\n')
+
+#             jmp_eax = self._searchOpcode('ff20') # jmp [eax]
+#             gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
+#             if given:
+#                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
+#             else:
+#                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))                
+
+
+        
+#         gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
+#         gadgets.append((self._createNumber, [0x40],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']+to_extend))
+#         if jmp_esp:
+#             gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
+#         gadgets.append((self._createNumber, [0x1000],{'reg':'edx'},['edx', 'dx', 'dh', 'dl']+to_extend))
+        
+#         gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))
+
+#         self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
+#         chain_tmp += self._createDependenceChain(gadgets)
+        
+#         self._printer.printInfo('Look for pushad gadget')
+#         chain_tmp += self._createPushad()
+        
+
+#         chain += self._printRebase()
+#         chain += 'rop = \'\'\n'
+#         chain += chain_tmp
+#         chain += 'rop += shellcode\n\n'
+#         chain += 'print(rop)\n'
+
+#         print(chain)
 

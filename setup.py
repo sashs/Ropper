@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
-import ropper
 
-version = ropper.VERSION
+
+version = '1.8.1'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """

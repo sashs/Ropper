@@ -72,7 +72,7 @@ class PE(Loader):
 
 
     def getWriteableSection(self):
-        for section in self.sections:
+        for section in self._binary.sections:
             if section.header.Characteristics & pe.IMAGE_SCN.MEM_WRITE:
                 s = Section(section.name, section.raw, section.header.VirtualAddress + self.imageBase, section.header.VirtualAddress)
 

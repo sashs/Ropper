@@ -60,7 +60,7 @@ class RopChainX86(RopChain):
 
     @classmethod
     def availableGenerators(cls):
-        return [RopChainX86System, RopChainX86Mprotect, RopChainX86VirtualProtect,RopChainX86VirtualAlloc]
+        return [RopChainX86System, RopChainX86Mprotect, RopChainX86VirtualProtect]
 
     @classmethod
     def archs(self):

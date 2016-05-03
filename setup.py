@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
-import ropper
 
-version = ropper.VERSION
+
+version = '1.8.1'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
@@ -23,7 +23,7 @@ setup(
     license="GPLv2",
     author="Sascha Schirra",
     author_email="sashs@scoding.de",
-    install_requires=['capstone','filebytes>=0.9.4'],
+    install_requires=['capstone','filebytes>=0.9.9'],
     url="http://scoding.de/ropper/",
     scripts=['script/ropper'],
     classifiers=[

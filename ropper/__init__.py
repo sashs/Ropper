@@ -32,7 +32,7 @@ from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIP
 
 
 app_options = None
-VERSION='1.8.0'
+VERSION='1.8.1'
 
 def start(args):
     try:
@@ -56,7 +56,7 @@ def deleteDuplicates(gadgets, callback=None):
         if callback:
             callback(gadget, i, len(gadgets))
     if callback:
-        callback(gadget, -1, len(gadgets))
+        callback(None, -1, len(gadgets))
     return toReturn
 
 

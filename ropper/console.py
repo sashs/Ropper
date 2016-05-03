@@ -81,7 +81,10 @@ class Console(cmd.Cmd):
         self.__handleOptions(self.__options)
 
     def __loadFile(self, file):
-        self.__binary = Loader.open(file, self.__options.raw, self.__options.arch)
+        try:
+            self.__binary = Loader.open(file, self.__options.raw, self.__options.arch)
+        except BaseException as e:
+            raise RopperError(e)
         self.__binaries.append(self.__binary)
         self.__binary.imageBase = self.__options.I
         if self.__options.arch:
@@ -576,8 +579,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             text = text[len(match.group(0)):].strip()
         for binary in self.__binaries:
             self.__cprinter.printInfo('Search in gadgets of file \'%s\'' % binary.fileName)
-            if self.binary in self.__gadgets:
-                self.__printGadgets(self.__search(self.__gadgets[self.binary], text, qual))
+            if binary in self.__gadgets:
+                self.__printGadgets(self.__search(self.__gadgets[binary], text, qual))
 
     def help_search(self):
         desc = 'search gadgets.\n\n'

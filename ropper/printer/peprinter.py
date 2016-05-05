@@ -161,8 +161,8 @@ class PEPrinter(FileDataPrinter):
                     else:
                         data.append((cstr(descriptorData.dllName, Color.BLUE),
                                 cstr(self._toHex(pefile._binary.imageBase + function.rva,pefile.arch.addressLength), Color.CYAN),
-                                cstr(hex(function.importByName.hint), Color.LIGHT_GRAY),
-                                cstr(function.importByName.name, Color.WHITE)))
+                                cstr(hex(function.importByName.hint) if function.importByName else '', Color.LIGHT_GRAY),
+                                cstr(function.importByName.name if function.importByName else '', Color.WHITE)))
 
             self._printTable(
                 'Imports', (cstr('DLL', Color.LIGHT_GRAY), cstr('Address', Color.LIGHT_GRAY), cstr('Hint/Ordinal', Color.LIGHT_GRAY), cstr('Function', Color.LIGHT_GRAY)), data)

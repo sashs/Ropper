@@ -55,6 +55,12 @@ class Console(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.__options = options
         options.addOptionChangedCallback(self.optionChanged)
+        import readline
+        old_delims = readline.get_completer_delims() # <-
+        old_delims = old_delims.replace('-', '')
+        old_delims = old_delims.replace('/', '')
+        readline.set_completer_delims(old_delims) # <-
+
         self.__binary = None
         self.__binaries = []
         self.__gadgets = {}
@@ -482,6 +488,18 @@ class Console(cmd.Cmd):
         else:
             self.__loadFile(text)
             self.__printInfo('File loaded.')
+
+    def complete_file(self, text, line, begidx, endidx):
+        file = text
+        cwd = '.'
+        path = ''
+        if '/' in file:
+            cwd = file[:file.rindex('/')+1]
+            file = file[file.rindex('/')+1:]
+            path = cwd
+
+        return [path+i for i in os.listdir(cwd) if i.startswith(file)]
+        
 
     def help_file(self):
         self.__printHelpText('file <file>|<idx>', 'file - loads a file\nidx - select this loaded file')

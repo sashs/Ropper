@@ -801,11 +801,13 @@ class RopChainX86VirtualProtect(RopChainX86):
     def __getVirtualProtectEntry(self):
         for binary in self._binaries:
             if binary.type == Type.PE:
-                s = binary._binary.dataDirectory[ImageDirectoryEntry.IMPORT]
-                if not s:
-                    return None 
-                for thunk in s.importNameTable:
-                    if thunk.importByName.name == 'VirtualProtect':
+                imports = binary._binary.dataDirectory[ImageDirectoryEntry.IMPORT]
+                if not imports:
+                    return None
+                for descriptorData in imports:
+                    for thunk in descriptorData.importNameTable:
+                
+                        if thunk.importByName and thunk.importByName.name == 'VirtualProtect':
                             return thunk.rva + binary.imageBase
             else:
                 self._printer.printError('File is not a PE file.')
@@ -841,7 +843,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain_tmp = ''
         got_jmp_esp = False
         try:
-            self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: %s' % address)
+            self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: 0x%x' % address)
             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
             if given:
                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))

@@ -80,7 +80,7 @@ class RopChainX86(RopChain):
         cur_len = 0
         cur_chain = ''
         counter = 0
-
+        failed_chains={}
         max_perm = math.factorial(len(gadgets))
         for x in itertools.permutations(gadgets):
             counter += 1
@@ -113,20 +113,28 @@ class RopChainX86(RopChain):
                 break
 
             except RopChainError as e:
-                pass
-            if len(fail) > cur_len:
-                cur_len = len(fail)
-                cur_chain = '# Filled registers: '
-                for fa in fail[:-1]:
-
-                    cur_chain += (fa[2]['reg']) + ', '
-                cur_chain += '\n'
-                cur_chain += chain2
+                failed_chains[chain2] = fail 
                 
             failed.append(tuple(fail))
         else:
             self._printer.println('')
             self._printer.printInfo('Cannot create chain which fills all registers')
+            fail_tmp = None
+            fail_max = []
+            chain_tmp = None
+            for chain,fail in failed_chains.items():
+                if not fail_tmp or len(fail) > len(fail_max):
+                    fail_max = fail
+                    chain_tmp = chain
+
+                
+            cur_chain = '# Filled registers: '
+            for fa in fail_max[:-1]:
+
+                cur_chain += (fa[2]['reg']) + ', '
+            cur_chain += '\n'
+            cur_chain += chain_tmp
+
         #    print('Impossible to create complete chain')
         self._printer.println('')    
         return cur_chain
@@ -507,7 +515,7 @@ class RopChainX86(RopChain):
                     return self._createNumberNeg(number, reg, badRegs,dontModify)
                 except RopChainError as e:
                     
-                    if number < 50:
+                    if number < 0x50:
                         try:
                             return self._createNumberXOR(number, reg, badRegs,dontModify)
                         except RopChainError:
@@ -568,9 +576,10 @@ class RopChainX86(RopChain):
     def _searchOpcode(self, opcode):
         r = Ropper()
         gadgets = []
-        for section in self._binaries[0].executableSections:
-            vaddr = section.virtualAddress
-            gadgets.extend(r.searchOpcode(self._binaries[0],opcode=opcode,disass=True))
+        for binary in self._binaries:
+            for section in binary.executableSections:
+                vaddr = section.virtualAddress
+                gadgets.extend(r.searchOpcode(binary,opcode=opcode,disass=True))
 
         if len(gadgets) > 0:
             return gadgets[0]
@@ -675,10 +684,11 @@ class RopChainX86Mprotect(RopChainX86):
     def _createJmp(self, reg=['esp']):
         r = Ropper()
         gadgets = []
-        for section in self._binaries[0].executableSections:
-            vaddr = section.virtualAddress
-            gadgets.extend(
-                r.searchJmpReg(self._binaries[0],reg))
+        for binary in self._binaries:
+            for section in binary.executableSections:
+                vaddr = section.virtualAddress
+                gadgets.extend(
+                    r.searchJmpReg(binary,reg))
 
 
 
@@ -781,7 +791,7 @@ class RopChainX86VirtualProtect(RopChainX86):
             for section in binary.executableSections:
                 vaddr = section.offset
                 gadgets.extend(
-                    r.searchJmpReg(self._binaries[0],reg))
+                    r.searchJmpReg(binary,reg))
 
 
 
@@ -845,10 +855,8 @@ class RopChainX86VirtualProtect(RopChainX86):
         try:
             self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: 0x%x' % address)
             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
-            if given:
-                gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
-            else:
-                gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+            gadgets.append((self._createNumber, [0x90909090],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
+            
             to_extend = ['esi','si']
             if jmp_esp:
                 gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))

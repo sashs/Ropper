@@ -872,7 +872,7 @@ class RopChainX86VirtualProtect(RopChainX86):
                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
             else:
                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))                
-            pop_ebp = self._searchOpcode('5d')
+            pop_ebp = self._searchOpcode('5dc3')
             if pop_ebp:
                 gadgets.append((self._createAddress, [pop_ebp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
 
@@ -891,7 +891,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain_tmp += self._createPushad()
 
         if not got_jmp_esp and jmp_esp:
-            chain_tmp += self._createAddress(jmp_esp.lines[0][0])
+            chain_tmp += self._createAddress(jmp_esp.lines[0][0])[0]
         
 
         chain += self._printRebase()

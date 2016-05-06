@@ -152,7 +152,7 @@ class PEPrinter(FileDataPrinter):
         if imports:
             data = []
             for descriptorData in imports:
-                for function in descriptorData.importNameTable:
+                for function in descriptorData.importAddressTable:
                     if function.ordinal:
                         data.append((cstr(descriptorData.dllName, Color.BLUE),
                                 cstr(self._toHex(pefile._binary.imageBase + function.rva,pefile.arch.addressLength), Color.CYAN),
@@ -160,7 +160,7 @@ class PEPrinter(FileDataPrinter):
                                 cstr('', Color.WHITE)))
                     else:
                         data.append((cstr(descriptorData.dllName, Color.BLUE),
-                                cstr(self._toHex(pefile._binary.imageBase + function.rva,pefile.arch.addressLength), Color.CYAN),
+                                cstr(self._toHex(pefile._binary.imageBase+function.rva,pefile.arch.addressLength), Color.CYAN),
                                 cstr(hex(function.importByName.hint) if function.importByName else '', Color.LIGHT_GRAY),
                                 cstr(function.importByName.name if function.importByName else '', Color.WHITE)))
 

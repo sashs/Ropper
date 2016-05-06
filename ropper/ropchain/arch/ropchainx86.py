@@ -584,7 +584,7 @@ class RopChainX86(RopChain):
         if len(gadgets) > 0:
             return gadgets[0]
         else:
-            raise RopChainError('Cannot create gadget for opcode: %x' % opcode)
+            raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
 
     def create(self):
         pass

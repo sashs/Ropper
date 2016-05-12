@@ -252,7 +252,7 @@ class Ropper(object):
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
                 
-            if hasret:
+            if hasret or i.mnemonic in binary.arch.badInstructions:
                 break
 
 

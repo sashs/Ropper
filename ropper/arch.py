@@ -123,10 +123,12 @@ class ArchitectureX86(Architecture):
             (b'\xff\xa4\x24[\x00-\xff]{4}', 7),
             (b'\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 3),                             # call [reg + value]
             (b'\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 3),                             # jmp [reg + value]
+            (b'\xe9[\x00-\xff]{4}', 5),                                                 # jmp value
+            (b'\xe8[\x00-\xff]{4}', 5),                                                 # call value
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'jne', 'je', 'jg', 'jl', 'jle', 'jge', 'ja','jb', 'jae', 'jbe', 'int', 'ret', 'call', 'jmp']
+        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'ret', 'call', 'jmp']
 
     def _initCategories(self):
         self._categories = {

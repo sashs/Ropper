@@ -46,7 +46,7 @@ class Ropper(object):
         self.printer = printer
 
 
-    def assemble(self, code, arch=x86, type=FORMAT.HEX):
+    def assemble(self, code, arch=x86, format=FORMAT.HEX):
         if 'keystone' not in globals():
             raise RopperError('Keystone is not installed! Please install Keystone. \nLook at http://keystone-engine.org')
 
@@ -60,17 +60,17 @@ class Ropper(object):
             return "invalid"
         to_return = byte_list
 
-        if type == FORMAT.STRING:
+        if format == FORMAT.STRING:
             to_return = '"'
             for byte in byte_list:
                 to_return += '\\x%02x' % byte
 
             to_return += '"'
-        elif type == FORMAT.HEX:
+        elif format == FORMAT.HEX:
             to_return = ''
             for byte in byte_list:
                 to_return += '%02x' % byte
-        elif type == FORMAT.RAW:
+        elif format == FORMAT.RAW:
             to_return = ''
             for byte in byte_list:
                 to_return += '%s' % chr(byte)
@@ -78,7 +78,7 @@ class Ropper(object):
         return to_return
 
     def disassemble(self, opcode, arch=x86):
-        opcode = self._formatOpcodeString(opcode)
+        opcode, size= self._formatOpcodeString(opcode)
         cs = capstone.Cs(arch.arch, arch.mode)
 
         to_return = ''
@@ -86,7 +86,7 @@ class Ropper(object):
 
         opcode_tmp = opcode
 
-        while byte_count < len(opcode):
+        while byte_count < size:
             old_byte_count = byte_count
             for i in cs.disasm(opcode_tmp,0):
                 to_return += '%s %s\n' % (i.mnemonic , i.op_str)
@@ -247,7 +247,7 @@ class Ropper(object):
                     toReturn.append(ppr)
         return toReturn
 
-    def searchGadgets(self, binary, instructionCount=10, gtype=GadgetType.ALL):
+    def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.imageBase
@@ -260,7 +260,7 @@ class Ropper(object):
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
 
-    def _searchGadgets(self, section, binary, instructionCount=10, gtype=GadgetType.ALL):
+    def _searchGadgets(self, section, binary, instructionCount=5, gtype=GadgetType.ALL):
 
         toReturn = []
         code = bytes(bytearray(section.bytes))

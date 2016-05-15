@@ -21,7 +21,7 @@ from .console import Console
 from .options import Options
 from .common.error import *
 from binascii import unhexlify
-from ropper.rop import Ropper
+from ropper.rop import Ropper, FORMAT
 from ropper.loaders import elf
 from ropper.loaders import pe
 from ropper.loaders import mach_o
@@ -79,7 +79,7 @@ def filterBadBytes(gadgets, badbytes):
         return gadgets
 
     toReturn = []
-    
+
     badbytes = formatBadBytes(badbytes)
 
     for gadget in gadgets:
@@ -94,7 +94,3 @@ def search(gadgets, searchString):
 
     searcher = gadgets[0].binary.arch.searcher
     return searcher.search(gadgets, searchString)
-
-
-
-

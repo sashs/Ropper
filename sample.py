@@ -39,7 +39,7 @@ rop = Ropper()
 gadgets = rop.searchGadgets(binary_elf)
 gadgets = rop.searchGadgets(binary_elf, gtype=GadgetType.JOP)
 gadgets = rop.searchGadgets(binary_pe, gtype=GadgetType.ROP)
-gadgets = rop.searchGadgets(binary_elf, depth=15)
+gadgets = rop.searchGadgets(binary_elf, instructionCount=5)
 
 
 ##### search pop pop ret ######
@@ -52,6 +52,24 @@ jmp_regs = rop.searchJmpReg(binary_pe, ['esp', 'eax'])
 opcode_gadgets = rop.searchOpcode(binary_elf, 'ffe4')
 opcode_gadgets = rop.searchOpcode(binary_elf, 'ffe?')
 opcode_gadgets = rop.searchOpcode(binary_elf, '??e4')
+
+##### search instructions ######
+opcode_gadgets = rop.searchInstructions(binary_elf, 'jmp esp')
+opcode_gadgets = rop.searchInstructions(binary_elf, 'pop eax; ret')
+
+##### assemble instructions ######
+hex_string = rop.assemble('jmp esp')
+print '"jmp esp" assembled to hex string =', hex_string
+raw_bytes = rop.assemble('jmp esp', format=FORMAT.RAW)
+print '"jmp esp" assembled to raw bytes =', raw_bytes
+string = rop.assemble('jmp esp', format=FORMAT.STRING)
+print '"jmp esp" assembled to string =',string
+arm_bytes = rop.assemble('bx sp', arch=ARM)
+print '"bx sp" assembled to hex string =', arm_bytes
+
+##### disassemble bytes #######
+arm_instructions = rop.disassemble(arm_bytes, arch=ARM)
+print arm_bytes, 'disassembled to "%s"' % arm_instructions
 
 # Change the imagebase, this also change the imagebase for all loaded gadgets of this binary
 binary_elf.imageBase = 0x0
@@ -84,5 +102,3 @@ strings = binary_elf.searchDataString('bin%')
 for address, string in strings:
 
     print "0x%x: %s" % (address, string)
-
-

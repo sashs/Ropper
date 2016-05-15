@@ -916,8 +916,21 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if not text:
             self.help_disasm()
             return
+        arch = None
+        if text.startswith('-a'):
+            text = text[3:]
+            index = text.index(' ')
+            arch = text[:index]
+            text = text[index:].strip()
+            arch = getArchitecture(arch)
 
-        self.__disasm(text, text)
+        if not arch:
+            if self.__binary:
+                arch = self.binary.arch
+            else:
+                arch = getArchitecture('x86')
+
+        self.__disasm(text, arch)
 
     def help_disasm(self):
         self.__printHelpText('disasm <bytes>','disassembles the given bytes')

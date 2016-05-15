@@ -20,6 +20,7 @@
 from ropper.common.utils import *
 from ropper.common.error import *
 from ropper.common.enum import Enum
+from ropper.arch import x86
 from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
 from struct import pack
@@ -28,13 +29,75 @@ import struct
 import sys
 import capstone
 
+# Optional sqlite support
+try:
+    import keystone
+except:
+    pass
+
+
+class FORMAT(Enum):
+    _enum_ = 'RAW STRING HEX'
 
 class Ropper(object):
 
     def __init__(self, printer=None):
         super(Ropper, self).__init__()
         self.printer = printer
-        
+
+
+    def assemble(self, code, arch=x86, type=FORMAT.HEX):
+        if 'keystone' not in globals():
+            raise RopperError('Keystone is not installed! Please install Keystone. \nLook at http://keystone-engine.org')
+
+        ks = keystone.Ks(arch.ksarch[0], arch.ksarch[1])
+        try:
+            byte_list =  ks.asm(code)[0]
+        except BaseException as e:
+            raise RopperError(e)
+
+        if not byte_list:
+            return "invalid"
+        to_return = byte_list
+
+        if type == FORMAT.STRING:
+            to_return = '"'
+            for byte in byte_list:
+                to_return += '\\x%02x' % byte
+
+            to_return += '"'
+        elif type == FORMAT.HEX:
+            to_return = ''
+            for byte in byte_list:
+                to_return += '%02x' % byte
+        elif type == FORMAT.RAW:
+            to_return = ''
+            for byte in byte_list:
+                to_return += '%s' % chr(byte)
+
+        return to_return
+
+    def disassemble(self, opcode, arch=x86):
+        opcode = self._formatOpcodeString(opcode)
+        cs = capstone.Cs(arch.arch, arch.mode)
+
+        to_return = ''
+        byte_count = 0
+
+        opcode_tmp = opcode
+
+        while byte_count < len(opcode):
+            old_byte_count = byte_count
+            for i in cs.disasm(opcode_tmp,0):
+                to_return += '%s %s\n' % (i.mnemonic , i.op_str)
+                byte_count += len(i.bytes)
+
+            if old_byte_count == byte_count or byte_count < len(opcode):
+                byte_count += 1
+                opcode_tmp = opcode[byte_count:]
+                to_return += '<invalid>\n'
+
+        return to_return
 
     def searchJmpReg(self, binary, regs):
         toReturn = []
@@ -53,13 +116,13 @@ class Ropper(object):
         disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
         toReturn = []
         Register = Enum('Register', 'ax cx dx bx sp bp si di')
-        
+
         for reg in regs:
             reg_tmp = reg.strip()[1:]
             if not Register[reg_tmp]:
                 raise RopperError('Invalid register: "%s"' % reg)
             insts = [toBytes(0xff , 0xe0 | Register[reg_tmp]), toBytes(0xff, 0xd0 | Register[reg_tmp]),  toBytes(0x50 | Register[reg_tmp] , 0xc3)]
-            
+
             for inst in insts:
                 toReturn.extend(self._searchOpcode(section, binary, inst, True))
 
@@ -93,22 +156,37 @@ class Ropper(object):
             m = re.search(b'\?', opcode)
         try:
             opcode = unhexlify(opcode)
+            size = len(opcode)
+            opcode = opcode.replace('\\','\\\\')
+            opcode = opcode.replace('(','\\(')
+            opcode = opcode.replace(')','\\(')
+            opcode = opcode.replace('[','\\[')
+            opcode = opcode.replace(']','\\]')
+            opcode = opcode.replace('+','\\+')
+            opcode = opcode.replace('.',r'\.')
+            opcode = opcode.replace('*',r'\*')
+            opcode = opcode.replace('?','\\?')
         except:
             raise RopperError('Invalid characters in opcode string')
-        return opcode
+        return opcode,size
 
-    
+
+    def searchInstructions(self, binary, code):
+
+        opcode = self.assemble(code, binary.arch)
+        return self.searchOpcode(binary, opcode, disass=True)
+
 
     def searchOpcode(self, binary, opcode, disass=False):
-        opcode = self._formatOpcodeString(opcode)
+        opcode, size = self._formatOpcodeString(opcode)
         gadgets = []
         for section in binary.executableSections:
-            gadgets.extend(self._searchOpcode(section, binary, opcode))
-        
+            gadgets.extend(self._searchOpcode(section, binary, opcode, size, disass))
+
         return gadgets
 
 
-    def _searchOpcode(self, section, binary, opcode, disass=False):
+    def _searchOpcode(self, section, binary, opcode, size, disass=False):
 
         disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
         toReturn = []
@@ -119,7 +197,7 @@ class Ropper(object):
 
             if (offset + match.start()) % binary.arch.align == 0:
                 if disass:
-                    for i in disassembler.disasm(struct.pack('B' * len(opcode), *code[match.start():match.end()]), offset + match.start()):
+                    for i in disassembler.disasm(struct.pack('B' * size, *code[match.start():match.end()]), offset + match.start()):
                         opcodeGadget.append(
                             i.address, i.mnemonic , i.op_str, bytes=i.bytes)
                 else:
@@ -127,7 +205,7 @@ class Ropper(object):
                         offset + match.start(), hexlify(match.group(0)).decode('utf-8'),bytes=match.group())
             else:
                 continue
-            
+
             toReturn.append(opcodeGadget)
 
         return toReturn
@@ -161,11 +239,11 @@ class Ropper(object):
                         break
                     ppr.append(
                         i.address, i.mnemonic , i.op_str, bytes=i.bytes)
-                    
+
                     if i.mnemonic.startswith('ret'):
                         break
                 if len(ppr) == 3:
-                    
+
                     toReturn.append(ppr)
         return toReturn
 
@@ -176,7 +254,7 @@ class Ropper(object):
 
             if self.printer:
                 self.printer.printInfo('Loading gadgets for section: ' + section.name)
-            
+
             newGadgets = self._searchGadgets(section=section, binary=binary, instructionCount=instructionCount, gtype=gtype)
             gadgets.extend(newGadgets)
 
@@ -187,16 +265,16 @@ class Ropper(object):
         toReturn = []
         code = bytes(bytearray(section.bytes))
         offset = section.offset
-        
+
         arch = binary.arch
-        
+
         max_progress = len(code) * len(arch.endings[gtype])
-        
+
         vaddrs = set() # to prevent that the gadget is added several times
         for ending in arch.endings[gtype]:
             offset_tmp = 0
             tmp_code = code[:]
-            
+
             match = re.search(ending[0], tmp_code)
             while match:
                 offset_tmp += match.start()
@@ -205,7 +283,7 @@ class Ropper(object):
                 if offset_tmp % arch.align == 0:
                     #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
                     none_count = 0
-                    
+
                     for x in range(0, index, arch.align):
                         code_part = tmp_code[index - x:index + ending[1]]
                         gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
@@ -226,7 +304,7 @@ class Ropper(object):
                 offset_tmp += arch.align
 
                 match = re.search(ending[0], tmp_code)
-                
+
                 if self.printer:
                     progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
                     self.printer.printProgress('loading gadgets...', float(progress) / max_progress)
@@ -234,7 +312,7 @@ class Ropper(object):
         if self.printer:
             self.printer.printProgress('loading gadgets...', 1)
             self.printer.finishProgress();
-        
+
         return toReturn
 
 
@@ -247,16 +325,16 @@ class Ropper(object):
         for i in disassembler.disasm(code_str, codeStartAddress):
             if re.match(ending[0], i.bytes):
                 hasret = True
-                
+
             if hasret or i.mnemonic not in binary.arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
-                
+
             if hasret or i.mnemonic in binary.arch.badInstructions:
                 break
 
 
-            
+
         leng = len(gadget)
         if hasret and leng > 0:
             return gadget,leng
@@ -294,7 +372,7 @@ class Ropper(object):
         return toReturn
 
 
-    def disassemble(self, section, binary, vaddr, offset, count):
+    def disassembleAddress(self, section, binary, vaddr, offset, count):
         if vaddr % binary.arch.align != 0:
             raise RopperError('The address doesn\'t have the correct alignment')
 
@@ -316,7 +394,7 @@ class Ropper(object):
         return gadget
 
 
-    
+
 
 
 def toBytes(*b):

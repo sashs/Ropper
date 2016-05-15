@@ -187,7 +187,8 @@ Usage
 
 Use ropper in Scripts
 ---------------------
-`from ropper import *
+```python
+from ropper import *
 
 ##### open a binary ######
 
@@ -290,7 +291,7 @@ for address, string in strings:
 
     print "0x%x: %s" % (address, string)
 
-`
+```
 
 Planned features for future versions
 ------------------------------------

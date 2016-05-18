@@ -715,7 +715,7 @@ class RopChainMprotectX86_64(RopChainX86_64):
 
         gadgets = []
         gadgets.append((self._createNumber, [address],{'reg':'rdi'},['rdi','edi', 'di']))
-        gadgets.append((self._createNumber, [size],{'reg':'rsi'},['rsi','esi', 'di']))
+        gadgets.append((self._createNumber, [size],{'reg':'rsi'},['rsi','esi', 'si']))
         gadgets.append((self._createNumber, [0x7],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0xa],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
 

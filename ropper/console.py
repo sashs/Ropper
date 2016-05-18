@@ -167,18 +167,18 @@ class Console(cmd.Cmd):
         self.__printGadgets(gadgets, header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchOpcode(self.binary,opcode)
         self.__printGadgets(gadgets, header='Opcode')
 
     def __searchInstructions(self, code):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchInstructions(self.binary,code)
         self.__printGadgets(gadgets, header='Instructions')
 
 
     def __searchPopPopRet(self):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         pprs = r.searchPopPopRet(self.binary)
         pprs = ropper.filterBadBytes(pprs, self.__options.badbytes)
         self.__printGadgets(pprs, header='POP;POP;RET Instructions')
@@ -197,7 +197,7 @@ class Console(cmd.Cmd):
         self.__cprinter.println('\n%d gadgets found' % counter)
 
     def __searchGadgets(self, binary):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchGadgets(binary, instructionCount=self.__options.inst_count, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
         binary.gadgets = gadgets
@@ -207,6 +207,15 @@ class Console(cmd.Cmd):
             self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary], self.__printProgress)
 
         return self.__gadgets[binary]
+
+    def __searchGadgetCallback(self, section, gadgets, progress):
+        if gadgets is not None:
+            self.__cprinter.printProgress('loading...', int(progress))
+
+            if progress == 1.0:
+                self.__cprinter.finishProgress()
+        else:
+            self.__cprinter.printInfo('Loading gadgets for section: ' + section.name)
 
     def __printProgress(self, gadget, gnr, count):
         if gnr >= 0:

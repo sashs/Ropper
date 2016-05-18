@@ -41,9 +41,13 @@ class FORMAT(Enum):
 
 class Ropper(object):
 
-    def __init__(self, printer=None):
+    def __init__(self, callback=None):
+        """
+        callback function signature:
+        def callback(section, gadgets, progress)
+        """
         super(Ropper, self).__init__()
-        self.printer = printer
+        self.callback = callback
 
 
     def assemble(self, code, arch=x86, format=FORMAT.HEX):
@@ -252,8 +256,8 @@ class Ropper(object):
         for section in binary.executableSections:
             vaddr = binary.imageBase
 
-            if self.printer:
-                self.printer.printInfo('Loading gadgets for section: ' + section.name)
+            if self.callback:
+                self.callback(section, None, 0)
 
             newGadgets = self._searchGadgets(section=section, binary=binary, instructionCount=instructionCount, gtype=gtype)
             gadgets.extend(newGadgets)
@@ -305,13 +309,12 @@ class Ropper(object):
 
                 match = re.search(ending[0], tmp_code)
 
-                if self.printer:
+                if self.callback:
                     progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-                    self.printer.printProgress('loading gadgets...', float(progress) / max_progress)
+                    self.callback(section, toReturn, float(progress) / max_progress)
 
-        if self.printer:
-            self.printer.printProgress('loading gadgets...', 1)
-            self.printer.finishProgress();
+        if self.callback:
+            self.callback(section, toReturn, 1.0)
 
         return toReturn
 

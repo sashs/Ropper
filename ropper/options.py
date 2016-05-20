@@ -167,7 +167,7 @@ epilog="""example uses:
         parser.add_argument(
             '--stack-pivot', help='Prints all stack pivot gadgets',action='store_true')
         parser.add_argument(
-            '--inst-count', help='Specifies the max count of instructions in a gadget (default: 10)', metavar='<n bytes>', type=int, default=6)
+            '--inst-count', help='Specifies the max count of instructions in a gadget (default: 5)', metavar='<n bytes>', type=int, default=5)
         parser.add_argument(
             '--search', help='Searches for gadgets', metavar='<regex>')
         parser.add_argument(

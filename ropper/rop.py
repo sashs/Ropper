@@ -290,7 +290,7 @@ class Ropper(object):
                     none_count = 0
 
                     for x in range(0, index, arch.align):
-                        code_part = tmp_code[index - x:index + ending[1]]
+                        code_part = tmp_code[index - x-1:index + ending[1]]
                         gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
                         if gadget:
                             if leng > instructionCount:

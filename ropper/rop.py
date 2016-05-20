@@ -82,7 +82,7 @@ class Ropper(object):
         return to_return
 
     def disassemble(self, opcode, arch=x86):
-        opcode, size= self._formatOpcodeString(opcode)
+        opcode, size= self._formatOpcodeString(opcode, regex=False)
         cs = capstone.Cs(arch.arch, arch.mode)
 
         to_return = ''
@@ -134,7 +134,7 @@ class Ropper(object):
 
 
 
-    def _formatOpcodeString(self, opcode):
+    def _formatOpcodeString(self, opcode, regex=True):
         if len(opcode) % 2 > 0:
             raise RopperError('The length of the opcode has to be a multiple of two')
 
@@ -161,15 +161,16 @@ class Ropper(object):
         try:
             opcode = unhexlify(opcode)
             size = len(opcode)
-            opcode = opcode.replace('\\','\\\\')
-            opcode = opcode.replace('(','\\(')
-            opcode = opcode.replace(')','\\(')
-            opcode = opcode.replace('[','\\[')
-            opcode = opcode.replace(']','\\]')
-            opcode = opcode.replace('+','\\+')
-            opcode = opcode.replace('.',r'\.')
-            opcode = opcode.replace('*',r'\*')
-            opcode = opcode.replace('?','\\?')
+            if regex:
+                opcode = opcode.replace('\\','\\\\')
+                opcode = opcode.replace('(','\\(')
+                opcode = opcode.replace(')','\\(')
+                opcode = opcode.replace('[','\\[')
+                opcode = opcode.replace(']','\\]')
+                opcode = opcode.replace('+','\\+')
+                opcode = opcode.replace('.',r'\.')
+                opcode = opcode.replace('*',r'\*')
+                opcode = opcode.replace('?','\\?')
         except:
             raise RopperError('Invalid characters in opcode string')
         return opcode,size

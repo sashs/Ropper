@@ -172,7 +172,7 @@ class Ropper(object):
                 opcode = opcode.replace('*',r'\*')
                 opcode = opcode.replace('?','\\?')
         except:
-            raise RopperError('Invalid characters in opcode string')
+            raise RopperError('Invalid characters in opcode string: %s' % opcode)
         return opcode,size
 
 

@@ -210,7 +210,7 @@ class Console(cmd.Cmd):
 
     def __searchGadgetCallback(self, section, gadgets, progress):
         if gadgets is not None:
-            self.__cprinter.printProgress('loading...', int(progress))
+            self.__cprinter.printProgress('loading...', progress)
 
             if progress == 1.0:
                 self.__cprinter.finishProgress()

@@ -348,7 +348,7 @@ class Ropper(object):
             ending_queue.put(ending)
 
         for cpu in range(cpu_count()+1):
-            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count)))
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
@@ -409,14 +409,14 @@ class Ropper(object):
 
                 for x in range(0, index, arch.align):
                     code_part = tmp_code[index - x-1:index + ending[1]]
-                    gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending)
+                    gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x - 1, ending)
                     if gadget:
                         if leng > instruction_count:
                             break
                         if gadget:
-                            if gadget.address not in vaddrs:
-                                vaddrs.update([gadget.address])
-                                to_return.append(gadget)
+                            #if gadget.address not in vaddrs:
+                            #    vaddrs.update([gadget.address])
+                            to_return.append(gadget)
                         none_count = 0
                     else:
                         none_count += 1
@@ -444,7 +444,7 @@ class Ropper(object):
         for i in disassembler.disasm(code_str, codeStartAddress):
             if re.match(ending[0], i.bytes):
                 hasret = True
-
+            
             if hasret or i.mnemonic not in arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)

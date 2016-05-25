@@ -376,11 +376,13 @@ class Ropper(object):
         
         try:
             while not ending_queue.empty():
-                
-                ending = ending_queue.get()
-                gadgets = self.__gatherGadgetsByEnding(code, arch, ending, instruction_count)
-                
-                gadget_queue.put(gadgets)
+                try:
+                    ending = ending_queue.get(False)
+                    gadgets = self.__gatherGadgetsByEnding(code, arch, ending, instruction_count)
+                    
+                    gadget_queue.put(gadgets)
+                except:
+                    pass
             
         except BaseException as e:
             raise RopperError(e)

@@ -343,11 +343,12 @@ class Ropper(object):
         gadget_queue = Queue()
         tmp_code = code[:]
 
+        process_count = min(cpu_count()+1, len(arch.endings[gtype]))
 
         for ending in arch.endings[gtype]:
             ending_queue.put(ending)
 
-        for cpu in range(cpu_count()+1):
+        for cpu in range(process_count):
             processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
@@ -357,7 +358,7 @@ class Ropper(object):
         ending_count = 0
         if self.__callback:
             self.__callback(section, to_return, 0)
-        while count < cpu_count()+1:
+        while count < process_count:
             gadgets = gadget_queue.get()
             if gadgets != None:
                 to_return.extend(gadgets)

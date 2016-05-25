@@ -21,6 +21,7 @@ from ropper.common.utils import *
 from ropper.common.error import *
 from ropper.common.enum import Enum
 from ropper.arch import x86
+from multiprocessing import Process, Pool, Queue, cpu_count, current_process
 from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
 from struct import pack
@@ -29,7 +30,7 @@ import struct
 import sys
 import capstone
 
-# Optional sqlite support
+# Optional keystone support
 try:
     import keystone
 except:
@@ -47,8 +48,14 @@ class Ropper(object):
         def callback(section, gadgets, progress)
         """
         super(Ropper, self).__init__()
-        self.callback = callback
+        self.__callback = callback
+        self.__cs = None
 
+
+    def __getCs(self, arch):
+        if not self.__cs or self.__cs.arch != arch.arch or self.__cs.mode != arch.mode:
+            self.__cs = capstone.Cs(arch.arch, arch.mode)
+        return self.__cs
 
     def assemble(self, code, arch=x86, format=FORMAT.HEX):
         if 'keystone' not in globals():
@@ -83,7 +90,7 @@ class Ropper(object):
 
     def disassemble(self, opcode, arch=x86):
         opcode, size= self._formatOpcodeString(opcode, regex=False)
-        cs = capstone.Cs(arch.arch, arch.mode)
+        cs = self.__getCs(arch)
 
         to_return = ''
         byte_count = 0
@@ -117,7 +124,7 @@ class Ropper(object):
         if binary.arch.arch != capstone.CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'jmp <reg>\' only supported on x86/x86_64')
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        cs = self.__getCs(binary.arch)
         toReturn = []
         Register = Enum('Register', 'ax cx dx bx sp bp si di')
 
@@ -193,7 +200,7 @@ class Ropper(object):
 
     def _searchOpcode(self, section, binary, opcode, size, disass=False):
 
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(binary.arch)
         toReturn = []
         code = bytearray(section.bytes)
         offset = section.offset
@@ -231,7 +238,7 @@ class Ropper(object):
             raise NotSupportedError(
                 'Wrong architecture, \'pop pop ret\' is only supported on x86/x86_64')
 
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(binary.arch)
         code = section.bytes
         offset = section.offset
         toReturn = []
@@ -257,84 +264,190 @@ class Ropper(object):
         for section in binary.executableSections:
             vaddr = binary.imageBase
 
-            if self.callback:
-                self.callback(section, None, 0)
+            if self.__callback:
+                self.__callback(section, None, 0)
 
-            newGadgets = self._searchGadgets(section=section, binary=binary, instructionCount=instructionCount, gtype=gtype)
+            newGadgets = self._searchGadgets(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
+            for gadget in newGadgets:
+                gadget.binary = binary
+                gadget.section = section
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
 
-    def _searchGadgets(self, section, binary, instructionCount=5, gtype=GadgetType.ALL):
+    # def _searchGadgets(self, section, binary, instructionCount=5, gtype=GadgetType.ALL):
 
-        toReturn = []
+    #     toReturn = []
+    #     code = bytes(bytearray(section.bytes))
+    #     offset = section.offset
+
+    #     arch = binary.arch
+
+    #     max_progress = len(code) * len(arch.endings[gtype])
+
+    #     vaddrs = set() # to prevent that the gadget is added several times
+    #     for ending in arch.endings[gtype]:
+    #         offset_tmp = 0
+    #         tmp_code = code[:]
+
+    #         match = re.search(ending[0], tmp_code)
+    #         while match:
+    #             offset_tmp += match.start()
+    #             index = match.start()
+
+    #             if offset_tmp % arch.align == 0:
+    #                 #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
+    #                 none_count = 0
+
+    #                 for x in range(0, index, arch.align):
+    #                     code_part = tmp_code[index - x-1:index + ending[1]]
+    #                     gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
+    #                     if gadget:
+    #                         if leng > instructionCount:
+    #                             break
+    #                         if gadget:
+    #                             if gadget.address not in vaddrs:
+    #                                 vaddrs.update([gadget.address])
+    #                                 toReturn.append(gadget)
+    #                         none_count = 0
+    #                     else:
+    #                         none_count += 1
+    #                         if none_count == 5:
+    #                             break
+
+    #             tmp_code = tmp_code[index+arch.align:]
+    #             offset_tmp += arch.align
+
+    #             match = re.search(ending[0], tmp_code)
+
+    #             if self.__callback:
+    #                 progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+    #                 self.__callback(section, toReturn, float(progress) / max_progress)
+
+    #     if self.__callback:
+    #         self.__callback(section, toReturn, 1.0)
+
+    #     return toReturn
+
+    def _searchGadgets(self, section, binary, instruction_count=5, gtype=GadgetType.ALL):
+
+        to_return = []
         code = bytes(bytearray(section.bytes))
-        offset = section.offset
-
+        
+        processes = []
         arch = binary.arch
 
         max_progress = len(code) * len(arch.endings[gtype])
 
-        vaddrs = set() # to prevent that the gadget is added several times
+        ending_queue = Queue()
+        gadget_queue = Queue()
+        tmp_code = code[:]
+
+
         for ending in arch.endings[gtype]:
-            offset_tmp = 0
-            tmp_code = code[:]
+            ending_queue.put(ending)
+
+        for cpu in range(cpu_count()+1):
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count)))
+            processes[cpu].daemon=True
+            processes[cpu].start()
+
+        
+        count = 0
+        ending_count = 0
+        if self.__callback:
+            self.__callback(section, to_return, 0)
+        while count < cpu_count()+1:
+            gadgets = gadget_queue.get()
+            if gadgets != None:
+                to_return.extend(gadgets)
+                if self.__callback:
+                    ending_count += 1
+                    self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
+            else:
+                count +=1
+        
+        for process in processes:
+            process.terminate()
+            
+        return to_return
+
+    def __gatherGadgetsByEndings(self, section, binary, code, arch, ending_queue, gadget_queue, instruction_count):
+        
+        try:
+            while not ending_queue.empty():
+                
+                ending = ending_queue.get()
+                gadgets = self.__gatherGadgetsByEnding(code, arch, ending, instruction_count)
+                
+                gadget_queue.put(gadgets)
+            
+        except BaseException as e:
+            raise RopperError(e)
+        
+        gadget_queue.put(None)
+        
+
+    def __gatherGadgetsByEnding(self, code, arch, ending, instruction_count):
+        vaddrs = set() # to prevent that the gadget is added several times
+        offset_tmp = 0
+        #offset = section.offset
+        offset = 0
+        tmp_code = code[:]
+        to_return = []
+        match = re.search(ending[0], tmp_code)
+
+        while match:
+            offset_tmp += match.start()
+            index = match.start()
+
+            if offset_tmp % arch.align == 0:
+                #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
+                none_count = 0
+
+                for x in range(0, index, arch.align):
+                    code_part = tmp_code[index - x-1:index + ending[1]]
+                    gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending)
+                    if gadget:
+                        if leng > instruction_count:
+                            break
+                        if gadget:
+                            if gadget.address not in vaddrs:
+                                vaddrs.update([gadget.address])
+                                to_return.append(gadget)
+                        none_count = 0
+                    else:
+                        none_count += 1
+                        if none_count == 5:
+                            break
+
+            tmp_code = tmp_code[index+arch.align:]
+            offset_tmp += arch.align
 
             match = re.search(ending[0], tmp_code)
-            while match:
-                offset_tmp += match.start()
-                index = match.start()
 
-                if offset_tmp % arch.align == 0:
-                    #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
-                    none_count = 0
+            #if self.__callback:
+            #    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+            #    self.__callback(section, toReturn, float(progress) / max_progress)
+        return to_return
+        #if self.__callback:
+        #    self.__callback(section, toReturn, 1.0)
 
-                    for x in range(0, index, arch.align):
-                        code_part = tmp_code[index - x-1:index + ending[1]]
-                        gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
-                        if gadget:
-                            if leng > instructionCount:
-                                break
-                            if gadget:
-                                if gadget.address not in vaddrs:
-                                    vaddrs.update([gadget.address])
-                                    toReturn.append(gadget)
-                            none_count = 0
-                        else:
-                            none_count += 1
-                            if none_count == 5:
-                                break
-
-                tmp_code = tmp_code[index+arch.align:]
-                offset_tmp += arch.align
-
-                match = re.search(ending[0], tmp_code)
-
-                if self.callback:
-                    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-                    self.callback(section, toReturn, float(progress) / max_progress)
-
-        if self.callback:
-            self.callback(section, toReturn, 1.0)
-
-        return toReturn
-
-
-    def __createGadget(self, binary, section, code_str, codeStartAddress, ending):
-        gadget = Gadget(binary, section)
+    def __createGadget(self, arch, code_str, codeStartAddress, ending):
+        gadget = Gadget(None, None)
         hasret = False
 
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(arch)
 
         for i in disassembler.disasm(code_str, codeStartAddress):
             if re.match(ending[0], i.bytes):
                 hasret = True
 
-            if hasret or i.mnemonic not in binary.arch.badInstructions:
+            if hasret or i.mnemonic not in arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
 
-            if hasret or i.mnemonic in binary.arch.badInstructions:
+            if hasret or i.mnemonic in arch.badInstructions:
                 break
 
 
@@ -350,7 +463,7 @@ class Ropper(object):
         counter = 0
         toReturn = None
         code = bytes(bytearray(section.bytes))
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(binary.arch)
 
         while len(gadget) < count:
             gadget = Gadget(binary, section)

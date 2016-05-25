@@ -43,7 +43,7 @@ class Gadget(object):
 
     def __init__(self, binary, section):
         super(Gadget, self).__init__()
-        self.__arch = binary.arch
+        self.__arch = None
         self.__lines = []
         self._gadget = ''
         self.__category = None
@@ -59,9 +59,18 @@ class Gadget(object):
     def section(self):
         return self._section
 
+    @section.setter
+    def section(self, section):
+        self._section = section
+
     @property
     def binary(self):
         return self._binary    
+
+    @binary.setter
+    def binary(self, binary):
+        self._binary = binary
+        self.__arch = binary.arch
 
     @property
     def bytes(self):
@@ -73,6 +82,8 @@ class Gadget(object):
 
     @property
     def imageBase(self):
+        if not self._binary:
+            return 0
         return self._binary.imageBase
 
     @property

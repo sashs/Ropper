@@ -14,15 +14,15 @@ Install [Capstone](http://www.capstone-engine.org) with PyPi:
 
     $ sudo pip install capstone
 
+Install [filebytes](https://github.com/sashs/filebytes) with PyPi:
+
+    $ sudo pip install filebytes
+
 Optional (not needed to run ropper just to look for gadgets):
 
 Install [Keystone](http://www.keystone-engine.org):
 
     You will find the command here, as soon as keystone is released.
-
-Install [filebytes](https://github.com/sashs/filebytes) with PyPi:
-
-    $ sudo pip install filebytes
 
 Install and execute Ropper
 

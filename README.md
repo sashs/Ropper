@@ -14,6 +14,10 @@ Install [Capstone](http://www.capstone-engine.org) with PyPi:
 
     $ sudo pip install capstone
 
+Optional: Install [Keystone](http://www.keystone-engine.org):
+
+    You will find the command here, if keystone is released.
+
 Install [filebytes](https://github.com/sashs/filebytes) with PyPi:
 
     $ sudo pip install filebytes

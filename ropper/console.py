@@ -945,7 +945,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText('disasm <bytes>','disassembles the given bytes')
 
     @safe_cmd
-    def do_disassembleAddress(self, text):
+    def do_disass_address(self, text):
         split = text.split(' ')
         length = 1
         if not isHex(split[0]):
@@ -961,7 +961,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         addr = int(split[0], 16)
         self.__disassembleAddress(addr, length)
 
-    def help_disassembleAddress(self):
+    def help_disass_address(self):
         self.__printHelpText('disassembleAddress <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
 
     @safe_cmd

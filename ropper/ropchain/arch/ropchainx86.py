@@ -47,7 +47,7 @@ class RopChainX86(RopChain):
 
     def _printRebase(self):
         toReturn = ''
-        
+
         for binary,section in self._usedBinaries:
             imageBase = binary.imageBase
             toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase , 4), binary.fileName))
@@ -94,7 +94,7 @@ class RopChainX86(RopChain):
             if found:
                 continue
             try:
-                fail = [] 
+                fail = []
                 chain2 = ''
                 dontModify = []
                 badRegs = []
@@ -107,14 +107,14 @@ class RopChainX86(RopChain):
                     dontModify.extend(g[3])
                     fail.append(g)
                     chain2 += g[0](*g[1], badRegs=badRegs, dontModify=dontModify,**g[2])[0]
-                
+
 
                 cur_chain += chain2
                 break
 
             except RopChainError as e:
-                failed_chains[chain2] = fail 
-                
+                failed_chains[chain2] = fail
+
             failed.append(tuple(fail))
         else:
             self._printer.println('')
@@ -127,7 +127,7 @@ class RopChainX86(RopChain):
                     fail_max = fail
                     chain_tmp = chain
 
-                
+
             cur_chain = '# Filled registers: '
             for fa in fail_max[:-1]:
 
@@ -136,11 +136,11 @@ class RopChainX86(RopChain):
             cur_chain += chain_tmp
 
         #    print('Impossible to create complete chain')
-        self._printer.println('')    
+        self._printer.println('')
         return cur_chain
 
     def _isModifiedOrDereferencedAccess(self, gadget, dontModify):
-        
+
         regs = []
         for line in gadget.lines[1:]:
             line = line[1]
@@ -166,7 +166,7 @@ class RopChainX86(RopChain):
 
 
     def _printRopInstruction(self, gadget, padding=True):
-        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget._binary, gadget._section)),toHex(gadget.lines[0][0],4), gadget.simpleInstructionString()))
+        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget._binary, gadget._section)),toHex(gadget.lines[0][0],4), gadget.simpleString()))
         if padding:
             regs = self._paddingNeededFor(gadget)
             for i in range(len(regs)):
@@ -202,7 +202,7 @@ class RopChainX86(RopChain):
         while quali < RopChainX86System.MAX_QUALI:
             for binary in self._binaries:
                 for gadget in self._gadgets[binary]:
-                    
+
                     if gadget.category[0] == category and gadget.category[1] == quali:
                         if badSrc and gadget.category[2]['src'] in badSrc:
                             continue
@@ -355,8 +355,8 @@ class RopChainX86(RopChain):
                     continue
                 else:
                     break;
-            
-            
+
+
 
         toReturn = self._printRopInstruction(popReg2, False)
         toReturn += self._printRebasedAddress(toHex(from_reg,4), idx=idx)
@@ -400,7 +400,7 @@ class RopChainX86(RopChain):
         regs = self._paddingNeededFor(popDst)
         for i in range(len(regs)):
             toReturn += self._printPaddingInstruction()
-        toReturn += self._printRopInstruction(sub)       
+        toReturn += self._printRopInstruction(sub)
         return (toReturn, popDst.category[2]['dst'],popSrc.category[2]['dst'])
 
     def _createNumberAddition(self, number, reg=None, badRegs=None, dontModify=None):
@@ -486,9 +486,9 @@ class RopChainX86(RopChain):
             raise RopChainError('Cannot build number gadget with xchg!')
 
         other = xchg.category[2]['src'] if xchg.category[2]['dst'] else xchg.category[2]['dst']
-        
+
         toReturn = self._createNumber(number, other, badRegs, dontModify)[0]
-        
+
         toReturn += self._printRopInstruction(xchg)
         return (toReturn, reg, other)
 
@@ -502,7 +502,7 @@ class RopChainX86(RopChain):
         pop = self._find(Category.LOAD_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
         if not pop:
             raise RopChainError('Cannot build number gadget with neg!')
-        
+
         toReturn = self._printRopInstruction(pop)
         toReturn += self._printPaddingInstruction(toHex((~number)+1)) # two's complement
         toReturn += self._printRopInstruction(neg)
@@ -514,7 +514,7 @@ class RopChainX86(RopChain):
                 try:
                     return self._createNumberNeg(number, reg, badRegs,dontModify)
                 except RopChainError as e:
-                    
+
                     if number < 0x50:
                         try:
                             return self._createNumberXOR(number, reg, badRegs,dontModify)
@@ -569,9 +569,9 @@ class RopChainX86(RopChain):
         return (toReturn,)
 
     def _createOpcode(self, opcode):
-        
+
         return self._printRopInstruction(self._searchOpcode(opcode))
-       
+
 
     def _searchOpcode(self, opcode):
         r = Ropper()
@@ -610,7 +610,7 @@ class RopChainX86System(RopChainX86):
         self._printer.println('\nwrite command into data section\neax 0xb\nebx address to cmd\necx address to null\nedx address to null\n')
 
         section = self._binaries[0].getSection(b'.data')
-        
+
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
         chain_tmp = '\n'
@@ -719,7 +719,7 @@ class RopChainX86Mprotect(RopChainX86):
         self._printer.println('eax 0x7b\nebx address\necx size\nedx 0x7 -> RWE\n')
 
         chain = self._printHeader()
-        
+
         chain += 'shellcode = \'\\xcc\'*100\n\n'
 
         gadgets = []
@@ -816,7 +816,7 @@ class RopChainX86VirtualProtect(RopChainX86):
                     return None
                 for descriptorData in imports:
                     for thunk in descriptorData.importNameTable:
-                
+
                         if thunk.importByName and thunk.importByName.name == 'VirtualProtect':
                             return thunk.rva + binary.imageBase
             else:
@@ -826,7 +826,7 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
     def create(self, param=None):
-        
+
         self._printer.printInfo('Ropchain Generator for VirtualProtect:\n')
         self._printer.println('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
         address = None
@@ -840,13 +840,13 @@ class RopChainX86VirtualProtect(RopChainX86):
                 raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
         else:
             given = True
-        
+
         writeable_ptr = self._binaries[0].getWriteableSection().offset + 0x4
         jmp_esp = self._createJmp()
         ret_addr = self._searchOpcode('c3')
 
         chain = self._printHeader()
-        
+
         chain += '\n\nshellcode = \'\\xcc\'*100\n\n'
         gadgets = []
         to_extend = []
@@ -856,7 +856,7 @@ class RopChainX86VirtualProtect(RopChainX86):
             self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: 0x%x' % address)
             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
             gadgets.append((self._createNumber, [0x90909090],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
-            
+
             to_extend = ['esi','si']
             if jmp_esp:
                 gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
@@ -871,28 +871,28 @@ class RopChainX86VirtualProtect(RopChainX86):
             if given:
                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
             else:
-                gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))                
+                gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
             pop_ebp = self._searchOpcode('5dc3')
             if pop_ebp:
                 gadgets.append((self._createAddress, [pop_ebp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
 
-        
+
         gadgets.append((self._createNumber, [0x1],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
         gadgets.append((self._createAddress, [writeable_ptr],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']+to_extend))
-        
+
         gadgets.append((self._createNumber, [0x40],{'reg':'edx'},['edx', 'dx', 'dh', 'dl']+to_extend))
-        
+
         gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))
 
         self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)
-        
+
         self._printer.printInfo('Look for pushad gadget')
         chain_tmp += self._createPushad()
 
         if not got_jmp_esp and jmp_esp:
             chain_tmp += self._createAddress(jmp_esp.lines[0][0])[0]
-        
+
 
         chain += self._printRebase()
         chain += 'rop = \'\'\n'
@@ -988,12 +988,12 @@ class RopChainX86VirtualProtect(RopChainX86):
 #                 raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
 #         else:
 #             given = True
-        
+
 #         jmp_esp = self._createJmp()
 #         ret_addr = self._searchOpcode('c3')
 
 #         chain = self._printHeader()
-        
+
 #         chain += '\n\nshellcode = \'\\xcc\'*100\n\n'
 #         gadgets = []
 #         to_extend = []
@@ -1016,24 +1016,24 @@ class RopChainX86VirtualProtect(RopChainX86):
 #             if given:
 #                 gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
 #             else:
-#                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))                
+#                 gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
 
 
-        
+
 #         gadgets.append((self._createNumber, [size],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']+to_extend))
 #         gadgets.append((self._createNumber, [0x40],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']+to_extend))
 #         if jmp_esp:
 #             gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
 #         gadgets.append((self._createNumber, [0x1000],{'reg':'edx'},['edx', 'dx', 'dh', 'dl']+to_extend))
-        
+
 #         gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))
 
 #         self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
 #         chain_tmp += self._createDependenceChain(gadgets)
-        
+
 #         self._printer.printInfo('Look for pushad gadget')
 #         chain_tmp += self._createPushad()
-        
+
 
 #         chain += self._printRebase()
 #         chain += 'rop = \'\'\n'
@@ -1042,4 +1042,3 @@ class RopChainX86VirtualProtect(RopChainX86):
 #         chain += 'print(rop)\n'
 
 #         print(chain)
-

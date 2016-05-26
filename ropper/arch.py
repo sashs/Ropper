@@ -25,6 +25,11 @@ from ropper.search.search import SearcherARM
 from re import compile
 from capstone import *
 from . import gadget
+# Optional keystone support
+try:
+    import keystone
+except:
+    pass
 
 
 class Architecture(AbstractSingleton):
@@ -34,6 +39,8 @@ class Architecture(AbstractSingleton):
 
         self._arch = arch
         self._mode = mode
+
+        self._ksarch = (None,None)
 
         self._addressLength = addressLength
         self._align = align
@@ -61,6 +68,10 @@ class Architecture(AbstractSingleton):
 
     def _initCategories(self):
         pass
+
+    @property
+    def ksarch(self):
+        return self._ksarch
 
     @property
     def arch(self):
@@ -99,6 +110,9 @@ class ArchitectureX86(Architecture):
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_X86, CS_MODE_32, 4, 1)
 
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_32)
+
         self._searcher = Searcherx86()
 
     def _initGadgets(self):
@@ -109,13 +123,12 @@ class ArchitectureX86(Architecture):
         self._endings[gadget.GadgetType.SYS] = [(b'\xcd\x80', 2),                           # int 0x80
                                                 (b'\x0f\x05',2),                            # syscall
                                                 (b'\x0f\x34',2),                            # sysenter
-                                                (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]     
+                                                (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]
 
         self._endings[gadget.GadgetType.JOP] = [(
             b'\xff[\x20\x21\x22\x23\x26\x27]', 2),
             (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),
             (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),
-            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),
             (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),
             (b'\xff[\x14\x24]\x24', 3),
             (b'\xff[\x55\x65]\x00', 3),
@@ -123,8 +136,8 @@ class ArchitectureX86(Architecture):
             (b'\xff\xa4\x24[\x00-\xff]{4}', 7),
             (b'\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 3),                             # call [reg + value]
             (b'\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 3),                             # jmp [reg + value]
-            (b'\xe9[\x00-\xff]{4}', 5),                                                 # jmp value
-            (b'\xe8[\x00-\xff]{4}', 5),                                                 # call value
+            #(b'\xe9[\x00-\xff]{4}', 5),                                                 # jmp value
+            #(b'\xe8[\x00-\xff]{4}', 5),                                                 # call value
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
@@ -154,6 +167,9 @@ class ArchitectureX86_64(ArchitectureX86):
     def __init__(self):
         ArchitectureX86.__init__(self)
 
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_64)
+
         self._endings[gadget.GadgetType.SYS] = [(b'\x0f\x05',2),
                                                 (b'\x0f\x05\xc3',3)]                            # syscall
 
@@ -177,8 +193,8 @@ class ArchitectureX86_64(ArchitectureX86):
                 gadget.Category.PUSHAD : (('^pushal$',),('mov','call','jmp')),
                 gadget.Category.NEG_REG : (('^neg (?P<dst>...)$',),('mov','call','jmp')),
                 gadget.Category.SYSCALL : (('^syscall$',),('mov','call','jmp'))}
-                
-        
+
+
 
 
 
@@ -187,6 +203,9 @@ class ArchitectureMips(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_MIPS, CS_MODE_32, 4, 4)
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_32)
 
     def _initGadgets(self):
         super(ArchitectureMips, self)._initGadgets()
@@ -201,19 +220,25 @@ class ArchitectureMips64(ArchitectureMips):
     def __init__(self):
         ArchitectureMips.__init__(self)
 
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_64)
+
         self._mode = CS_MODE_64
 
         self._addressLength = 8
 
     def _initGadgets(self):
         super(ArchitectureMips64, self)._initGadgets()
-        
+
 
 class ArchitectureArm(Architecture):
 
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
         self._searcher = SearcherARM()
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_ARM)
 
     def _initGadgets(self):
         super(ArchitectureArm, self)._initGadgets()
@@ -228,6 +253,9 @@ class ArchitectureArmThumb(Architecture):
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
         self._searcher = SearcherARM()
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_THUMB)
 
     def _initGadgets(self):
         super(ArchitectureArmThumb, self)._initGadgets()
@@ -244,11 +272,14 @@ class ArchitectureArm64(Architecture):
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
 
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_BIG_ENDIAN)
+
     def _initGadgets(self):
         super(ArchitectureArm64, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x5f\xd6', 4), # ret <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4), # ret <reg> (x24 - x28) 
-                                                (b'\xc0\x03\x5f\xd6', 4)] # ret 
+                                                (b'[\x00\x20\x40\x60\x80]\x03\x5f\xd6', 4), # ret <reg> (x24 - x28)
+                                                (b'\xc0\x03\x5f\xd6', 4)] # ret
 
         self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # br <reg>
                                                 (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # br <reg>
@@ -262,6 +293,9 @@ class ArchitecturePPC(Architecture):
     def __init__(self):
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
 
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_32)
+
     def _initGadgets(self):
         super(ArchitecturePPC, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
@@ -272,6 +306,9 @@ class ArchitecturePPC64(ArchitecturePPC):
     def __init__(self):
 
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_64)
 
 
 

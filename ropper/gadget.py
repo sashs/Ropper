@@ -43,11 +43,13 @@ class Gadget(object):
 
     def __init__(self, binary, section):
         super(Gadget, self).__init__()
-        self.__arch = binary.arch
+        self.__arch = None
         self.__lines = []
         self._gadget = ''
         self.__category = None
         self._binary = binary
+        if binary:
+            self.__arch = binary.arch
         self._section = section
         self._bytes = bytearray()
 
@@ -59,20 +61,31 @@ class Gadget(object):
     def section(self):
         return self._section
 
+    @section.setter
+    def section(self, section):
+        self._section = section
+
     @property
     def binary(self):
-        return self._binary    
+        return self._binary
+
+    @binary.setter
+    def binary(self, binary):
+        self._binary = binary
+        self.__arch = binary.arch
 
     @property
     def bytes(self):
         return self._bytes
-   
-    @bytes.setter 
+
+    @bytes.setter
     def bytes(self, bytes):
         self._bytes = bytes
 
     @property
     def imageBase(self):
+        if not self._binary:
+            return 0
         return self._binary.imageBase
 
     @property
@@ -89,7 +102,7 @@ class Gadget(object):
 
         if bytes:
             self.bytes += bytes
-        
+
 
     def match(self, filter):
         if not filter or len(filter) == 0:
@@ -121,7 +134,7 @@ class Gadget(object):
             else:
                 toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ cstr('; ', Color.LIGHT_BLUE)
 
-        
+
         return toReturn
 
     def simpleString(self):
@@ -193,7 +206,7 @@ class GadgetDAO(object):
         scount = 0
         gcount = 0
         endcount = len(gadgets)
-        saved_sections = {}        
+        saved_sections = {}
 
         for gadget in gadgets:
             if gadget._section not in saved_sections:
@@ -201,7 +214,7 @@ class GadgetDAO(object):
                 saved_sections[section] = scount
                 c.execute('insert into sections values(?, ?,?,?,?)' ,(scount, section.name, section.offset, len(gadgets), hashlib.md5(section.bytes).hexdigest()))
                 scount +=1
-            
+
             c.execute('insert into gadgets values(?,?,?)', (gcount, saved_sections[gadget._section], len(gadget.lines)))
 
             for addr, line, mnem, op in gadget.lines:
@@ -220,7 +233,7 @@ class GadgetDAO(object):
         if 'sqlite3' not in globals():
             self._printer.printError('sqlite is not installed!')
             return
-       
+
         execSect = binary.executableSections
         gcount = 0
         lcount = 0
@@ -264,7 +277,7 @@ class GadgetDAO(object):
 
             if self._printer:
                 self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
-        if self._printer:         
+        if self._printer:
             self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
         conn.close()
         return gadgets

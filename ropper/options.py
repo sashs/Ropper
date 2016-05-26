@@ -134,7 +134,11 @@ epilog="""example uses:
         parser.add_argument(
             '--hex', help='Prints the selected sections in a hex format', action='store_true')
         parser.add_argument(
-            '--disassemble', help='Disassembles instruction at address <address> (0x12345678:L3). The count of instructions to disassemble can be specified (0x....:L...)', metavar='<address:length>')
+            '--asm', help='A string to assemble', nargs='+')
+        parser.add_argument(
+            '--disasm', help='A string to disassemble')
+        parser.add_argument(
+            '--disassemble-address', help='Disassembles instruction at address <address> (0x12345678:L3). The count of instructions to disassemble can be specified (0x....:L...)', metavar='<address:length>')
         parser.add_argument(
             '-i', '--info', help='Shows file header [ELF/PE/Mach-O]', action='store_true')
         parser.add_argument('-e', help='Shows EntryPoint', action='store_true')
@@ -163,7 +167,7 @@ epilog="""example uses:
         parser.add_argument(
             '--stack-pivot', help='Prints all stack pivot gadgets',action='store_true')
         parser.add_argument(
-            '--inst-count', help='Specifies the max count of instructions in a gadget (default: 10)', metavar='<n bytes>', type=int, default=6)
+            '--inst-count', help='Specifies the max count of instructions in a gadget (default: 6)', metavar='<n bytes>', type=int, default=6)
         parser.add_argument(
             '--search', help='Searches for gadgets', metavar='<regex>')
         parser.add_argument(
@@ -172,6 +176,8 @@ epilog="""example uses:
             '--filter', help='Filters gadgets', metavar='<regex>')
         parser.add_argument(
             '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
+        parser.add_argument(
+            '--instructions', help='Searchs for instructions (e.g. "jmp esp", "pop eax; ret")', metavar='<instructions>')
         parser.add_argument(
             '--type', help='Sets the type of gadgets [rop, jop, sys, all] (default: all)', metavar='<type>', default='all')
         parser.add_argument(
@@ -194,7 +200,7 @@ epilog="""example uses:
 
         self.nocolor = self.__args.nocolor and not self.isWindows()
 
-        if not self.__args.console and not self.__args.file and not self.__args.version:
+        if not self.__args.asm and not self.disasm and not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
 
         if self.__args.I:

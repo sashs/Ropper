@@ -24,19 +24,20 @@ from ropper.arch import *
 import unittest
 
 # class ELF_ARM(unittest.TestCase):
-
+#
 #     def setUp(self):
 #         self.file = Loader.open('test-binaries/ls-arm')
-
+#         self.file.arch = ARM
+#
 #     def test_general(self):
-#         self.assertEqual(self.file.arch, x86)
+#         self.assertEqual(self.file.arch, ARM)
 #         self.assertEqual(self.file.type, Type.ELF)
-        
-
+#
+#
 #     def test_gadgets(self):
-#         ropper = Ropper(self.file)
-#         gadgets = ropper.searchRopGadgets()
-
+#         ropper = Ropper()
+#         gadgets = ropper.searchGadgets(self.file)
+#
 #         gadget = gadgets[0]
 #         self.assertEqual(len(gadgets), 1711)
 #         self.assertEqual(gadget.lines[0][0], 0x8567)
@@ -53,7 +54,7 @@ class ELF_ARM_THUMB(unittest.TestCase):
 
     def setUp(self):
         self.file = Loader.open('test-binaries/ls-arm')
-        
+
 
     def test_general(self):
         self.assertEqual(self.file.arch, ARMTHUMB)
@@ -64,7 +65,7 @@ class ELF_ARM_THUMB(unittest.TestCase):
         gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertGreater(len(gadgets), 1700)
+        self.assertGreater(len(gadgets), 1300)
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x00008000)
         self.file.imageBase = 0x0

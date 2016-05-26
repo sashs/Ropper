@@ -19,7 +19,7 @@
 
 from ropper.loaders.loader import Loader,Type
 from ropper.printer.printer import FileDataPrinter
-from ropper.rop import Ropper
+from ropper.rop import Ropper, FORMAT
 from ropper.common.error import *
 from ropper.gadget import GadgetType
 from ropper.gadget import GadgetDAO
@@ -142,6 +142,23 @@ class Console(cmd.Cmd):
         else:
             raise ArgumentError('Invalid option: {}'.format(option))
 
+    def __asm(self, code, arch, format):
+        r = Ropper()
+        if format == 'R':
+            f = FORMAT.RAW
+        elif format == 'H':
+            f = FORMAT.HEX
+        elif format == 'S':
+            f = FORMAT.STRING
+        else:
+            raise RopperError('wrong format: %s' % f)
+
+        self.__cprinter.println(r.assemble(code, arch, f))
+
+    def __disasm(self, code, arch):
+        r = Ropper()
+        self.__cprinter.println(r.disassemble(code, arch))
+
     def __searchJmpReg(self, regs):
         r = Ropper()
         regs = regs.split(',')
@@ -150,13 +167,18 @@ class Console(cmd.Cmd):
         self.__printGadgets(gadgets, header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchOpcode(self.binary,opcode)
         self.__printGadgets(gadgets, header='Opcode')
-       
+
+    def __searchInstructions(self, code):
+        r = Ropper(self.__searchGadgetCallback)
+        gadgets = r.searchInstructions(self.binary,code)
+        self.__printGadgets(gadgets, header='Instructions')
+
 
     def __searchPopPopRet(self):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         pprs = r.searchPopPopRet(self.binary)
         pprs = ropper.filterBadBytes(pprs, self.__options.badbytes)
         self.__printGadgets(pprs, header='POP;POP;RET Instructions')
@@ -175,7 +197,7 @@ class Console(cmd.Cmd):
         self.__cprinter.println('\n%d gadgets found' % counter)
 
     def __searchGadgets(self, binary):
-        r = Ropper(self.__cprinter)
+        r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchGadgets(binary, instructionCount=self.__options.inst_count, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
         binary.gadgets = gadgets
@@ -185,6 +207,15 @@ class Console(cmd.Cmd):
             self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary], self.__printProgress)
 
         return self.__gadgets[binary]
+
+    def __searchGadgetCallback(self, section, gadgets, progress):
+        if gadgets is not None:
+            self.__cprinter.printProgress('loading...', progress)
+
+            if progress == 1.0:
+                self.__cprinter.finishProgress()
+        else:
+            self.__cprinter.printInfo('Loading gadgets for section: ' + section.name)
 
     def __printProgress(self, gadget, gnr, count):
         if gnr >= 0:
@@ -201,14 +232,14 @@ class Console(cmd.Cmd):
         for binary in self.__binaries:
             self.__cprinter.printInfo('Load %s' % binary.fileName)
             self.__searchGadgets(binary)
-            
+
 
     def __loadUnloadedGadgets(self):
 
         for binary in self.__binaries:
             if not binary.loaded:
                 self.__searchGadgets(binary)
-                
+
 
     def __searchAndPrintGadgets(self):
 
@@ -309,7 +340,7 @@ class Console(cmd.Cmd):
 
     def __printStrings(self, string, sec=None):
         data = []
-        
+
         if not string or string == '[ -~]{2}[ -~]*':
             string = '[ -~]{2}[ -~]*'
         else:
@@ -324,15 +355,15 @@ class Console(cmd.Cmd):
                     data.append( (cstr(toHex(match.start() + vaddr), Color.RED) , cstr(match.group(), Color.LIGHT_GRAY)))
         printTable('Strings',(cstr('Address'), cstr('Value')), data)
 
-    def __disassemble(self, addr, length):
+    def __disassembleAddress(self, addr, length):
         eSections = self.binary.executableSections
 
         for section in  eSections:
             if section.virtualAddress <= addr and section.virtualAddress + section.size > addr:
                 ropper = Ropper()
 
-                
-                g = ropper.disassemble(section, self.binary, addr, addr - (self.binary.imageBase+section.offset), length)
+
+                g = ropper.disassembleAddress(section, self.binary, addr, addr - (self.binary.imageBase+section.offset), length)
                 if not g:
                     self.__cprinter.printError('Cannot disassemble address: %s' % toHex(addr))
                     return
@@ -364,6 +395,22 @@ class Console(cmd.Cmd):
             self.__printData('entry_point')
         elif options.imports:
             self.__printData('imports')
+        elif options.asm:
+            code = options.asm[0]
+            format = 'H'
+            if len(options.asm) == 2:
+                code = options.asm[0]
+                format = options.asm[1]
+            arch = getArchitecture('x86')
+            if options.arch:
+                arch = getArchitecture(options.arch)
+            self.__asm(code, arch, format)
+        elif options.disasm:
+            code = options.disasm
+            arch = getArchitecture('x86')
+            if options.arch:
+                arch = getArchitecture(options.arch)
+            self.__disasm(code, arch)
         elif options.set:
             self.__set(options.set, True)
         elif options.unset:
@@ -379,12 +426,14 @@ class Console(cmd.Cmd):
             self.__printGadgets(self.__binary.gadgets, Category.STACK_PIVOT)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
+        elif options.instructions:
+            self.__searchInstructions(self.__options.instructions)
         elif options.string:
             self.__printStrings(options.string, options.section)
         elif options.hex and options.section:
             self.__printSectionInHex(options.section)
-        elif options.disassemble:
-            split = options.disassemble.split(':')
+        elif options.disassemble_address:
+            split = options.disassemble_address.split(':')
             length = 1
             if not isHex(split[0]):
                 raise RopperError('Number have to be in hex format 0x....')
@@ -394,7 +443,7 @@ class Console(cmd.Cmd):
                     length = int(split[1][1:])
                 else:
                     raise RopperError('Length have to be in the following format L + Number e.g. L3')
-            self.__disassemble(int(split[0],16), length)
+            self.__disassembleAddress(int(split[0],16), length)
         #elif options.checksec:
          #   self.__checksec()
         elif options.chain:
@@ -417,7 +466,7 @@ class Console(cmd.Cmd):
                         self.__gadgets[binary] = binary.gadgets
                     if not self.__options.all:
                         self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
-        
+
 
 
 
@@ -499,7 +548,7 @@ class Console(cmd.Cmd):
             path = cwd
 
         return [path+i for i in os.listdir(cwd) if i.startswith(file)]
-        
+
 
     def help_file(self):
         self.__printHelpText('file <file>|<idx>', 'file - loads a file\nidx - select this loaded file')
@@ -621,6 +670,19 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
 
         self.__printHelpText('search [/<quality>/] <string>',desc )
+
+    @safe_cmd
+    def do_instructions(self, text):
+        if len(text) == 0:
+            self.help_instructions()
+            return
+
+        self.__searchInstructions(text)
+
+    def help_instructions(self):
+        self.__printHelpText(
+            'instructions <instructions>', 'searchs instructions in executable sections')
+
 
     @safe_cmd
     def do_opcode(self, text):
@@ -827,7 +889,63 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText('hex <section>','Prints the section <section> in hex format')
 
     @safe_cmd
-    def do_disassemble(self, text):
+    def do_asm(self, text):
+        if not text:
+            self.help_asm()
+            return
+
+        text = text.strip()
+        format = 'H'
+        if text[-2:] in (' H', ' R', ' S'):
+            format = text[-1:]
+            text = text[:-2]
+
+        arch = None
+        if text.startswith('-a'):
+            text = text[3:]
+            index = text.index(' ')
+            arch = text[:index]
+            text = text[index:]
+            arch = getArchitecture(arch)
+
+        if not arch:
+            if self.__binary:
+                arch = self.binary.arch
+            else:
+                arch = getArchitecture('x86')
+
+        self.__asm(text, arch, format)
+
+
+    def help_asm(self):
+        self.__printHelpText('asm [-a <arch>] <code> [<format>]','assembles the given code. \n Format:\nR - Raw\nS - String\nH - Hex\nDefault: H')
+
+    @safe_cmd
+    def do_disasm(self, text):
+        if not text:
+            self.help_disasm()
+            return
+        arch = None
+        if text.startswith('-a'):
+            text = text[3:]
+            index = text.index(' ')
+            arch = text[:index]
+            text = text[index:].strip()
+            arch = getArchitecture(arch)
+
+        if not arch:
+            if self.__binary:
+                arch = self.binary.arch
+            else:
+                arch = getArchitecture('x86')
+
+        self.__disasm(text, arch)
+
+    def help_disasm(self):
+        self.__printHelpText('disasm <bytes>','disassembles the given bytes')
+
+    @safe_cmd
+    def do_disass_address(self, text):
         split = text.split(' ')
         length = 1
         if not isHex(split[0]):
@@ -841,10 +959,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 return
 
         addr = int(split[0], 16)
-        self.__disassemble(addr, length)
+        self.__disassembleAddress(addr, length)
 
-    def help_disassemble(self):
-        self.__printHelpText('disassemble <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
+    def help_disass_address(self):
+        self.__printHelpText('disassembleAddress <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
 
     @safe_cmd
     def do_stack_pivot(self, text):
@@ -974,7 +1092,7 @@ class ELFConsole(EditConsoleMixin,cmd.Cmd):
             ehdr = self._binary.ehdr
 
             self._printer.println('ehdr')
-            
+
             for field in ehdr._fields_:
                 self._printer.println('    %s' % field[0],'=',(bytes(ehdr.__getattribute__(field[0]))))
 
@@ -993,7 +1111,7 @@ class ELFConsole(EditConsoleMixin,cmd.Cmd):
     def do_shdr(self, text):
         shdrs = self._binary.shdrs
         if not text:
-            
+
 
             for i in range(len(shdrs)):
                 self._printer.println('shdr [%d]' % i)
@@ -1015,7 +1133,7 @@ class ELFConsole(EditConsoleMixin,cmd.Cmd):
                 for field in shdr._fields_:
                     self._printer.println('    %s' % field[0],'=',hex(shdr.__getattribute__(field[0]))[:-1])
 
-  
+
 
 
 

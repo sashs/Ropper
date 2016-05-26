@@ -46,7 +46,7 @@ class RopChainX86_64(RopChain):
 
     def _printRebase(self):
         toReturn = ''
-        
+
         for binary,section in self._usedBinaries:
             imageBase = binary.imageBase
             toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase ,8), binary.fileName))
@@ -93,7 +93,7 @@ class RopChainX86_64(RopChain):
             if found:
                 continue
             try:
-                fail = [] 
+                fail = []
                 chain2 = ''
                 dontModify = []
                 badRegs = []
@@ -106,7 +106,7 @@ class RopChainX86_64(RopChain):
                     dontModify.extend(g[3])
                     fail.append(g)
                     chain2 += g[0](*g[1], badRegs=badRegs, dontModify=dontModify,**g[2])[0]
-                
+
 
                 cur_chain += chain2
                 break
@@ -121,17 +121,17 @@ class RopChainX86_64(RopChain):
                     cur_chain += (fa[2]['reg']) + ', '
                 cur_chain += '\n'
                 cur_chain += chain2
-                
+
             failed.append(tuple(fail))
         else:
             self._printer.println('')
             self._printer.printInfo('Cannot create chain which fills all registers')
         #    print('Impossible to create complete chain')
-        self._printer.println('')    
+        self._printer.println('')
         return cur_chain
 
     def _isModifiedOrDereferencedAccess(self, gadget, dontModify):
-        
+
         regs = []
         for line in gadget.lines[1:]:
             line = line[1]
@@ -157,7 +157,7 @@ class RopChainX86_64(RopChain):
 
 
     def _printRopInstruction(self, gadget, padding=True):
-        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget._binary, gadget._section)),toHex(gadget.lines[0][0],8), gadget.simpleInstructionString()))
+        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget._binary, gadget._section)),toHex(gadget.lines[0][0],8), gadget.simpleString()))
         if padding:
             regs = self._paddingNeededFor(gadget)
             for i in range(len(regs)):
@@ -195,9 +195,9 @@ class RopChainX86_64(RopChain):
         while quali < RopChainSystemX86_64.MAX_QUALI:
             for binary in self._binaries:
                 for gadget in self._gadgets[binary]:
-                    
+
                     if gadget.category[0] == category and gadget.category[1] == quali:
-                        
+
                         if badSrc and gadget.category[2]['src'] in badSrc:
                             continue
                         if badDst and gadget.category[2]['dst'] in badDst:
@@ -353,8 +353,8 @@ class RopChainX86_64(RopChain):
                     continue
                 else:
                     break;
-            
-            
+
+
 
         toReturn = self._printRopInstruction(popReg2, False)
         toReturn += self._printRebasedAddress(toHex(from_reg,8), idx=idx)
@@ -398,7 +398,7 @@ class RopChainX86_64(RopChain):
         regs = self._paddingNeededFor(popDst)
         for i in range(len(regs)):
             toReturn += self._printPaddingInstruction()
-        toReturn += self._printRopInstruction(sub)       
+        toReturn += self._printRopInstruction(sub)
         return (toReturn, popDst.category[2]['dst'],popSrc.category[2]['dst'])
 
     def _createNumberAddition(self, number, reg=None, badRegs=None, dontModify=None):
@@ -484,9 +484,9 @@ class RopChainX86_64(RopChain):
             raise RopChainError('Cannot build number gadget with xchg!')
 
         other = xchg.category[2]['src'] if xchg.category[2]['dst'] else xchg.category[2]['dst']
-        
+
         toReturn = self._createNumber(number, other, badRegs, dontModify)[0]
-        
+
         toReturn += self._printRopInstruction(xchg)
         return (toReturn, reg, other)
 
@@ -500,7 +500,7 @@ class RopChainX86_64(RopChain):
         pop = self._find(Category.LOAD_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
         if not pop:
             raise RopChainError('Cannot build number gadget with neg!')
-        
+
         toReturn = self._printRopInstruction(pop)
         toReturn += self._printPaddingInstruction(toHex((~number)+1, 8)) # two's complement
         toReturn += self._printRopInstruction(neg)
@@ -512,7 +512,7 @@ class RopChainX86_64(RopChain):
                 try:
                     return self._createNumberNeg(number, reg, badRegs,dontModify)
                 except RopChainError as e:
-                    
+
                     if number < 50:
                         try:
                             return self._createNumberXOR(number, reg, badRegs,dontModify)
@@ -567,9 +567,9 @@ class RopChainX86_64(RopChain):
         return (toReturn,)
 
     def _createOpcode(self, opcode):
-        
+
         return self._printRopInstruction(self._searchOpcode(opcode))
-       
+
 
     def _searchOpcode(self, opcode):
         r = Ropper()
@@ -607,7 +607,7 @@ class RopChainSystemX86_64(RopChainX86_64):
         self._printer.println('\nwrite command into data section\nrax 0xb\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
 
         section = self._binaries[0].getSection(b'.data')
-        
+
         length = math.ceil(float(len(cmd))/8) * 8
         chain = self._printHeader()
         chain_tmp = '\n'
@@ -710,12 +710,12 @@ class RopChainMprotectX86_64(RopChainX86_64):
         self._printer.println('rax 0xa\nrdi address\nrsi size\nrdx 0x7 -> RWE\n')
 
         chain = self._printHeader()
-        
+
         chain += 'shellcode = \'\\xcc\'*100\n\n'
 
         gadgets = []
         gadgets.append((self._createNumber, [address],{'reg':'rdi'},['rdi','edi', 'di']))
-        gadgets.append((self._createNumber, [size],{'reg':'rsi'},['rsi','esi', 'di']))
+        gadgets.append((self._createNumber, [size],{'reg':'rsi'},['rsi','esi', 'si']))
         gadgets.append((self._createNumber, [0x7],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0xa],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
 
@@ -746,4 +746,3 @@ class RopChainMprotectX86_64(RopChainX86_64):
         chain += 'print(rop)\n'
 
         print(chain)
-

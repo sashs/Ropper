@@ -20,6 +20,8 @@
 from ropper.common.utils import *
 from ropper.common.error import *
 from ropper.common.enum import Enum
+from ropper.arch import x86
+from multiprocessing import Process, Pool, Queue, cpu_count, current_process
 from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
 from struct import pack
@@ -28,13 +30,85 @@ import struct
 import sys
 import capstone
 
+# Optional keystone support
+try:
+    import keystone
+except:
+    pass
+
+
+class FORMAT(Enum):
+    _enum_ = 'RAW STRING HEX'
 
 class Ropper(object):
 
-    def __init__(self, printer=None):
+    def __init__(self, callback=None):
+        """
+        callback function signature:
+        def callback(section, gadgets, progress)
+        """
         super(Ropper, self).__init__()
-        self.printer = printer
-        
+        self.__callback = callback
+        self.__cs = None
+
+
+    def __getCs(self, arch):
+        if not self.__cs or self.__cs.arch != arch.arch or self.__cs.mode != arch.mode:
+            self.__cs = capstone.Cs(arch.arch, arch.mode)
+        return self.__cs
+
+    def assemble(self, code, arch=x86, format=FORMAT.HEX):
+        if 'keystone' not in globals():
+            raise RopperError('Keystone is not installed! Please install Keystone. \nLook at http://keystone-engine.org')
+
+        ks = keystone.Ks(arch.ksarch[0], arch.ksarch[1])
+        try:
+            byte_list =  ks.asm(code)[0]
+        except BaseException as e:
+            raise RopperError(e)
+
+        if not byte_list:
+            return "invalid"
+        to_return = byte_list
+
+        if format == FORMAT.STRING:
+            to_return = '"'
+            for byte in byte_list:
+                to_return += '\\x%02x' % byte
+
+            to_return += '"'
+        elif format == FORMAT.HEX:
+            to_return = ''
+            for byte in byte_list:
+                to_return += '%02x' % byte
+        elif format == FORMAT.RAW:
+            to_return = ''
+            for byte in byte_list:
+                to_return += '%s' % chr(byte)
+
+        return to_return
+
+    def disassemble(self, opcode, arch=x86):
+        opcode, size= self._formatOpcodeString(opcode, regex=False)
+        cs = self.__getCs(arch)
+
+        to_return = ''
+        byte_count = 0
+
+        opcode_tmp = opcode
+
+        while byte_count < size:
+            old_byte_count = byte_count
+            for i in cs.disasm(opcode_tmp,0):
+                to_return += '%s %s\n' % (i.mnemonic , i.op_str)
+                byte_count += len(i.bytes)
+
+            if old_byte_count == byte_count or byte_count < len(opcode):
+                byte_count += 1
+                opcode_tmp = opcode[byte_count:]
+                to_return += '<invalid>\n'
+
+        return to_return
 
     def searchJmpReg(self, binary, regs):
         toReturn = []
@@ -50,16 +124,16 @@ class Ropper(object):
         if binary.arch.arch != capstone.CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'jmp <reg>\' only supported on x86/x86_64')
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        cs = self.__getCs(binary.arch)
         toReturn = []
         Register = Enum('Register', 'ax cx dx bx sp bp si di')
-        
+
         for reg in regs:
             reg_tmp = reg.strip()[1:]
             if not Register[reg_tmp]:
                 raise RopperError('Invalid register: "%s"' % reg)
             insts = [toBytes(0xff , 0xe0 | Register[reg_tmp]), toBytes(0xff, 0xd0 | Register[reg_tmp]),  toBytes(0x50 | Register[reg_tmp] , 0xc3)]
-            
+
             for inst in insts:
                 toReturn.extend(self._searchOpcode(section, binary, inst, True))
 
@@ -67,7 +141,7 @@ class Ropper(object):
 
 
 
-    def _formatOpcodeString(self, opcode):
+    def _formatOpcodeString(self, opcode, regex=True):
         if len(opcode) % 2 > 0:
             raise RopperError('The length of the opcode has to be a multiple of two')
 
@@ -93,24 +167,40 @@ class Ropper(object):
             m = re.search(b'\?', opcode)
         try:
             opcode = unhexlify(opcode)
+            size = len(opcode)
+            if regex:
+                opcode = opcode.replace('\\','\\\\')
+                opcode = opcode.replace('(','\\(')
+                opcode = opcode.replace(')','\\(')
+                opcode = opcode.replace('[','\\[')
+                opcode = opcode.replace(']','\\]')
+                opcode = opcode.replace('+','\\+')
+                opcode = opcode.replace('.',r'\.')
+                opcode = opcode.replace('*',r'\*')
+                opcode = opcode.replace('?','\\?')
         except:
-            raise RopperError('Invalid characters in opcode string')
-        return opcode
+            raise RopperError('Invalid characters in opcode string: %s' % opcode)
+        return opcode,size
 
-    
+
+    def searchInstructions(self, binary, code):
+
+        opcode = self.assemble(code, binary.arch)
+        return self.searchOpcode(binary, opcode, disass=True)
+
 
     def searchOpcode(self, binary, opcode, disass=False):
-        opcode = self._formatOpcodeString(opcode)
+        opcode, size = self._formatOpcodeString(opcode)
         gadgets = []
         for section in binary.executableSections:
-            gadgets.extend(self._searchOpcode(section, binary, opcode))
-        
+            gadgets.extend(self._searchOpcode(section, binary, opcode, size, disass))
+
         return gadgets
 
 
-    def _searchOpcode(self, section, binary, opcode, disass=False):
+    def _searchOpcode(self, section, binary, opcode, size, disass=False):
 
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(binary.arch)
         toReturn = []
         code = bytearray(section.bytes)
         offset = section.offset
@@ -119,7 +209,7 @@ class Ropper(object):
 
             if (offset + match.start()) % binary.arch.align == 0:
                 if disass:
-                    for i in disassembler.disasm(struct.pack('B' * len(opcode), *code[match.start():match.end()]), offset + match.start()):
+                    for i in disassembler.disasm(struct.pack('B' * size, *code[match.start():match.end()]), offset + match.start()):
                         opcodeGadget.append(
                             i.address, i.mnemonic , i.op_str, bytes=i.bytes)
                 else:
@@ -127,7 +217,7 @@ class Ropper(object):
                         offset + match.start(), hexlify(match.group(0)).decode('utf-8'),bytes=match.group())
             else:
                 continue
-            
+
             toReturn.append(opcodeGadget)
 
         return toReturn
@@ -148,7 +238,7 @@ class Ropper(object):
             raise NotSupportedError(
                 'Wrong architecture, \'pop pop ret\' is only supported on x86/x86_64')
 
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(binary.arch)
         code = section.bytes
         offset = section.offset
         toReturn = []
@@ -161,102 +251,210 @@ class Ropper(object):
                         break
                     ppr.append(
                         i.address, i.mnemonic , i.op_str, bytes=i.bytes)
-                    
+
                     if i.mnemonic.startswith('ret'):
                         break
                 if len(ppr) == 3:
-                    
+
                     toReturn.append(ppr)
         return toReturn
 
-    def searchGadgets(self, binary, instructionCount=10, gtype=GadgetType.ALL):
+    def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.imageBase
 
-            if self.printer:
-                self.printer.printInfo('Loading gadgets for section: ' + section.name)
-            
-            newGadgets = self._searchGadgets(section=section, binary=binary, instructionCount=instructionCount, gtype=gtype)
+            if self.__callback:
+                self.__callback(section, None, 0)
+
+            newGadgets = self._searchGadgets(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
+            for gadget in newGadgets:
+                gadget.binary = binary
+                gadget.section = section
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
 
-    def _searchGadgets(self, section, binary, instructionCount=10, gtype=GadgetType.ALL):
+    # def _searchGadgets(self, section, binary, instructionCount=5, gtype=GadgetType.ALL):
 
-        toReturn = []
+    #     toReturn = []
+    #     code = bytes(bytearray(section.bytes))
+    #     offset = section.offset
+
+    #     arch = binary.arch
+
+    #     max_progress = len(code) * len(arch.endings[gtype])
+
+    #     vaddrs = set() # to prevent that the gadget is added several times
+    #     for ending in arch.endings[gtype]:
+    #         offset_tmp = 0
+    #         tmp_code = code[:]
+
+    #         match = re.search(ending[0], tmp_code)
+    #         while match:
+    #             offset_tmp += match.start()
+    #             index = match.start()
+
+    #             if offset_tmp % arch.align == 0:
+    #                 #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
+    #                 none_count = 0
+
+    #                 for x in range(0, index, arch.align):
+    #                     code_part = tmp_code[index - x-1:index + ending[1]]
+    #                     gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
+    #                     if gadget:
+    #                         if leng > instructionCount:
+    #                             break
+    #                         if gadget:
+    #                             if gadget.address not in vaddrs:
+    #                                 vaddrs.update([gadget.address])
+    #                                 toReturn.append(gadget)
+    #                         none_count = 0
+    #                     else:
+    #                         none_count += 1
+    #                         if none_count == 5:
+    #                             break
+
+    #             tmp_code = tmp_code[index+arch.align:]
+    #             offset_tmp += arch.align
+
+    #             match = re.search(ending[0], tmp_code)
+
+    #             if self.__callback:
+    #                 progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+    #                 self.__callback(section, toReturn, float(progress) / max_progress)
+
+    #     if self.__callback:
+    #         self.__callback(section, toReturn, 1.0)
+
+    #     return toReturn
+
+    def _searchGadgets(self, section, binary, instruction_count=5, gtype=GadgetType.ALL):
+
+        to_return = []
         code = bytes(bytearray(section.bytes))
-        offset = section.offset
         
+        processes = []
         arch = binary.arch
-        
+
         max_progress = len(code) * len(arch.endings[gtype])
-        
-        vaddrs = set() # to prevent that the gadget is added several times
+
+        ending_queue = Queue()
+        gadget_queue = Queue()
+        tmp_code = code[:]
+
+        process_count = min(cpu_count()+1, len(arch.endings[gtype]))
+
         for ending in arch.endings[gtype]:
-            offset_tmp = 0
-            tmp_code = code[:]
-            
-            match = re.search(ending[0], tmp_code)
-            while match:
-                offset_tmp += match.start()
-                index = match.start()
+            ending_queue.put(ending)
 
-                if offset_tmp % arch.align == 0:
-                    #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
-                    none_count = 0
-                    
-                    for x in range(0, index, arch.align):
-                        code_part = tmp_code[index - x:index + ending[1]]
-                        gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
-                        if gadget:
-                            if leng > instructionCount:
-                                break
-                            if gadget:
-                                if gadget.address not in vaddrs:
-                                    vaddrs.update([gadget.address])
-                                    toReturn.append(gadget)
-                            none_count = 0
-                        else:
-                            none_count += 1
-                            if none_count == 5:
-                                break
+        for cpu in range(process_count):
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
+            processes[cpu].daemon=True
+            processes[cpu].start()
 
-                tmp_code = tmp_code[index+arch.align:]
-                offset_tmp += arch.align
-
-                match = re.search(ending[0], tmp_code)
-                
-                if self.printer:
-                    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-                    self.printer.printProgress('loading gadgets...', float(progress) / max_progress)
-
-        if self.printer:
-            self.printer.printProgress('loading gadgets...', 1)
-            self.printer.finishProgress();
         
-        return toReturn
+        count = 0
+        ending_count = 0
+        if self.__callback:
+            self.__callback(section, to_return, 0)
+        while count < process_count:
+            gadgets = gadget_queue.get()
+            if gadgets != None:
+                to_return.extend(gadgets)
+                if self.__callback:
+                    ending_count += 1
+                    self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
+            else:
+                count +=1
+        
+        for process in processes:
+            process.terminate()
+            
+        return to_return
 
+    def __gatherGadgetsByEndings(self, section, binary, code, arch, ending_queue, gadget_queue, instruction_count):
+        
+        try:
+            while not ending_queue.empty():
+                try:
+                    ending = ending_queue.get(False)
+                    gadgets = self.__gatherGadgetsByEnding(code, arch, ending, instruction_count)
+                    
+                    gadget_queue.put(gadgets)
+                except:
+                    pass
+            
+        except BaseException as e:
+            raise RopperError(e)
+        
+        gadget_queue.put(None)
+        
 
-    def __createGadget(self, binary, section, code_str, codeStartAddress, ending):
-        gadget = Gadget(binary, section)
+    def __gatherGadgetsByEnding(self, code, arch, ending, instruction_count):
+        vaddrs = set() # to prevent that the gadget is added several times
+        offset_tmp = 0
+        #offset = section.offset
+        offset = 0
+        tmp_code = code[:]
+        to_return = []
+        match = re.search(ending[0], tmp_code)
+
+        while match:
+            offset_tmp += match.start()
+            index = match.start()
+
+            if offset_tmp % arch.align == 0:
+                #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
+                none_count = 0
+
+                for x in range(0, index+1, arch.align):
+                    code_part = tmp_code[index - x:index + ending[1]]
+                    gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x , ending)
+                    if gadget:
+                        if leng > instruction_count:
+                            break
+                        if gadget:
+                            #if gadget.address not in vaddrs:
+                            #    vaddrs.update([gadget.address])
+                            to_return.append(gadget)
+                        none_count = 0
+                    else:
+                        none_count += 1
+                        if none_count == 5:
+                            break
+
+            tmp_code = tmp_code[index+arch.align:]
+            offset_tmp += arch.align
+
+            match = re.search(ending[0], tmp_code)
+
+            #if self.__callback:
+            #    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+            #    self.__callback(section, toReturn, float(progress) / max_progress)
+        return to_return
+        #if self.__callback:
+        #    self.__callback(section, toReturn, 1.0)
+
+    def __createGadget(self, arch, code_str, codeStartAddress, ending):
+        gadget = Gadget(None, None)
         hasret = False
 
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(arch)
 
         for i in disassembler.disasm(code_str, codeStartAddress):
             if re.match(ending[0], i.bytes):
                 hasret = True
-                
-            if hasret or i.mnemonic not in binary.arch.badInstructions:
+            
+            if hasret or i.mnemonic not in arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
-                
-            if hasret or i.mnemonic in binary.arch.badInstructions:
+
+            if hasret or i.mnemonic in arch.badInstructions:
                 break
 
 
-            
+
         leng = len(gadget)
         if hasret and leng > 0:
             return gadget,leng
@@ -268,7 +466,7 @@ class Ropper(object):
         counter = 0
         toReturn = None
         code = bytes(bytearray(section.bytes))
-        disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
+        disassembler = self.__getCs(binary.arch)
 
         while len(gadget) < count:
             gadget = Gadget(binary, section)
@@ -294,7 +492,7 @@ class Ropper(object):
         return toReturn
 
 
-    def disassemble(self, section, binary, vaddr, offset, count):
+    def disassembleAddress(self, section, binary, vaddr, offset, count):
         if vaddr % binary.arch.align != 0:
             raise RopperError('The address doesn\'t have the correct alignment')
 
@@ -316,7 +514,7 @@ class Ropper(object):
         return gadget
 
 
-    
+
 
 
 def toBytes(*b):

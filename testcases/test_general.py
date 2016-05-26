@@ -41,13 +41,13 @@ class GeneralTests(unittest.TestCase):
         gadgets = r.searchGadgets(self.file)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [rax]')
-        self.assertGreater(len(found_gadgets), 5)
+        self.assertEqual(len(found_gadgets), 1)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [r?x]')
-        self.assertGreater(len(found_gadgets), 25)
+        self.assertEqual(len(found_gadgets), 10)
 
         found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [r?x%]')
-        self.assertGreater(len(found_gadgets), 70)
+        self.assertGreater(len(found_gadgets), 10)
 
 
     def test_badbytes(self):
@@ -122,8 +122,3 @@ class GeneralTests(unittest.TestCase):
         self.assertEqual(gadgets[0].lines[0][0], loaded_gadgets[0].lines[0][0])
 
         os.remove(db)
-
-
-
-
-

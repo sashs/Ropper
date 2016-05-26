@@ -6,7 +6,7 @@ import unittest
 class ConsoleTest(unittest.TestCase):
 
     def setUp(self):
-        
+
         self.console = Console(Options([]))
         self.console.do_file('test-binaries/ls-x86')
 
@@ -29,9 +29,9 @@ class ConsoleTest(unittest.TestCase):
         c.do_detailed('off')
         c.do_detailed('invalid')
 
-        c.do_disassemble('0x8048abc')
-        c.do_disassemble('0x9048abc')
-        c.do_disassemble('invalid')
+        c.do_disass_address('0x8048abc')
+        c.do_disass_address('0x9048abc')
+        c.do_disass_address('invalid')
 
         c.do_file('test-binaries/ls-x86')
         c.do_file('')
@@ -73,12 +73,12 @@ class ConsoleTest(unittest.TestCase):
 
         c.do_search('mov e?x')
 
-        c.do_settings('')        
-        c.do_settings('color off')        
+        c.do_settings('')
+        c.do_settings('color off')
         c.do_settings('color')
 
-        c.do_show('segments')        
-        c.do_show('sections')        
+        c.do_show('segments')
+        c.do_show('sections')
         c.do_show('file_type')
         c.do_show('architecture')
         c.do_show('imports')
@@ -90,7 +90,7 @@ class ConsoleTest(unittest.TestCase):
         c.do_type('rop')
         c.do_type('jop')
         c.do_type('all')
-        
+
         c.do_stack_pivot('')
 
 

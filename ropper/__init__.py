@@ -21,7 +21,7 @@ from .console import Console
 from .options import Options
 from .common.error import *
 from binascii import unhexlify
-from ropper.rop import Ropper
+from ropper.rop import Ropper, FORMAT
 from ropper.loaders import elf
 from ropper.loaders import pe
 from ropper.loaders import mach_o
@@ -32,7 +32,7 @@ from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIP
 
 
 app_options = None
-VERSION='1.8.7'
+VERSION='1.9.0'
 
 def start(args):
     try:
@@ -45,21 +45,18 @@ def start(args):
 
 def deleteDuplicates(gadgets, callback=None):
     toReturn = []
-    inst = []
-    gadgetString = None
+    inst = set()
+    count = 0
     for i,gadget in enumerate(gadgets):
-        gadgetString = gadget._gadget
-        gadgetHash = hash(gadgetString)
-        if gadgetHash not in inst:
-            inst.append(gadgetHash)
+        inst.add(gadget._gadget)
+        if len(inst) > count:
+            count = len(inst)
             toReturn.append(gadget)
         if callback:
             callback(gadget, i, len(gadgets))
     if callback:
         callback(None, -1, len(gadgets))
     return toReturn
-
-
 
 
 def filterBadBytes(gadgets, badbytes):
@@ -79,7 +76,7 @@ def filterBadBytes(gadgets, badbytes):
         return gadgets
 
     toReturn = []
-    
+
     badbytes = formatBadBytes(badbytes)
 
     for gadget in gadgets:
@@ -94,7 +91,3 @@ def search(gadgets, searchString):
 
     searcher = gadgets[0].binary.arch.searcher
     return searcher.search(gadgets, searchString)
-
-
-
-

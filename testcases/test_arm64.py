@@ -27,7 +27,7 @@ class ELF_ARM64(unittest.TestCase):
 
     def setUp(self):
         self.file = Loader.open('test-binaries/ls-arm64')
-        
+
 
     def test_general(self):
         self.assertEqual(self.file.arch, ARM64)
@@ -38,7 +38,7 @@ class ELF_ARM64(unittest.TestCase):
         gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertGreater(len(gadgets), 2350)
+        self.assertGreater(len(gadgets), 1900)
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x00400000)
         self.file.imageBase = 0x0

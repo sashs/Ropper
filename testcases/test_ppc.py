@@ -31,14 +31,14 @@ class ELF_PPC(unittest.TestCase):
     def test_general(self):
         self.assertEqual(self.file.arch, PPC)
         self.assertEqual(self.file.type, Type.ELF)
-        
+
 
     def test_gadgets(self):
         ropper = Ropper()
         gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertGreater(len(gadgets), 1500)
+        self.assertGreater(len(gadgets), 1400)
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x10000000)
         self.file.imageBase = 0x0
@@ -52,14 +52,14 @@ class ELF_PPC(unittest.TestCase):
         regs=['esp']
         with self.assertRaises(NotSupportedError):
             gadgets = ropper.searchJmpReg(self.file, regs)
-        
+
 
     def test_ppr(self):
         ropper = Ropper()
-        
+
         with self.assertRaises(NotSupportedError):
             gadgets = ropper.searchPopPopRet(self.file)
-        
+
 
 
 if __name__ == '__main__':

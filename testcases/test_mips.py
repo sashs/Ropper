@@ -31,14 +31,14 @@ class ELF_Mips(unittest.TestCase):
     def test_general(self):
         self.assertEqual(self.file.arch, MIPS)
         self.assertEqual(self.file.type, Type.ELF)
-        
+
 
     def test_gadgets(self):
         ropper = Ropper()
         gadgets = ropper.searchGadgets(self.file)
 
         gadget = gadgets[0]
-        self.assertGreater(len(gadgets), 2450)
+        self.assertGreater(len(gadgets), 2100)
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x400000)
         self.file.imageBase = 0x0

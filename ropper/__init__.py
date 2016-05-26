@@ -45,21 +45,18 @@ def start(args):
 
 def deleteDuplicates(gadgets, callback=None):
     toReturn = []
-    inst = []
-    gadgetString = None
+    inst = set()
+    count = 0
     for i,gadget in enumerate(gadgets):
-        gadgetString = gadget._gadget
-        gadgetHash = hash(gadgetString)
-        if gadgetHash not in inst:
-            inst.append(gadgetHash)
+        inst.add(gadget._gadget)
+        if len(inst) > count:
+            count = len(inst)
             toReturn.append(gadget)
         if callback:
             callback(gadget, i, len(gadgets))
     if callback:
         callback(None, -1, len(gadgets))
     return toReturn
-
-
 
 
 def filterBadBytes(gadgets, badbytes):

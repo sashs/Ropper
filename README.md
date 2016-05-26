@@ -18,7 +18,7 @@ Optional (not needed to run ropper just to look for gadgets):
 
 Install [Keystone](http://www.keystone-engine.org):
 
-    You will find the command here, if keystone is released.
+    You will find the command here, as soon as keystone is released.
 
 Install [filebytes](https://github.com/sashs/filebytes) with PyPi:
 

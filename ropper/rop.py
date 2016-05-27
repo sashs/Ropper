@@ -146,6 +146,12 @@ class Ropper(object):
             raise RopperError('The length of the opcode has to be a multiple of two')
 
         opcode = opcode.encode('ascii')
+        size = len(opcode)/2
+        for b in (b'5c',b'5d',b'5b',b'28',b'29',b'2b',b'2a',b'2e',b'3f'):
+           
+            if opcode.find(b) % 2 == 0:
+                opcode = opcode.replace(b,b'%s%s' % (hexlify(b'\\'),b))
+
         m = re.search(b'\?', opcode)
         while m:
 
@@ -161,24 +167,16 @@ class Ropper(object):
                 high = int(char,16)
                 start = high << 4
                 end  = start + 0xf
-                #import pdb;pdb.set_trace()
+                
                 opcode = opcode[:m.start()-1] + hexlify(b'['+pack('B',start)+b'-'+pack('B',end)+b']') + opcode[m.start()+1:]
 
             m = re.search(b'\?', opcode)
         try:
+            
             opcode = unhexlify(opcode)
-            size = len(opcode)
-            if regex:
-                opcode = opcode.replace('\\','\\\\')
-                opcode = opcode.replace('(','\\(')
-                opcode = opcode.replace(')','\\(')
-                opcode = opcode.replace('[','\\[')
-                opcode = opcode.replace(']','\\]')
-                opcode = opcode.replace('+','\\+')
-                opcode = opcode.replace('.',r'\.')
-                opcode = opcode.replace('*',r'\*')
-                opcode = opcode.replace('?','\\?')
-        except:
+            
+        except BaseException as e:
+            #raise RopperError(e)
             raise RopperError('Invalid characters in opcode string: %s' % opcode)
         return opcode,size
 
@@ -209,6 +207,7 @@ class Ropper(object):
 
             if (offset + match.start()) % binary.arch.align == 0:
                 if disass:
+                    #for i in disassembler.disasm(struct.pack('B' * size, *code[match.start():match.end()]), offset + match.start()):
                     for i in disassembler.disasm(struct.pack('B' * size, *code[match.start():match.end()]), offset + match.start()):
                         opcodeGadget.append(
                             i.address, i.mnemonic , i.op_str, bytes=i.bytes)

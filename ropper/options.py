@@ -68,31 +68,38 @@ epilog="""example uses:
   ropper.py --file /bin/ls --console
 
   [Informations]
-  ropper.py --file /bin/ls --info
-  ropper.py --file /bin/ls --imports
-  ropper.py --file /bin/ls --sections
-  ropper.py --file /bin/ls --segments
-  ropper.py --file /bin/ls --set nx
-  ropper.py --file /bin/ls --unset nx
+  Ropper.py --file /bin/ls --info
+  Ropper.py --file /bin/ls --imports
+  Ropper.py --file /bin/ls --sections
+  Ropper.py --file /bin/ls --segments
+  Ropper.py --file /bin/ls --set nx
+  Ropper.py --file /bin/ls --unset nx
 
   [Gadgets]
-  ropper.py --file /bin/ls --inst-count 5
-  ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
-  ropper.py --file /bin/ls --search "sub eax" --detail
-  ropper.py --file /bin/ls --filter "sub eax"
-  ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
-  ropper.py --file /bin/ls --opcode ffe4
-  ropper.py --file /bin/ls --opcode ffe?
-  ropper.py --file /bin/ls --opcode ??e4
-  ropper.py --file /bin/ls --detailed
-  ropper.py --file /bin/ls --ppr --nocolor
-  ropper.py --file /bin/ls --jmp esp,eax
-  ropper.py --file /bin/ls --type jop
-  ropper.py --file /bin/ls --chain execve=/bin/sh
-  ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
-  ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+  Ropper.py --file /bin/ls --inst-count 5
+  Ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
+  Ropper.py --file /bin/ls --search "sub eax" --detail
+  Ropper.py --file /bin/ls --filter "sub eax"
+  Ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
+  Ropper.py --file /bin/ls --opcode ffe4
+  Ropper.py --file /bin/ls --opcode ffe?
+  Ropper.py --file /bin/ls --opcode ??e4
+  Ropper.py --file /bin/ls --detailed
+  Ropper.py --file /bin/ls --ppr --nocolor
+  Ropper.py --file /bin/ls --jmp esp,eax
+  Ropper.py --file /bin/ls --type jop
+  Ropper.py --file /bin/ls --chain execve
+  Ropper.py --file /bin/ls --chain execve=/bin/sh
+  Ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
+  Ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+
+  [Assemble/Disassemble]
+  Ropper.py --asm "jmp esp"
+  Ropper.py --asm "mov eax, ecx; ret"
+  Ropper.py --disasm ffe4
 
   [Search]
+  Ropper.py --file /bin/ls --search <searchstring>
   ?\t\tany character
   %\t\tany string
 
@@ -134,9 +141,9 @@ epilog="""example uses:
         parser.add_argument(
             '--hex', help='Prints the selected sections in a hex format', action='store_true')
         parser.add_argument(
-            '--asm', help='A string to assemble', nargs='+')
+            '--asm', help='A string to assemble and a format of the output (H=HEX, S=STRING, R=RAW, default: H)', nargs='+', metavar="<asm> [H|S|R]")
         parser.add_argument(
-            '--disasm', help='A string to disassemble')
+            '--disasm', help='Opcode to disassemble (e.g. ffe4, 89c8c3, ...)', metavar="<opcode>")
         parser.add_argument(
             '--disassemble-address', help='Disassembles instruction at address <address> (0x12345678:L3). The count of instructions to disassemble can be specified (0x....:L...)', metavar='<address:length>')
         parser.add_argument(

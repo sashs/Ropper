@@ -50,15 +50,15 @@ Usage
 
     usage: Ropper.py [-h] [-v] [--console] [-f <file>] [-r] [--db <dbfile>]
                  [-a <arch>] [--section <section>] [--string [<string>]]
-                 [--hex] [--asm ASM [ASM ...]] [--disasm DISASM]
-                 [--disassemble-address <address:length>] [-i] [-e]
-                 [--imagebase] [-c] [-s] [-S] [--imports] [--symbols]
-                 [--set <option>] [--unset <option>] [-I <imagebase>] [-p]
-                 [-j <reg>] [--stack-pivot] [--inst-count <n bytes>]
-                 [--search <regex>] [--quality <quality>] [--filter <regex>]
-                 [--opcode <opcode>] [--instructions <instructions>]
-                 [--type <type>] [--detailed] [--all] [--chain <generator>]
-                 [-b <badbytes>] [--nocolor]
+                 [--hex] [--asm <asm> [H|S|R] [<asm> [H|S|R] ...]]
+                 [--disasm <opcode>] [--disassemble-address <address:length>]
+                 [-i] [-e] [--imagebase] [-c] [-s] [-S] [--imports]
+                 [--symbols] [--set <option>] [--unset <option>]
+                 [-I <imagebase>] [-p] [-j <reg>] [--stack-pivot]
+                 [--inst-count <n bytes>] [--search <regex>]
+                 [--quality <quality>] [--filter <regex>] [--opcode <opcode>]
+                 [--instructions <instructions>] [--type <type>] [--detailed]
+                 [--all] [--chain <generator>] [-b <badbytes>] [--nocolor]
 
     You can use ropper to display information about binary files in different file formats
     and you can search for gadgets to build rop chains for different architectures
@@ -95,8 +95,10 @@ Usage
     --section <section>   The data of the this section should be printed
     --string [<string>]   Looks for the string <string> in all data sections
     --hex                 Prints the selected sections in a hex format
-    --asm ASM [ASM ...]   A string to assemble
-    --disasm DISASM       A string to disassemble
+    --asm <asm> [H|S|R] [<asm> [H|S|R] ...]
+                        A string to assemble and a format of the output
+                        (H=HEX, S=STRING, R=RAW, default: H)
+    --disasm <opcode>     Opcode to disassemble (e.g. ffe4, 89c8c3, ...)
     --disassemble-address <address:length>
                         Disassembles instruction at address <address>
                         (0x12345678:L3). The count of instructions to
@@ -121,7 +123,7 @@ Usage
     --stack-pivot         Prints all stack pivot gadgets
     --inst-count <n bytes>
                         Specifies the max count of instructions in a gadget
-                        (default: 10)
+                        (default: 6)
     --search <regex>      Searches for gadgets
     --quality <quality>   The quality for gadgets which are found by search (1 =
                         best)
@@ -145,31 +147,38 @@ Usage
     ropper.py --file /bin/ls --console
 
     [Informations]
-    ropper.py --file /bin/ls --info
-    ropper.py --file /bin/ls --imports
-    ropper.py --file /bin/ls --sections
-    ropper.py --file /bin/ls --segments
-    ropper.py --file /bin/ls --set nx
-    ropper.py --file /bin/ls --unset nx
+    Ropper.py --file /bin/ls --info
+    Ropper.py --file /bin/ls --imports
+    Ropper.py --file /bin/ls --sections
+    Ropper.py --file /bin/ls --segments
+    Ropper.py --file /bin/ls --set nx
+    Ropper.py --file /bin/ls --unset nx
 
     [Gadgets]
-    ropper.py --file /bin/ls --inst-count 5
-    ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
-    ropper.py --file /bin/ls --search "sub eax" --detail
-    ropper.py --file /bin/ls --filter "sub eax"
-    ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
-    ropper.py --file /bin/ls --opcode ffe4
-    ropper.py --file /bin/ls --opcode ffe?
-    ropper.py --file /bin/ls --opcode ??e4
-    ropper.py --file /bin/ls --detailed
-    ropper.py --file /bin/ls --ppr --nocolor
-    ropper.py --file /bin/ls --jmp esp,eax
-    ropper.py --file /bin/ls --type jop
-    ropper.py --file /bin/ls --chain execve=/bin/sh
-    ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
-    ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+    Ropper.py --file /bin/ls --inst-count 5
+    Ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
+    Ropper.py --file /bin/ls --search "sub eax" --detail
+    Ropper.py --file /bin/ls --filter "sub eax"
+    Ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
+    Ropper.py --file /bin/ls --opcode ffe4
+    Ropper.py --file /bin/ls --opcode ffe?
+    Ropper.py --file /bin/ls --opcode ??e4
+    Ropper.py --file /bin/ls --detailed
+    Ropper.py --file /bin/ls --ppr --nocolor
+    Ropper.py --file /bin/ls --jmp esp,eax
+    Ropper.py --file /bin/ls --type jop
+    Ropper.py --file /bin/ls --chain execve
+    Ropper.py --file /bin/ls --chain execve=/bin/sh
+    Ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
+    Ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+
+    [Assemble/Disassemble]
+    Ropper.py --asm "jmp esp"
+    Ropper.py --asm "mov eax, ecx; ret"
+    Ropper.py --disasm ffe4
 
     [Search]
+    Ropper.py --file /bin/ls --search <searchstring>
     ?		any character
     %		any string
 

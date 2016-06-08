@@ -23,6 +23,7 @@ import ropper.common.enum as enum
 from ropper.common.utils import toHex
 from ropper.common.error import RopperError
 from ropper.common.coloredstring import *
+import ropper.arch
 
 # Optional sqlite support
 try:
@@ -107,7 +108,11 @@ class Gadget(object):
     def match(self, filter):
         if not filter or len(filter) == 0:
             return True
-        return bool(re.match(filter, self._gadget))
+        if self.__arch in (ropper.arch.ARMTHUMB, ropper.arch.ARM):
+            return bool(re.match(filter, self._gadget.replace('.w','')))
+        else:
+            return bool(re.match(filter, self._gadget))
+
 
     def addressesContainsBytes(self, badbytes):
         line =  self.__lines[0]
@@ -138,7 +143,12 @@ class Gadget(object):
         return toReturn
 
     def simpleString(self):
-        toReturn = '%s: ' % cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
+        address = self.__lines[0][0]
+        if self.__arch == ropper.arch.ARMTHUMB:
+            address += 1
+            toReturn = '%s (%s): ' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
+        else:
+            toReturn = '%s: ' % cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
         toReturn += self.simpleInstructionString()
         return toReturn
 
@@ -179,7 +189,12 @@ class Gadget(object):
     def __str__(self):
         if not len(self.__lines):
             return "empty gadget"
-        toReturn = cstr('Gadget', Color.GREEN)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.BLUE))
+        address = self.__lines[0][0]
+        if self.__arch == ropper.arch.ARMTHUMB:
+            address += 1
+            toReturn = cstr('Gadget', Color.BLUE)+': %s (%s)\n' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.YELLOW),cstr(toHex(address+ self.imageBase, self.__arch.addressLength), Color.GREEN))
+        else:
+            toReturn = cstr('Gadget', Color.BLUE)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.YELLOW))
         for line in self.__lines:
             toReturn += cstr(toHex(line[0] + self.imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 

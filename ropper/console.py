@@ -29,6 +29,7 @@ from ropper.common.coloredstring import *
 from ropper.common.utils import *
 from ropper.ropchain.ropchain import *
 from ropper.arch import getArchitecture
+from binascii import unhexlify
 from sys import stdout, stdin, stderr
 import ropper
 import cmd
@@ -267,7 +268,7 @@ class Console(cmd.Cmd):
         self.__options.nocolor = True
 
         try:
-            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter)
+            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter, unhexlify(self.__options.badbytes))
 
             if not generator:
                 self.__options.nocolor = old

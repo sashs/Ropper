@@ -266,69 +266,73 @@ class Ropper(object):
             if self.__callback:
                 self.__callback(section, None, 0)
 
-            newGadgets = self._searchGadgets(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
-            for gadget in newGadgets:
-                gadget.binary = binary
-                gadget.section = section
+            if sys.platform.startswith('win'):
+                newGadgets = self._searchGadgetsSingle(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
+            else:
+                newGadgets = self._searchGadgetsForked(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
+            
+                for gadget in newGadgets:
+                    gadget.binary = binary
+                    gadget.section = section
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
 
-    # def _searchGadgets(self, section, binary, instructionCount=5, gtype=GadgetType.ALL):
+    def _searchGadgetsSingle(self, section, binary, instruction_count=5, gtype=GadgetType.ALL):
 
-    #     toReturn = []
-    #     code = bytes(bytearray(section.bytes))
-    #     offset = section.offset
+        toReturn = []
+        code = bytes(bytearray(section.bytes))
+        offset = section.offset
 
-    #     arch = binary.arch
+        arch = binary.arch
 
-    #     max_progress = len(code) * len(arch.endings[gtype])
+        max_progress = len(code) * len(arch.endings[gtype])
 
-    #     vaddrs = set() # to prevent that the gadget is added several times
-    #     for ending in arch.endings[gtype]:
-    #         offset_tmp = 0
-    #         tmp_code = code[:]
+        vaddrs = set() # to prevent that the gadget is added several times
+        for ending in arch.endings[gtype]:
+            offset_tmp = 0
+            tmp_code = code[:]
 
-    #         match = re.search(ending[0], tmp_code)
-    #         while match:
-    #             offset_tmp += match.start()
-    #             index = match.start()
+            match = re.search(ending[0], tmp_code)
+            while match:
+                offset_tmp += match.start()
+                index = match.start()
 
-    #             if offset_tmp % arch.align == 0:
-    #                 #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
-    #                 none_count = 0
+                if offset_tmp % arch.align == 0:
+                    #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
+                    none_count = 0
 
-    #                 for x in range(0, index, arch.align):
-    #                     code_part = tmp_code[index - x-1:index + ending[1]]
-    #                     gadget, leng = self.__createGadget(binary, section, code_part, offset + offset_tmp - x, ending)
-    #                     if gadget:
-    #                         if leng > instructionCount:
-    #                             break
-    #                         if gadget:
-    #                             if gadget.address not in vaddrs:
-    #                                 vaddrs.update([gadget.address])
-    #                                 toReturn.append(gadget)
-    #                         none_count = 0
-    #                     else:
-    #                         none_count += 1
-    #                         if none_count == 5:
-    #                             break
+                    for x in range(0, index, arch.align):
+                        code_part = tmp_code[index - x-1:index + ending[1]]
+                        gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending,binary, section)
+                        if gadget:
+                            if leng > instruction_count:
+                                break
+                            if gadget:
+                                if gadget.address not in vaddrs:
+                                    vaddrs.update([gadget.address])
+                                    toReturn.append(gadget)
+                            none_count = 0
+                        else:
+                            none_count += 1
+                            if none_count == 5:
+                                break
 
-    #             tmp_code = tmp_code[index+arch.align:]
-    #             offset_tmp += arch.align
+                tmp_code = tmp_code[index+arch.align:]
+                offset_tmp += arch.align
 
-    #             match = re.search(ending[0], tmp_code)
+                match = re.search(ending[0], tmp_code)
 
-    #             if self.__callback:
-    #                 progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-    #                 self.__callback(section, toReturn, float(progress) / max_progress)
+                if self.__callback:
+                    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
+                    self.__callback(section, toReturn, float(progress) / max_progress)
 
-    #     if self.__callback:
-    #         self.__callback(section, toReturn, 1.0)
+        if self.__callback:
+            self.__callback(section, toReturn, 1.0)
 
-    #     return toReturn
+        return toReturn
 
-    def _searchGadgets(self, section, binary, instruction_count=5, gtype=GadgetType.ALL):
+    def _searchGadgetsForked(self, section, binary, instruction_count=5, gtype=GadgetType.ALL):
 
         to_return = []
         code = bytes(bytearray(section.bytes))
@@ -357,15 +361,16 @@ class Ropper(object):
         ending_count = 0
         if self.__callback:
             self.__callback(section, to_return, 0)
-        while count < process_count:
+        while ending_count < len(arch.endings[gtype]):
             gadgets = gadget_queue.get()
             if gadgets != None:
                 to_return.extend(gadgets)
+
+                ending_count += 1
                 if self.__callback:
-                    ending_count += 1
                     self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
-            else:
-                count +=1
+            #else:
+             #   count +=1
         
         for process in processes:
             process.terminate()
@@ -435,8 +440,8 @@ class Ropper(object):
         #if self.__callback:
         #    self.__callback(section, toReturn, 1.0)
 
-    def __createGadget(self, arch, code_str, codeStartAddress, ending):
-        gadget = Gadget(None, None)
+    def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
+        gadget = Gadget(binary, section)
         hasret = False
 
         disassembler = self.__getCs(arch)

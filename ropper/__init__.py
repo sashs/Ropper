@@ -32,7 +32,7 @@ from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIP
 
 
 app_options = None
-VERSION='1.9.3'
+VERSION=[1,9,4]
 
 def start(args):
     try:

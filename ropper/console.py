@@ -114,7 +114,7 @@ class Console(cmd.Cmd):
         self.binary.printer.printData(self.binary, data)
 
     def __printVersion(self):
-        self.__cprinter.println("Version: Ropper %s" % ropper.VERSION)
+        self.__cprinter.println("Version: Ropper %s" % '.'.join([str(x) for x in ropper.VERSION]))
         self.__cprinter.println("Author: Sascha Schirra")
         self.__cprinter.println("Website: http://scoding.de/ropper\n")
 

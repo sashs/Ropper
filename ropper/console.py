@@ -56,11 +56,12 @@ class Console(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.__options = options
         options.addOptionChangedCallback(self.optionChanged)
-        import readline
-        old_delims = readline.get_completer_delims() # <-
-        old_delims = old_delims.replace('-', '')
-        old_delims = old_delims.replace('/', '')
-        readline.set_completer_delims(old_delims) # <-
+        if not options.isWindows():
+            import readline
+            old_delims = readline.get_completer_delims() # <-
+            old_delims = old_delims.replace('-', '')
+            old_delims = old_delims.replace('/', '')
+            readline.set_completer_delims(old_delims) # <-
 
         self.__binary = None
         self.__binaries = []

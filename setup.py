@@ -5,7 +5,7 @@ version = '1.9.3'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
-With ropper you can show information about files in different file formats
+You can use ropper to look at information about files in different file formats
 and you can find gadgets to build rop chains for different architectures.
 """.strip()
 

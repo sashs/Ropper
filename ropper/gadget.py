@@ -165,6 +165,10 @@ class Gadget(object):
                                 if l[1].startswith(invalid):
                                     self.__category = (Category.NONE,)
                                     return self.__category
+                        d = match.groupdict()
+                        for key, value in d.items():
+                            d[key] = str(value)
+
                         self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
                         return self.__category
             self.__category = (Category.NONE,)

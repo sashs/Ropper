@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = '1.9.3'
+version = '1.9.4'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
@@ -15,6 +15,15 @@ for p in packages:
     if p.startswith('ropper'):
         valid_packages.append(p)
 
+install_requires = ['filebytes>=0.9.9']
+try:
+    import capstone
+    if capstone.cs_version()[0] < 3:
+        install_requires.append('capstone')
+    del capstone
+except:
+    install_requires.append('capstone')
+
 setup(
     name=package_name,
     version=version,
@@ -23,7 +32,7 @@ setup(
     license="GPLv2",
     author="Sascha Schirra",
     author_email="sashs@scoding.de",
-    install_requires=['capstone','filebytes>=0.9.9'],
+    install_requires=install_requires,
     url="http://scoding.de/ropper/",
     scripts=['script/ropper'],
     classifiers=[

@@ -205,7 +205,7 @@ epilog="""example uses:
             self.__argv.append('--console')
         self.__args = self.__parser.parse_args(self.__argv)
 
-        self.nocolor = self.__args.nocolor and not self.isWindows()
+        self.nocolor = self.__args.nocolor or self.isWindows()
 
         if not self.__args.asm and not self.disasm and not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')

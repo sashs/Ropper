@@ -16,7 +16,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from ropper.gadget import Category
 from ropper.common.error import *
 from ropper.common.utils import *
@@ -28,6 +27,10 @@ from re import match
 from filebytes.pe import ImageDirectoryEntry
 import itertools
 import math
+import sys
+
+if sys.version_info.major == 2:
+    range = xrange
 
 class RopChainX86(RopChain):
 
@@ -183,19 +186,23 @@ class RopChainX86(RopChain):
         return ('rop += p(%s)\n' % addr)
 
     def _containsZeroByte(self, addr):
-        return addr & 0xff == 0 or addr & 0xff00 == 0 or addr & 0xff0000 == 0 or addr & 0xff000000 == 0
+        return self.containsBadbytes(addr)
 
     def _createZeroByteFillerForSub(self, number):
         start = 0x01010101
-        for i in xrange(start, 0x02020202):
+        for i in range(start, 0x0f0f0f0f):
             if not self._containsZeroByte(i) and not self._containsZeroByte(i+number):
                 return i
 
+        raise RopChainError("Could not create Number for substract gadget")
+
     def _createZeroByteFillerForAdd(self, number):
         start = 0x01010101
-        for i in xrange(start, 0x02020202):
+        for i in range(start, 0x0f0f0f0f):
             if not self._containsZeroByte(i) and not self._containsZeroByte(number-i):
                 return i
+
+        raise RopChainError("Could not create Number for addition gadget")
 
     def _find(self, category, reg=None, srcdst='dst', badDst=[], badSrc=None, dontModify=None, srcEqDst=False, switchRegs=False ):
         quali = 1
@@ -305,7 +312,7 @@ class RopChainX86(RopChain):
     def _createLoadRegValueFrom(self, what, from_reg, dontModify=[], idx=0):
         try:
             return self._createLoadRegValueFromMov(what, from_reg, dontModify, idx)
-        except:
+        except RopChainError:
             return self._createLoadRegValueFromXchg(what, from_reg, dontModify, idx)
 
     def _createLoadRegValueFromMov(self, what, from_reg, dontModify=[], idx=0):
@@ -438,6 +445,8 @@ class RopChainX86(RopChain):
         return (toReturn, popDst.category[2]['dst'],popSrc.category[2]['dst'])
 
     def _createNumberPop(self, number, reg=None, badRegs=None, dontModify=None):
+        if self._containsZeroByte(0xffffffff):
+            raise RopChainError("Cannot write value with pop -1 and inc gadgets, because there are badbytes in the negated number")
         while True:
             popReg = self._find(Category.LOAD_REG, reg=reg, badDst=badRegs,dontModify=dontModify)
             if not popReg:
@@ -495,6 +504,8 @@ class RopChainX86(RopChain):
     def _createNumberNeg(self, number, reg=None, badRegs=None, dontModify=None):
         if number == 0:
             raise RopChainError('Cannot build number gadget with neg if number is 0!')
+        if self._containsZeroByte((~number)+1):
+            raise RopChainError("Cannot use neg gadget, because there are badbytes in the negated number")
         neg = self._find(Category.NEG_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
         if not neg:
             raise RopChainError('Cannot build number gadget with neg!')
@@ -504,6 +515,8 @@ class RopChainX86(RopChain):
             raise RopChainError('Cannot build number gadget with neg!')
 
         toReturn = self._printRopInstruction(pop)
+
+
         toReturn += self._printPaddingInstruction(toHex((~number)+1)) # two's complement
         toReturn += self._printRopInstruction(neg)
         return (toReturn, reg,)
@@ -539,7 +552,7 @@ class RopChainX86(RopChain):
                 toReturn = self._printRopInstruction(popReg)
                 toReturn += self._printPaddingInstruction(toHex(number,4))
                 return (toReturn , popReg.category[2]['dst'])
-        except:
+        except RopChainError:
             return self._createNumberXchg(number, reg, badRegs, dontModify)
 
     def _createAddress(self, address, reg=None, badRegs=None, dontModify=None):
@@ -650,7 +663,7 @@ class RopChainX86System(RopChainX86):
                 chain_tmp += self._createOpcode('cd80')
                 self._printer.printInfo('int 0x80 opcode found')
 
-            except:
+            except RopChainError:
                 try:
                     self._printer.printInfo('No int 0x80 opcode found')
                     self._printer.printInfo('Look for call gs:[0x10] opcode')
@@ -861,7 +874,7 @@ class RopChainX86VirtualProtect(RopChainX86):
             if jmp_esp:
                 gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
             got_jmp_esp = True
-        except:
+        except RopChainError:
             self._printer.printInfo('Cannot create fill esi gadget!')
             self._printer.printInfo('Try to create this chain:\n')
             self._printer.println('eax Pointer to VirtualProtect\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (pop ebp;ret)\nesi pointer to jmp [eax]\nedi ret (rop nop)\n')

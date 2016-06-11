@@ -29,6 +29,7 @@ from ropper.common.coloredstring import *
 from ropper.common.utils import *
 from ropper.ropchain.ropchain import *
 from ropper.arch import getArchitecture
+from binascii import unhexlify
 from sys import stdout, stdin, stderr
 import ropper
 import cmd
@@ -55,11 +56,12 @@ class Console(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.__options = options
         options.addOptionChangedCallback(self.optionChanged)
-        import readline
-        old_delims = readline.get_completer_delims() # <-
-        old_delims = old_delims.replace('-', '')
-        old_delims = old_delims.replace('/', '')
-        readline.set_completer_delims(old_delims) # <-
+        if not options.isWindows():
+            import readline
+            old_delims = readline.get_completer_delims() # <-
+            old_delims = old_delims.replace('-', '')
+            old_delims = old_delims.replace('/', '')
+            readline.set_completer_delims(old_delims) # <-
 
         self.__binary = None
         self.__binaries = []
@@ -112,7 +114,7 @@ class Console(cmd.Cmd):
         self.binary.printer.printData(self.binary, data)
 
     def __printVersion(self):
-        self.__cprinter.println("Version: Ropper %s" % ropper.VERSION)
+        self.__cprinter.println("Version: Ropper %s" % '.'.join([str(x) for x in ropper.VERSION]))
         self.__cprinter.println("Author: Sascha Schirra")
         self.__cprinter.println("Website: http://scoding.de/ropper\n")
 
@@ -267,7 +269,7 @@ class Console(cmd.Cmd):
         self.__options.nocolor = True
 
         try:
-            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter)
+            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter, unhexlify(self.__options.badbytes))
 
             if not generator:
                 self.__options.nocolor = old

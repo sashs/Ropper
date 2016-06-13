@@ -100,7 +100,7 @@ class Console(cmd.Cmd):
         if self.__binaries[0] != self.__binary and self.__binaries[0].arch != self.__binary.arch:
             raise RopperError('Load multiple files with different architectures is not supported')
         if not self.binary.arch:
-            raise RopperError('An architecture have to be set')
+            raise RopperError('An architecture has to be set')
         self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
 
@@ -205,10 +205,15 @@ class Console(cmd.Cmd):
         binary.gadgets = gadgets
         self.__gadgets[binary] = ropper.filterBadBytes(gadgets, self.__options.badbytes)
         if not self.__options.all:
-            self.__cprinter.printInfo('deleting double gadgets...')
-            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary], self.__printProgress)
+            self.__cprinter.printInfo('remove double gadgets')
+            self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary], self.__deleteDoubleGadgetsCallback)
 
         return self.__gadgets[binary]
+
+    def __deleteDoubleGadgetsCallback(self, gadget, added, progress):
+        self.__cprinter.printProgress('removing...', progress)
+        if progress == 1.0:
+            self.__cprinter.finishProgress()
 
     def __searchGadgetCallback(self, section, gadgets, progress):
         if gadgets is not None:
@@ -259,8 +264,10 @@ class Console(cmd.Cmd):
 
     def __search(self, gadgets, filter, quality=None):
         self.__printInfo('Searching for gadgets: '+filter)
-        found = self.binary.arch.searcher.search(gadgets, filter, quality, pprinter=self.__cprinter)
-        return found
+        self.__cprinter.println()
+        for gadget in self.binary.arch.searcher.search(gadgets, filter, quality):
+            self.__printGadget(gadget, self.__options.detailed)
+        self.__cprinter.println()
 
     def __generateChain(self, gadgets, command):
         split = command.split('=')
@@ -269,7 +276,7 @@ class Console(cmd.Cmd):
         self.__options.nocolor = True
 
         try:
-            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__cprinter, unhexlify(self.__options.badbytes))
+            generator = RopChain.get(self.__binaries, self.__gadgets,split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
 
             if not generator:
                 self.__options.nocolor = old
@@ -280,16 +287,21 @@ class Console(cmd.Cmd):
             #self.__printSeparator(behind='\n\n')
 
             if len(split) == 2:
-                generator.create(split[1])
+                chain = generator.create(split[1])
             else:
-                generator.create()
+                chain = generator.create()
 
+            self.__cprinter.println(chain)
             #self.__printSeparator(before='\n\n')
             self.__printInfo('rop chain generated!')
         except RopperError as e:
             self.__printError(e)
         self.__options.nocolor = old
 
+    def __ropchainInfoCallback(self, message):
+        if message.startswith('[*]'):
+            self.__cprinter.puts('\r'+message)
+        self.__cprinter.printInfo(message)
 
     def __checksec(self):
         sec = self.binary.checksec()
@@ -649,7 +661,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         for binary in self.__binaries:
             self.__cprinter.printInfo('Search in gadgets of file \'%s\'' % binary.fileName)
             if binary in self.__gadgets:
-                self.__printGadgets(self.__search(self.__gadgets[binary], text, qual))
+                self.__search(self.__gadgets[binary], text, qual)
 
     def help_search(self):
         desc = 'search gadgets.\n\n'

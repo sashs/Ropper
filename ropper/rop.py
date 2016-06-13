@@ -135,7 +135,7 @@ class Ropper(object):
             insts = [toBytes(0xff , 0xe0 | Register[reg_tmp]), toBytes(0xff, 0xd0 | Register[reg_tmp]),  toBytes(0x50 | Register[reg_tmp] , 0xc3)]
 
             for inst in insts:
-                toReturn.extend(self._searchOpcode(section, binary, inst, True))
+                toReturn.extend(self._searchOpcode(section, binary, inst, len(inst),True))
 
         return sorted(toReturn, key=lambda x: str(x))
 
@@ -146,7 +146,7 @@ class Ropper(object):
             raise RopperError('The length of the opcode has to be a multiple of two')
 
         opcode = opcode.encode('ascii')
-        size = len(opcode)/2
+        size = int(len(opcode)/2)
         for b in (b'5c',b'5d',b'5b',b'28',b'29',b'2b',b'2a',b'2e',b'3f'):
            
             if opcode.find(b) % 2 == 0:

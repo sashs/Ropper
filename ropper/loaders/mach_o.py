@@ -22,7 +22,7 @@ import filebytes.mach_o as macho
 
 class MachO(Loader):
 
-    def __init__(self, filename):
+    def __init__(self, filename, bytes=None):
 
         self.loaderCommands = []
         self.header = None
@@ -30,7 +30,7 @@ class MachO(Loader):
         self.__module = None
         self.__imageBase = None
 
-        super(MachO, self).__init__(filename)
+        super(MachO, self).__init__(filename, bytes)
 
     @property
     def entryPoint(self):
@@ -88,11 +88,13 @@ class MachO(Loader):
     def checksec(self):
         return {}
 
-    def _loadFile(self, fileName):
-        return macho.MachO(fileName)
+    def _loadFile(self, fileName, bytes=None):
+        return macho.MachO(fileName, bytes)
 
     @classmethod
-    def isSupportedFile(cls, fileName):
+    def isSupportedFile(cls, fileName, bytes=None):
+        if bytes:
+            return macho.MachO.isSupportedContent(bytes)
         return macho.MachO.isSupportedFile(fileName)
 
 ARCH = {int(macho.CpuType.I386): x86,

@@ -21,10 +21,11 @@ from ropper.common.error import *
 
 class RopChain(Abstract):
 
-    def __init__(self, binaries, gadgets, printer, badbytes=''):
+    def __init__(self, binaries, gadgets, callback, badbytes=''):
+        
         self._binaries = binaries
         self._usedBinaries = []
-        self._printer = printer
+        self.__callback = callback
         self._gadgets = gadgets
         self.__badbytes = badbytes
 
@@ -49,13 +50,13 @@ class RopChain(Abstract):
         return []
 
     @classmethod
-    def get(cls, binaries, gadgets, name, printer, badbytes=''):
+    def get(cls, binaries, gadgets, name, callback, badbytes=''):
         for subclass in cls.__subclasses__():
             if binaries[0].arch in subclass.archs():
                 gens = subclass.availableGenerators()
                 for gen in gens:
                     if gen.name() == name:
-                        return gen(binaries, gadgets, printer, badbytes)
+                        return gen(binaries, gadgets, callback, badbytes)
         
 
     def containsBadbytes(self, value, bytecount=4):
@@ -72,3 +73,7 @@ class RopChain(Abstract):
 
                 tmp >>= 8 
         return False
+
+    def _printMessage(self, message):
+        if self.__callback:
+            self.__callback(message)

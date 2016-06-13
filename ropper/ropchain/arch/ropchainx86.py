@@ -87,7 +87,7 @@ class RopChainX86(RopChain):
         max_perm = math.factorial(len(gadgets))
         for x in itertools.permutations(gadgets):
             counter += 1
-            self._printer.puts('\r[*] Try permuation %d / %d' % (counter, max_perm))
+            self._printMessage('[*] Try permuation %d / %d' % (counter, max_perm))
             found = False
             for y in failed:
 
@@ -120,8 +120,7 @@ class RopChainX86(RopChain):
 
             failed.append(tuple(fail))
         else:
-            self._printer.println('')
-            self._printer.printInfo('Cannot create chain which fills all registers')
+            self._printMessage('Cannot create chain which fills all registers')
             fail_tmp = None
             fail_max = []
             chain_tmp = None
@@ -139,7 +138,6 @@ class RopChainX86(RopChain):
             cur_chain += chain_tmp
 
         #    print('Impossible to create complete chain')
-        self._printer.println('')
         return cur_chain
 
     def _isModifiedOrDereferencedAccess(self, gadget, dontModify):
@@ -619,8 +617,8 @@ class RopChainX86System(RopChainX86):
         if len(cmd.split(' ')) > 1:
             raise RopChainError('No argument support for execve commands')
 
-        self._printer.printInfo('ROPchain Generator for syscall execve:\n')
-        self._printer.println('\nwrite command into data section\neax 0xb\nebx address to cmd\necx address to null\nedx address to null\n')
+        self._printMessage('ROPchain Generator for syscall execve:\n')
+        self._printMessage('\nwrite command into data section\neax 0xb\nebx address to cmd\necx address to null\nedx address to null\n')
 
         section = self._binaries[0].getSection(b'.data')
 
@@ -628,7 +626,6 @@ class RopChainX86System(RopChainX86):
         chain = self._printHeader()
         chain_tmp = '\n'
         chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
-
         badregs = []
 
         while True:
@@ -639,7 +636,7 @@ class RopChainX86System(RopChainX86):
                 chain_tmp += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
                 break
             except BaseException as e:
-                raise e
+                #raise e
                 badregs.append(ret[1])
 
         gadgets = []
@@ -648,29 +645,29 @@ class RopChainX86System(RopChainX86):
         gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
 
-        self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
+        self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)
         try:
-            self._printer.printInfo('Look for syscall gadget')
+            self._printMessage('Look for syscall gadget')
             chain_tmp += self._createSyscall()[0]
-            self._printer.printInfo('syscall gadget found')
+            self._printMessage('syscall gadget found')
 
         except RopChainError:
             try:
-                self._printer.printInfo('No syscall gadget found!')
-                self._printer.printInfo('Look for int 0x80 opcode')
+                self._printMessage('No syscall gadget found!')
+                self._printMessage('Look for int 0x80 opcode')
 
                 chain_tmp += self._createOpcode('cd80')
-                self._printer.printInfo('int 0x80 opcode found')
+                self._printMessage('int 0x80 opcode found')
 
             except RopChainError:
                 try:
-                    self._printer.printInfo('No int 0x80 opcode found')
-                    self._printer.printInfo('Look for call gs:[0x10] opcode')
+                    self._printMessage('No int 0x80 opcode found')
+                    self._printMessage('Look for call gs:[0x10] opcode')
                     chain_tmp += self._createOpcode('65ff1510000000')
-                    self._printer.printInfo('call gs:[0x10] found')
+                    self._printMessage('call gs:[0x10] found')
                 except RopChainError:
-                    self._printer.printInfo('No call gs:[0x10] opcode found')
+                    self._printMessage('No call gs:[0x10] opcode found')
 
 
         chain += self._printRebase()
@@ -678,7 +675,7 @@ class RopChainX86System(RopChainX86):
 
         chain += chain_tmp
         chain += 'print rop'
-        print(chain)
+        return chain
 
 
 class RopChainX86Mprotect(RopChainX86):
@@ -728,8 +725,8 @@ class RopChainX86Mprotect(RopChainX86):
             raise RopChainError('Missing parameter: address:size')
 
         address, size = self.__extract(param)
-        self._printer.printInfo('ROPchain Generator for syscall mprotect:\n')
-        self._printer.println('eax 0x7b\nebx address\necx size\nedx 0x7 -> RWE\n')
+        self._printMessage('ROPchain Generator for syscall mprotect:\n')
+        self._printMessage('eax 0x7b\nebx address\necx size\nedx 0x7 -> RWE\n')
 
         chain = self._printHeader()
 
@@ -741,24 +738,24 @@ class RopChainX86Mprotect(RopChainX86):
         gadgets.append((self._createNumber, [0x7],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [0x7d],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
 
-        self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
+        self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp = ''
         chain_tmp += self._createDependenceChain(gadgets)
         try:
-            self._printer.printInfo('Look for syscall gadget')
+            self._printMessage('Look for syscall gadget')
             chain_tmp += self._createSyscall()[0]
-            self._printer.printInfo('syscall gadget found')
+            self._printMessage('syscall gadget found')
         except RopChainError:
             chain_tmp += '\n# ADD HERE SYSCALL GADGET\n\n'
-            self._printer.printInfo('No syscall gadget found!')
+            self._printMessage('No syscall gadget found!')
 
-        self._printer.printInfo('Look for jmp esp')
+        self._printMessage('Look for jmp esp')
         jmp_esp = self._createJmp()
         if jmp_esp:
-            self._printer.printInfo('jmp esp found')
+            self._printMessage('jmp esp found')
             chain_tmp += jmp_esp
         else:
-            self._printer.printInfo('no jmp esp found')
+            self._printMessage('no jmp esp found')
             chain_tmp += '\n# ADD HERE JMP ESP\n\n'
 
         chain += self._printRebase()
@@ -767,7 +764,7 @@ class RopChainX86Mprotect(RopChainX86):
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'
 
-        print(chain)
+        return chain
 
 class RopChainX86VirtualProtect(RopChainX86):
     """
@@ -793,7 +790,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         if pushad:
             return self._printRopInstruction(pushad)
         else:
-            self._printer.printInfo('No pushad found!')
+            self._printMessage('No pushad found!')
             return '# Add here PUSHAD gadget!'
 
 
@@ -833,15 +830,15 @@ class RopChainX86VirtualProtect(RopChainX86):
                         if thunk.importByName and thunk.importByName.name == 'VirtualProtect':
                             return thunk.rva + binary.imageBase
             else:
-                self._printer.printError('File is not a PE file.')
+                self._printMessage('File is not a PE file.')
         return None
 
 
 
     def create(self, param=None):
 
-        self._printer.printInfo('Ropchain Generator for VirtualProtect:\n')
-        self._printer.println('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
+        self._printMessage('Ropchain Generator for VirtualProtect:\n')
+        self._printMessage('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
         address = None
         if param:
             address = self.__extract(param)
@@ -849,7 +846,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         if not address:
             address = self.__getVirtualProtectEntry()
             if not address:
-                self._printer.printError('No IAT-Entry for VirtualProtect found!')
+                self._printMessage('No IAT-Entry for VirtualProtect found!')
                 raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
         else:
             given = True
@@ -866,7 +863,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain_tmp = ''
         got_jmp_esp = False
         try:
-            self._printer.printInfo('Try to create gadget to fill esi with content of IAT address: 0x%x' % address)
+            self._printMessage('Try to create gadget to fill esi with content of IAT address: 0x%x' % address)
             chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
             gadgets.append((self._createNumber, [0x90909090],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
 
@@ -875,9 +872,9 @@ class RopChainX86VirtualProtect(RopChainX86):
                 gadgets.append((self._createAddress, [jmp_esp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))
             got_jmp_esp = True
         except RopChainError:
-            self._printer.printInfo('Cannot create fill esi gadget!')
-            self._printer.printInfo('Try to create this chain:\n')
-            self._printer.println('eax Pointer to VirtualProtect\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (pop ebp;ret)\nesi pointer to jmp [eax]\nedi ret (rop nop)\n')
+            self._printMessage('Cannot create fill esi gadget!')
+            self._printMessage('Try to create this chain:\n')
+            self._printMessage('eax Pointer to VirtualProtect\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (pop ebp;ret)\nesi pointer to jmp [eax]\nedi ret (rop nop)\n')
 
             jmp_eax = self._searchOpcode('ff20') # jmp [eax]
             gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
@@ -897,10 +894,10 @@ class RopChainX86VirtualProtect(RopChainX86):
 
         gadgets.append((self._createAddress, [ret_addr.lines[0][0]],{'reg':'edi'},['edi', 'di']+to_extend))
 
-        self._printer.printInfo('Try to create chain which fills registers without delete content of previous filled registers')
+        self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)
 
-        self._printer.printInfo('Look for pushad gadget')
+        self._printMessage('Look for pushad gadget')
         chain_tmp += self._createPushad()
 
         if not got_jmp_esp and jmp_esp:
@@ -913,7 +910,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'
 
-        print(chain)
+        return chain
 
 # class RopChainX86VirtualAlloc(RopChainX86):
 #     """
@@ -1054,4 +1051,4 @@ class RopChainX86VirtualProtect(RopChainX86):
 #         chain += 'rop += shellcode\n\n'
 #         chain += 'print(rop)\n'
 
-#         print(chain)
+#         return chain

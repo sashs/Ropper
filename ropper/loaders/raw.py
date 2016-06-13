@@ -24,8 +24,8 @@ from filebytes.binary import Binary
 
 class Raw(Loader):
 
-    def __init__(self, filename, arch=x86):
-        super(Raw, self).__init__(filename)
+    def __init__(self, filename, arch=x86, bytes=None):
+        super(Raw, self).__init__(filename, bytes)
         self.__codeSection = Section('bytes', self._binary._bytes, 0x0, 0x0)
         self.arch = arch
 
@@ -54,8 +54,8 @@ class Raw(Loader):
     def _loadDefaultArch(self):
         return None
 
-    def _loadFile(self, fileName):
-        return RawBinary(fileName)
+    def _loadFile(self, fileName, bytes=None):
+        return RawBinary(fileName, bytes)
 
     def setNX(self, enable):
         raise LoaderError('Not available for raw files')
@@ -70,7 +70,7 @@ class Raw(Loader):
 
 
     @classmethod
-    def isSupportedFile(cls, fileName):
+    def isSupportedFile(cls, fileName, bytes=None):
         return True
 
 

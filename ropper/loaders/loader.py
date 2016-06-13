@@ -54,7 +54,7 @@ class Section(object):
 
 class Loader(Abstract):
 
-    def __init__(self, filename):
+    def __init__(self, filename, bytes=None):
         super(Loader, self).__init__()
 
         self._fileName = filename
@@ -69,7 +69,7 @@ class Loader(Abstract):
         self._manualImageBase = None
         self.loaded = False
 
-        self.__binary = self._loadFile(filename)
+        self.__binary = self._loadFile(filename, bytes)
         self._arch = self._loadDefaultArch()
 
     @property
@@ -141,17 +141,17 @@ class Loader(Abstract):
         return self._fileName
 
     @classmethod
-    def isSupportedFile(cls, fileName):
+    def isSupportedFile(cls, fileName, bytes=None):
         return False
 
     @classmethod
-    def open(cls, fileName, raw=False, arch=None):
+    def open(cls, fileName, bytes=None, raw=False, arch=None):
         sc = Loader.__subclasses__()
         Raw = None
         for subclass in sc:
             if subclass.__name__ != 'Raw':
-                if not raw and subclass.isSupportedFile(fileName):
-                    return subclass(fileName)
+                if not raw and subclass.isSupportedFile(fileName, bytes):
+                    return subclass(fileName, bytes)
             else:
                 Raw = subclass
 
@@ -186,7 +186,7 @@ class Loader(Abstract):
     def gadgets(self, new_gadgets):
         self._gadgets = new_gadgets
 
-    def _loadFile(self, fileName):
+    def _loadFile(self, fileName, bytes=None):
         pass
 
     def assertFileRange(self, value):

@@ -607,7 +607,10 @@ class RopChainSystemX86_64(RopChainX86_64):
             what = '/' * (8 - len(what) % 8) + what
         return self._createWriteStringWhere(what,where, idx=idx)
 
-    def create(self, cmd='/bin/sh'):
+    def create(self, options):
+        cmd = options.get('cmd')
+        if not cmd:
+            cmd = '/bin/sh'
         if len(cmd.split(' ')) > 1:
             raise RopChainError('No argument support for execve commands')
 
@@ -709,11 +712,23 @@ class RopChainMprotectX86_64(RopChainX86_64):
             return (int(split[0], 16), int(split[1], 10))
 
 
-    def create(self, param=None):
-        if not param:
-            raise RopChainError('Missing parameter: address:size')
+    def create(self, options={}):
+        address = options.get('address')
+        size = options.get('size')
+        if not address:
+            raise RopChainError('Missing parameter: address')
+        if not size:
+            raise RopChainError('Missing parameter: size')
 
-        address, size = self.__extract(param)
+        if not match('0x[0-9a-fA-F]{1,8}', address):
+            raise RopChainError('Parameter address have to have the following format: <hexnumber>')
+
+        if not match('0x[0-9a-fA-F]+', size):
+            raise RopChainError('Parameter size have to have the following format: <hexnumber>')
+
+        address = int(address, 16)
+        size = int(size, 16)
+
         self._printMessage('ROPchain Generator for syscall mprotect:\n')
         self._printMessage('rax 0xa\nrdi address\nrsi size\nrdx 0x7 -> RWE\n')
 

@@ -37,7 +37,7 @@ except:
     pass
 
 
-class FORMAT(Enum):
+class Format(Enum):
     _enum_ = 'RAW STRING HEX'
 
 class Ropper(object):
@@ -57,7 +57,7 @@ class Ropper(object):
             self.__cs = capstone.Cs(arch.arch, arch.mode)
         return self.__cs
 
-    def assemble(self, code, arch=x86, format=FORMAT.HEX):
+    def assemble(self, code, arch=x86, format=Format.HEX):
         if 'keystone' not in globals():
             raise RopperError('Keystone is not installed! Please install Keystone. \nLook at http://keystone-engine.org')
 
@@ -71,17 +71,17 @@ class Ropper(object):
             return "invalid"
         to_return = byte_list
 
-        if format == FORMAT.STRING:
+        if format == Format.STRING:
             to_return = '"'
             for byte in byte_list:
                 to_return += '\\x%02x' % byte
 
             to_return += '"'
-        elif format == FORMAT.HEX:
+        elif format == Format.HEX:
             to_return = ''
             for byte in byte_list:
                 to_return += '%02x' % byte
-        elif format == FORMAT.RAW:
+        elif format == Format.RAW:
             to_return = ''
             for byte in byte_list:
                 to_return += '%s' % chr(byte)
@@ -154,9 +154,11 @@ class Ropper(object):
 
         m = re.search(b'\?', opcode)
         while m:
-
             if m.start() % 2 == 0:
-                if opcode[m.start()+1] == '?':
+                char = opcode[m.start()+1]
+                if type(char) == int:
+                    char = chr(char)
+                if char == '?':
                     opcode = opcode[:m.start()] + hexlify(b'[\x00-\xff]') +  opcode[m.start()+2:]
                 else:
                     raise RopperError('A ? for the highest 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')

@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2014 Sascha Schirra
+# Copyright 2016 Sascha Schirra
 #
 # This file is part of Ropper.
 #
@@ -19,10 +19,55 @@
 from __future__ import print_function
 from ropper.common.utils import isHex, toHex
 from ropper.common.coloredstring import cstr, Color
-from ropper import Ropper, deleteDuplicates, filterBadBytes, RopperError
+from ropper.common.error import RopperError
 from ropper.loaders.loader import Loader
 from ropper.ropchain.ropchain import RopChain
+from ropper.arch import getArchitecture
+from ropper.rop import Ropper, Format
 import re
+
+def deleteDuplicates(gadgets, callback=None):
+    toReturn = []
+    inst = set()
+    count = 0
+    added = False
+    for i,gadget in enumerate(gadgets):
+        inst.add(gadget._gadget)
+        if len(inst) > count:
+            count = len(inst)
+            toReturn.append(gadget)
+            added = True
+        if callback:
+            callback(gadget, added, float(i)/(len(gadgets)-1))
+            added = False
+    return toReturn
+
+
+def filterBadBytes(gadgets, badbytes):
+
+    def formatBadBytes(badbytes):
+        if len(badbytes) % 2 > 0:
+            raise RopperError('The length of badbytes has to be a multiple of two')
+
+        try:
+            badbytes = unhexlify(badbytes)
+        except:
+            raise RopperError('Invalid characters in badbytes string')
+        return badbytes
+
+
+    if not badbytes:
+        return gadgets
+
+    toReturn = []
+
+    badbytes = formatBadBytes(badbytes)
+
+    for gadget in gadgets:
+        if not badbytes or not gadget.addressesContainsBytes(badbytes):
+            toReturn.append(gadget)
+
+    return toReturn
 
 class Options(object):
 
@@ -116,6 +161,10 @@ class RopperService(object):
             cstr.COLOR = self.__options.color
 
     @property
+    def ropper(self):
+        return self.__ropper
+    
+    @property
     def options(self):
         return self.__options
 
@@ -130,13 +179,17 @@ class RopperService(object):
 
     def __prepareGadgets(self, gadgets):
 
-        if self.__options.badbytes:
-                gadgets = filterBadBytes(gadgets, self.options.badbytes)
+        gadgets = self.__filterBadBytes(gadgets)
         if not self.__options.all:
             callback = None
             if self.__callbacks and hasattr(self.__callbacks, '__deleteDoubleGadgetsProgress__'):
                 callback = self.__callbacks.__deleteDoubleGadgetsProgress__
             gadgets = deleteDuplicates(gadgets, callback)
+        return gadgets
+
+    def __filterBadBytes(self, gadgets):
+        if self.__options.badbytes:
+            gadgets = filterBadBytes(gadgets, self.options.badbytes)
         return gadgets
 
     def _badbytes_changed(self, value):
@@ -156,10 +209,16 @@ class RopperService(object):
                 return file
 
         return None
+
+    def getFileFor(self, name):
+        return self._getFileFor(name)
         
     def addFile(self, name, bytes=None, arch=None, raw=False):
         if self._getFileFor(name):
             raise RopperError('file is already added: %s' % name)
+
+        if arch:
+            arch=getArchitecture(arch)
 
         loader = Loader.open(name, bytes=bytes, raw=raw, arch=arch)
         if len(self.__files) > 0 and self.__files[0].loader.arch != loader.arch:
@@ -168,9 +227,18 @@ class RopperService(object):
         self.__files.append(file)
 
     def removeFile(self, name):
-        for idx in self.__files:
-            if self.__files[idx].loader.fileName == name:
+        for idx, fc in enumerate(self.__files):
+            if fc.loader.fileName == name:
                 del self.__files[idx]
+
+    def asm(self, code, arch='x86', format='hex'):
+        if format not in ('hex', 'string', 'raw'):
+            raise RopperError('Invalid format: %s\n Valid formats are: hex, string, raw' % format)
+        format = Format.HEX if format=='hex' else Format.STRING if format=='string' else Format.RAW
+        return self.ropper.assemble(code, arch=getArchitecture(arch), format=format)
+
+    def disasm(self, opcode, arch='x86'):
+        return self.ropper.disassemble(opcode, arch=getArchitecture(arch))
 
     def searchPopPopRet(self, name=None):
         to_return = {}
@@ -187,7 +255,7 @@ class RopperService(object):
 
         return to_return
 
-    def searchJmpReg(self, name=None, regs=['esp']):
+    def searchJmpReg(self, regs=['esp'],name=None):
         to_return = {}
 
         if not name:
@@ -200,7 +268,7 @@ class RopperService(object):
 
             to_return[name] = self.__ropper.searchJmpReg(fc.loader, regs)
 
-        return to_return
+        return self.__filterBadBytes(to_return)
 
     def searchOpcode(self, opcode, name=None):
         to_return = {}
@@ -209,28 +277,28 @@ class RopperService(object):
             for file in self.__files:
                 to_return[file.loader.fileName] = self.__ropper.searchOpcode(file.loader, opcode)
         else:
-            fc = self.__files.get(name)
+            fc = self.getFileFor(name)
             if not fc:
                 raise RopperError('No such file opened: %s' % name)
 
             to_return[name] = self.__ropper.searchOpcode(fc.loader, opcode)
 
-        return to_return
+        return self.__filterBadBytes(to_return)
 
-    def searchInstructions(self, instructions, name=None):
+    def searchInstructions(self, code, name=None):
         to_return = {}
 
         if not name:
             for file in self.__files:
-                to_return[file.loader.fileName] = self.__ropper.searchInstructions(file.loader, instructions)
+                to_return[file.loader.fileName] = self.__ropper.searchInstructions(file.loader, code)
         else:
-            fc = self.__files.get(name)
+            fc = self.getFileFor(name)
             if not fc:
                 raise RopperError('No such file opened: %s' % name)
 
-            to_return[name] = self.__ropper.searchInstructions(fc.loader, instructions)
+            to_return[name] = self.__ropper.searchInstructions(fc.loader, code)
 
-        return to_return
+        return self.__filterBadBytes(to_return)
 
     def loadGadgetsFor(self, name=None):
         def load_gadgets(f):
@@ -305,6 +373,25 @@ class RopperService(object):
                 s = fc.loader.arch.searcher
                 for gadget in s.search(fc.gadgets, searchString, quality):
                     yield(fc, gadget)
+
+    def disassAddress(self, name, address, length):
+        fc = self.getFileFor(name)
+        if not fc:
+            raise RopperError('No such file opened: %s' % name)
+        eSections = fc.loader.executableSections
+
+        for section in  eSections:
+            if section.virtualAddress <= address and section.virtualAddress + section.size > address:
+                ropper = Ropper()
+
+
+                g = ropper.disassembleAddress(section, fc.loader, address, address - (fc.loader.imageBase+section.offset), length)
+                if not g:
+                    raise RopperError('Cannot disassemble address: %s' % toHex(address))
+                    
+                if length < 0:
+                    length = length * -1
+                return g.disassemblyString()
         
     def createRopChain(self, chain, options={}):
         callback = None
@@ -315,14 +402,26 @@ class RopperService(object):
         gadgets = {}
         for binary in self.__files:
             gadgets[binary.loader] = binary.gadgets
-            print(len(binary.gadgets))
             b.append(binary.loader)
         generator = RopChain.get(b, gadgets, chain, callback, self.options.badbytes)
 
         if not generator:
             raise RopperError('%s does not have support for %s chain generation at the moment. Its a future feature.' % (self.files.values()[0].loader.arch.__class__.__name__, chain))
 
-        return generator.create()
+        return generator.create(options)
+
+    def changeImageBaseFor(self, name, imagebase):
+        file = self._getFileFor(name)
+        file.loader.imageBase = imagebase
+        if file.loaded:
+            file.gadgets = self.__prepareGadgets(file.allGadgets)
+
+    def setArchitectureFor(self, name, arch):
+        file = self.getFileFor(name)
+        file.loader.arch = getArchitecture(arch)
+        file.allGadgets = None
+        file.gadgets = None
+
 
 
 class FileContainer(object):
@@ -335,6 +434,21 @@ class FileContainer(object):
         self.__gadgets = None
         self.__loaded = False
 
+    @property
+    def name(self):
+        return self.loader.fileName
+    
+    @property
+    def arch(self):
+        return self.loader.arch
+
+    @property
+    def type(self):
+        return self.loader.type
+    
+    @property
+    def loaded(self):
+        return self.__loaded
 
     @property
     def loader(self):

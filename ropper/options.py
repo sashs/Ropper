@@ -79,8 +79,6 @@ epilog="""example uses:
   Ropper.py --file /bin/ls --inst-count 5
   Ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
   Ropper.py --file /bin/ls --search "sub eax" --detail
-  Ropper.py --file /bin/ls --filter "sub eax"
-  Ropper.py --file /bin/ls --inst-count 5 --filter "sub eax"
   Ropper.py --file /bin/ls --opcode ffe4
   Ropper.py --file /bin/ls --opcode ffe?
   Ropper.py --file /bin/ls --opcode ??e4
@@ -179,8 +177,6 @@ epilog="""example uses:
             '--search', help='Searches for gadgets', metavar='<regex>')
         parser.add_argument(
             '--quality', help='The quality for gadgets which are found by search (1 = best)', metavar='<quality>', type=int)
-        parser.add_argument(
-            '--filter', help='Filters gadgets', metavar='<regex>')
         parser.add_argument(
             '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(

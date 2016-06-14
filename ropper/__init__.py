@@ -21,7 +21,7 @@ from .console import Console
 from .options import Options
 from .common.error import *
 from binascii import unhexlify
-from ropper.rop import Ropper, FORMAT
+from ropper.rop import Ropper
 from ropper.loaders import elf
 from ropper.loaders import pe
 from ropper.loaders import mach_o
@@ -43,48 +43,7 @@ def start(args):
         print(e)
 
 
-def deleteDuplicates(gadgets, callback=None):
-    toReturn = []
-    inst = set()
-    count = 0
-    added = False
-    for i,gadget in enumerate(gadgets):
-        inst.add(gadget._gadget)
-        if len(inst) > count:
-            count = len(inst)
-            toReturn.append(gadget)
-            added = True
-        if callback:
-            callback(gadget, added, float(i)/(len(gadgets)-1))
-            added = False
-    return toReturn
 
-
-def filterBadBytes(gadgets, badbytes):
-
-    def formatBadBytes(badbytes):
-        if len(badbytes) % 2 > 0:
-            raise RopperError('The length of badbytes has to be a multiple of two')
-
-        try:
-            badbytes = unhexlify(badbytes)
-        except:
-            raise RopperError('Invalid characters in badbytes string')
-        return badbytes
-
-
-    if not badbytes:
-        return gadgets
-
-    toReturn = []
-
-    badbytes = formatBadBytes(badbytes)
-
-    for gadget in gadgets:
-        if not badbytes or not gadget.addressesContainsBytes(badbytes):
-            toReturn.append(gadget)
-
-    return toReturn
 
 def search(gadgets, searchString):
     if not gadgets:

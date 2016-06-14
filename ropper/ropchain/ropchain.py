@@ -34,7 +34,7 @@ class RopChain(Abstract):
         return self.__badbytes
 
     @abstractmethod
-    def create(self):
+    def create(self, options):
         pass
 
     @classmethod

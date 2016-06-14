@@ -613,7 +613,10 @@ class RopChainX86System(RopChainX86):
             what = '/' * (4 - len(what) % 4) + what
         return self._createWriteStringWhere(what,where, idx=idx)
 
-    def create(self, cmd='/bin/sh'):
+    def create(self, options={}):
+        cmd = options.get('cmd')
+        if not cmd:
+            cmd = '/bin/sh'
         if len(cmd.split(' ')) > 1:
             raise RopChainError('No argument support for execve commands')
 
@@ -709,22 +712,24 @@ class RopChainX86Mprotect(RopChainX86):
         else:
             return None
 
-    def __extract(self, param):
-        if not match('0x[0-9a-fA-F]{1,8},0x[0-9a-fA-F]+', param) or not match('0x[0-9a-fA-F]{1,8},[0-9]+', param):
-            raise RopChainError('Parameter have to have the following format: <hexnumber>,<hexnumber> or <hexnumber>,<number>')
 
-        split = param.split(',')
-        if isHex(split[1]):
-            return (int(split[0], 16), int(split[1], 16))
-        else:
-            return (int(split[0], 16), int(split[1], 10))
+    def create(self, options={}):
+        address = options.get('address')
+        size = options.get('size')
+        if not address:
+            raise RopChainError('Missing parameter: address')
+        if not size:
+            raise RopChainError('Missing parameter: size')
 
+        if not match('0x[0-9a-fA-F]{1,8}', address):
+            raise RopChainError('Parameter address have to have the following format: <hexnumber>')
 
-    def create(self, param=None):
-        if not param:
-            raise RopChainError('Missing parameter: address:size')
+        if not match('0x[0-9a-fA-F]+', size):
+            raise RopChainError('Parameter size have to have the following format: <hexnumber>')
 
-        address, size = self.__extract(param)
+        address = int(address, 16)
+        size = int(size, 16)
+
         self._printMessage('ROPchain Generator for syscall mprotect:\n')
         self._printMessage('eax 0x7b\nebx address\necx size\nedx 0x7 -> RWE\n')
 
@@ -835,13 +840,22 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
 
-    def create(self, param=None):
+    def create(self, options={}):
 
         self._printMessage('Ropchain Generator for VirtualProtect:\n')
         self._printMessage('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
-        address = None
-        if param:
-            address = self.__extract(param)
+        
+        address = options.get('address')
+
+        
+
+        if not match('0x[0-9a-fA-F]+', size):
+            raise RopChainError('Parameter size have to have the following format: <hexnumber>')
+
+        address = int(address, 16)
+        size = int(address, 16)
+
+        
         given = False
         if not address:
             address = self.__getVirtualProtectEntry()
@@ -849,6 +863,9 @@ class RopChainX86VirtualProtect(RopChainX86):
                 self._printMessage('No IAT-Entry for VirtualProtect found!')
                 raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
         else:
+            if address:
+                if not match('0x[0-9a-fA-F]{1,8}', address):
+                    raise RopChainError('Parameter address have to have the following format: <hexnumber>')
             given = True
 
         writeable_ptr = self._binaries[0].getWriteableSection().offset + 0x4

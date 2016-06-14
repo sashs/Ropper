@@ -36,7 +36,7 @@ class Architecture(AbstractSingleton):
 
     def __init__(self, arch, mode, addressLength, align):
         super(Architecture, self).__init__()
-
+        self._name = 'raw'
         self._arch = arch
         self._mode = mode
 
@@ -102,14 +102,14 @@ class Architecture(AbstractSingleton):
         return self._searcher
 
     def __str__(self):
-        return self.__class__.__name__
+        return self._name
 
 
 class ArchitectureX86(Architecture):
 
     def __init__(self):
-        Architecture.__init__(self, CS_ARCH_X86, CS_MODE_32, 4, 1)
-
+        super(ArchitectureX86, self).__init__( CS_ARCH_X86, CS_MODE_32, 4, 1)
+        self._name = 'x86'
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_32)
 
@@ -165,7 +165,8 @@ class ArchitectureX86(Architecture):
 class ArchitectureX86_64(ArchitectureX86):
 
     def __init__(self):
-        ArchitectureX86.__init__(self)
+        super(ArchitectureX86_64, self).__init__()
+        self._name = 'x86_64'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_64)
@@ -202,7 +203,8 @@ class ArchitectureX86_64(ArchitectureX86):
 class ArchitectureMips(Architecture):
 
     def __init__(self):
-        Architecture.__init__(self, CS_ARCH_MIPS, CS_MODE_32, 4, 4)
+        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4)
+        self._name = 'MIPS'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_32)
@@ -218,7 +220,8 @@ class ArchitectureMips(Architecture):
 class ArchitectureMips64(ArchitectureMips):
 
     def __init__(self):
-        ArchitectureMips.__init__(self)
+        super(ArchitectureMips64, self).__init__()
+        self._name = 'MIPS64'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_64)
@@ -234,8 +237,9 @@ class ArchitectureMips64(ArchitectureMips):
 class ArchitectureArm(Architecture):
 
     def __init__(self):
-        Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
+        super(ArchitectureArm,self).__init__(CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
         self._searcher = SearcherARM()
+        self._name = 'ARM'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_ARM)
@@ -251,8 +255,9 @@ class ArchitectureArm(Architecture):
 class ArchitectureArmThumb(Architecture):
 
     def __init__(self):
-        Architecture.__init__(self, CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
+        super(ArchitectureArmThumb, self).__init__(CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
         self._searcher = SearcherARM()
+        self._name = 'ARMTHUMB'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_THUMB)
@@ -270,7 +275,8 @@ class ArchitectureArmThumb(Architecture):
 class ArchitectureArm64(Architecture):
 
     def __init__(self):
-        Architecture.__init__(self, CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
+        super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
+        self._name = 'ARM64'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_BIG_ENDIAN)
@@ -291,7 +297,8 @@ class ArchitectureArm64(Architecture):
 class ArchitecturePPC(Architecture):
 
     def __init__(self):
-        Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
+        super(ArchitecturePPC, self).__init__(CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
+        self._name = 'PPC'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_32)
@@ -306,6 +313,7 @@ class ArchitecturePPC64(ArchitecturePPC):
     def __init__(self):
 
         Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
+        self._name = 'PPC64'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_64)

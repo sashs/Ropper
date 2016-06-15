@@ -383,7 +383,7 @@ class Ropper(object):
             while not ending_queue.empty():
                 try:
                     ending = ending_queue.get(False)
-                    gadgets = self.__gatherGadgetsByEnding(code, arch, ending, instruction_count)
+                    gadgets = self.__gatherGadgetsByEnding(section, code, arch, ending, instruction_count)
                     
                     gadget_queue.put(gadgets)
                 except:
@@ -395,11 +395,10 @@ class Ropper(object):
         gadget_queue.put(None)
         
 
-    def __gatherGadgetsByEnding(self, code, arch, ending, instruction_count):
+    def __gatherGadgetsByEnding(self, section, code, arch, ending, instruction_count):
         vaddrs = set() # to prevent that the gadget is added several times
         offset_tmp = 0
-        #offset = section.offset
-        offset = 0
+        offset = section.offset
         tmp_code = code[:]
         to_return = []
         match = re.search(ending[0], tmp_code)

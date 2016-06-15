@@ -134,6 +134,8 @@ class PEPrinter(FileDataPrinter):
              > 0 else no),
             (cstr('WdmDriver', Color.BLUE), yes if (
                 dllc & ImageDllCharacteristics.WDM_DRIVER) > 0 else no),
+            (cstr('ControlFLowGuard', Color.BLUE), yes if (
+                dllc & ImageDllCharacteristics.CONTROL_FLOW_GUARD) > 0 else no),
             (cstr('TerminalServerAware', Color.BLUE), yes if (
                 dllc & ImageDllCharacteristics.TERMINAL_SERVER_AWARE) > 0 else no)
         ]

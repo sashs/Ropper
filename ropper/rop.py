@@ -317,7 +317,7 @@ class Ropper(object):
                             none_count = 0
                         else:
                             none_count += 1
-                            if none_count == 5:
+                            if none_count == arch.maxInvalid:
                                 break
 
                 tmp_code = tmp_code[index+arch.align:]
@@ -427,7 +427,7 @@ class Ropper(object):
                         none_count = 0
                     else:
                         none_count += 1
-                        if none_count == 5:
+                        if none_count == arch.maxInvalid:
                             break
 
             tmp_code = tmp_code[index+arch.align:]

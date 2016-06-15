@@ -48,6 +48,7 @@ class Architecture(AbstractSingleton):
         self._endings = {}
         self._badInstructions = []
         self._categories = {}
+        self._maxInvalid = 1
 
         self._searcher = Searcher()
 
@@ -101,6 +102,10 @@ class Architecture(AbstractSingleton):
     def searcher(self):
         return self._searcher
 
+    @property
+    def maxInvalid(self):
+        return self._maxInvalid
+
     def __str__(self):
         return self._name
 
@@ -110,6 +115,7 @@ class ArchitectureX86(Architecture):
     def __init__(self):
         super(ArchitectureX86, self).__init__( CS_ARCH_X86, CS_MODE_32, 4, 1)
         self._name = 'x86'
+        self._maxInvalid = 6
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_32)
 
@@ -167,7 +173,7 @@ class ArchitectureX86_64(ArchitectureX86):
     def __init__(self):
         super(ArchitectureX86_64, self).__init__()
         self._name = 'x86_64'
-
+        self._maxInvalid = 8
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_64)
 

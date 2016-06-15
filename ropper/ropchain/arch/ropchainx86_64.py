@@ -27,6 +27,10 @@ from ropper.loaders.loader import Type
 from re import match
 import itertools
 import math
+import sys
+
+if sys.version_info.major == 2:
+    range = xrange
 
 class RopChainX86_64(RopChain):
 
@@ -174,17 +178,17 @@ class RopChainX86_64(RopChain):
         return ('rop += p(%s)\n' % addr)
 
     def _containsZeroByte(self, addr):
-        return addr & 0xff == 0 or addr & 0xff00 == 0 or addr & 0xff0000 == 0 or addr & 0xff000000 == 0
+        return self.containsBadbytes(addr,8)
 
     def _createZeroByteFillerForSub(self, number):
         start = 0x0101010101010101
-        for i in xrange(start, 0x0202020202020202):
+        for i in range(start, 0x0202020202020202):
             if not self._containsZeroByte(i) and not self._containsZeroByte(i+number):
                 return i
 
     def _createZeroByteFillerForAdd(self, number):
         start = 0x0101010101010101
-        for i in xrange(start, 0x0202020202020202):
+        for i in range(start, 0x0202020202020202):
             if not self._containsZeroByte(i) and not self._containsZeroByte(number-i):
                 return i
 
@@ -303,7 +307,7 @@ class RopChainX86_64(RopChain):
     def _createLoadRegValueFrom(self, what, from_reg, dontModify=[], idx=0):
         try:
             return self._createLoadRegValueFromMov(what, from_reg, dontModify, idx)
-        except:
+        except RopChainError:
             return self._createLoadRegValueFromXchg(what, from_reg, dontModify, idx)
 
     def _createLoadRegValueFromMov(self, what, from_reg, dontModify=[], idx=0):
@@ -436,6 +440,8 @@ class RopChainX86_64(RopChain):
         return (toReturn, popDst.category[2]['dst'],popSrc.category[2]['dst'])
 
     def _createNumberPop(self, number, reg=None, badRegs=None, dontModify=None):
+        if self._containsZeroByte(0xffffffff):
+            raise RopChainError("Cannot write value with pop -1 and inc gadgets, because there are badbytes in the negated number")
         while True:
             popReg = self._find(Category.LOAD_REG, reg=reg, badDst=badRegs,dontModify=dontModify)
             if not popReg:
@@ -493,6 +499,8 @@ class RopChainX86_64(RopChain):
     def _createNumberNeg(self, number, reg=None, badRegs=None, dontModify=None):
         if number == 0:
             raise RopChainError('Cannot build number gadget with neg if number is 0!')
+        if self._containsZeroByte((~number)+1):
+            raise RopChainError("Cannot use neg gadget, because there are badbytes in the negated number")
         neg = self._find(Category.NEG_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
         if not neg:
             raise RopChainError('Cannot build number gadget with neg!')
@@ -508,7 +516,7 @@ class RopChainX86_64(RopChain):
 
     def _createNumber(self, number, reg=None, badRegs=None, dontModify=None, xchg=True):
         try:
-            if self._containsZeroByte(number):
+            if self.containsBadbytes(number):
                 try:
                     return self._createNumberNeg(number, reg, badRegs,dontModify)
                 except RopChainError as e:
@@ -537,7 +545,7 @@ class RopChainX86_64(RopChain):
                 toReturn = self._printRopInstruction(popReg)
                 toReturn += self._printPaddingInstruction(toHex(number,8))
                 return (toReturn , popReg.category[2]['dst'])
-        except:
+        except RopChainError:
             return self._createNumberXchg(number, reg, badRegs, dontModify)
 
     def _createAddress(self, address, reg=None, badRegs=None, dontModify=None):
@@ -629,7 +637,7 @@ class RopChainSystemX86_64(RopChainX86_64):
         chain_tmp += tmpx
         gadgets = []
         gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'rdi'},['rdi','edi', 'di']))
-        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rsi'},['rsi','esi', 'di']))
+        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rsi'},['rsi','esi', 'si']))
         gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
         gadgets.append((self._createNumber, [59],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
 
@@ -648,7 +656,7 @@ class RopChainSystemX86_64(RopChainX86_64):
                 chain_tmp += self._createOpcode('0f0f')
                 self._printer.printInfo('syscall opcode found')
 
-            except:
+            except RopChainError:
                 chain_tmp += '# INSERT SYSCALL GADGET HERE'
                 self._printer.printInfo('syscall opcode not found')
 

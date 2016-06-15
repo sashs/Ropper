@@ -21,11 +21,16 @@ from ropper.common.error import *
 
 class RopChain(Abstract):
 
-    def __init__(self, binaries, gadgets, printer):
+    def __init__(self, binaries, gadgets, printer, badbytes=''):
         self._binaries = binaries
         self._usedBinaries = []
         self._printer = printer
         self._gadgets = gadgets
+        self.__badbytes = badbytes
+
+    @property
+    def badbytes(self):
+        return self.__badbytes
 
     @abstractmethod
     def create(self):
@@ -44,11 +49,26 @@ class RopChain(Abstract):
         return []
 
     @classmethod
-    def get(cls, binaries, gadgets, name, printer):
+    def get(cls, binaries, gadgets, name, printer, badbytes=''):
         for subclass in cls.__subclasses__():
             if binaries[0].arch in subclass.archs():
                 gens = subclass.availableGenerators()
                 for gen in gens:
                     if gen.name() == name:
-                        return gen(binaries, gadgets, printer)
+                        return gen(binaries, gadgets, printer, badbytes)
         
+
+    def containsBadbytes(self, value, bytecount=4):
+        for b in self.badbytes:
+            tmp = value
+
+
+            if type(b) == str:
+                b = ord(b)
+
+            for i in range(bytecount):
+                if (tmp & 0xff) == b:
+                    return True
+
+                tmp >>= 8 
+        return False

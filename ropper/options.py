@@ -37,6 +37,7 @@ class Options(object):
         self.__parser = self._createArgParser()
         self._analyseArguments()
         self.__callbacks = []
+        self.__ropper_options = {}
 
     def _createArgParser(self):
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -211,6 +212,17 @@ epilog="""example uses:
                 raise ArgumentError('Imagebase should be in hex (0x.....)')
             else:
                 self.__args.I = int(self.__args.I, 16)
+
+        ropper_options = {}
+        ropper_options['all'] = self.__args.all
+        ropper_options['color'] = not self.__args.nocolor
+        ropper_options['badbytes'] = self.__args.badbytes
+        ropper_options['detailed'] = self.__args.detailed
+        ropper_options['inst_count'] = self.__args.inst_count
+        ropper_options['type'] = self.__args.type
+        self.ropper_options = ropper_options
+
+
 
 
     def __missingArgument(self, arg):

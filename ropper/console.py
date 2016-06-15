@@ -52,13 +52,37 @@ def safe_cmd(func):
             ConsolePrinter().printError(e)
     return cmd
 
+class CallbackClass(object):
+
+    def __init__(self, console):
+        self.__console = console
+
+    def __gadgetSearchProgress__(self, section, gadgets, progress):
+        if gadgets is not None:
+            self.__console.cprinter.printProgress('loading...', progress)
+
+            if progress == 1.0:
+                self.__console.cprinter.finishProgress()
+        else:
+            self.__console.cprinter.printInfo(
+                'Load gadgets for section: ' + section.name)
+
+    def __deleteDoubleGadgetsProgress__(self, gadget, added, progress):
+        self.__console.cprinter.printProgress('removing double gadgets...', progress)
+        if progress == 1.0:
+            self.__console.cprinter.finishProgress()
+
+    def __ropchainMessages__(self, message):
+        if message.startswith('[*]'):
+            self.__console.cprinter.puts('\r' + message)
+        else:
+            self.__console.cprinter.printInfo(message)
 
 class Console(cmd.Cmd):
 
     def __init__(self, options):
         cmd.Cmd.__init__(self)
         self.__options = options
-        options.addOptionChangedCallback(self.optionChanged)
         if not options.isWindows():
             import readline
             old_delims = readline.get_completer_delims()  # <-
@@ -66,12 +90,16 @@ class Console(cmd.Cmd):
             old_delims = old_delims.replace('/', '')
             readline.set_completer_delims(old_delims)  # <-
 
-        self.__rs = RopperService()
+        self.__rs = RopperService(self.__options.ropper_options, callbacks=CallbackClass(self))
         self.__currentFileName = ''
         self.__cprinter = ConsolePrinter()
         self.__dataPrinter = {}
         self.prompt = cstr('(ropper) ', Color.YELLOW)
 
+    @property
+    def cprinter(self):
+        return self.__cprinter
+    
     @property
     def currentFileName(self):
         if not self.__currentFileName:
@@ -176,8 +204,7 @@ class Console(cmd.Cmd):
     def __searchJmpReg(self, regs):
         regs = regs.split(',')
         gadgets = self.__rs.searchJmpReg(name=self.currentFileName, regs=regs)
-        self.__printGadgets([g for g in gadgets.values()][
-                            0], header='JMP Instructions')
+        self.__printGadgets([g for g in gadgets.values()][0], header='JMP Instructions')
 
     def __searchOpcode(self, opcode):
         gadgets = self.__rs.searchOpcode(
@@ -248,7 +275,7 @@ class Console(cmd.Cmd):
     #         if not binary.loaded:
     #             self.__searchGadgetsFor(binary)
 
-    def __loadAndPrintGadgets(self):
+    def __printGadgetsFromCurrentFile(self):
         gadgets = self.currentFile.gadgets
         self.__printGadgets(gadgets, detailed=self.__options.detailed)
 
@@ -259,16 +286,16 @@ class Console(cmd.Cmd):
             if fc != old:
                 old = fc
                 self.__cprinter.println()
-                self.__printInfo('File: %s' % fc.loader.fileName)
+                self.__printInfo('File: %s' % fc)
 
             self.__printGadget(gadget, self.__options.detailed)
         self.__cprinter.println()
 
-    def __generateChain(self, gadgets, command):
+    def __generateChain(self, command):
         split = command.split(' ')
 
-        old = self.__options.nocolor
-        self.__options.nocolor = True
+        old = self.__rs.options.color
+        self.__rs.options.color = False
 
         generator = split[0]
         options = {}
@@ -289,7 +316,7 @@ class Console(cmd.Cmd):
             self.__printInfo('rop chain generated!')
         except RopperError as e:
             self.__printError(e)
-        self.__options.nocolor = old
+        self.__rs.options.color = old
 
     def __ropchainInfoCallback(self, message):
         if message.startswith('[*]'):
@@ -316,7 +343,7 @@ class Console(cmd.Cmd):
                 return
         dao = GadgetDAO(dbpath, self.__cprinter)
 
-        dao.save(self.binary.gadgets)
+        dao.save(self.currentFile.allGadgets)
 
     def __loaddb(self, dbpath):
         if not dbpath.endswith('.db'):
@@ -326,13 +353,7 @@ class Console(cmd.Cmd):
 
         dao = GadgetDAO(dbpath, self.__cprinter)
 
-        self.binary.gadgets = dao.load(self.binary)
-        self.binary.loaded = True
-        if not self.__options.all:
-            self.__gadgets[self.binary] = ropper.deleteDuplicates(ropper.filterBadBytes(
-                self.binary.gadgets, self.__options.badbytes), self.__printProgress)
-        else:
-            self.__gadgets[self.binary] = self.binary.gadgets
+        self.__rs._setGadgets(self.__currentFileName,dao.load(self.currentFile.loader))
 
     def __printStrings(self, string, sec=None):
         strings = self.__rs.searchString(
@@ -352,9 +373,9 @@ class Console(cmd.Cmd):
         self.__cprinter.println(ds)
 
     def __printSectionInHex(self, section):
-        section = self.__binary.getSection(section.encode('ASCII'))
+        section = self.currentFile.loader.getSection(section.encode('ASCII'))
         printHexFormat(section.bytes, section.virtualAddress,
-                       self.__options.nocolor)
+                       not self.__rs.options.color)
 
     def __handleOptions(self, options):
         if options.sections:
@@ -399,7 +420,7 @@ class Console(cmd.Cmd):
             self.__searchJmpReg(options.jmp)
         elif options.stack_pivot:
             self.__loadGadgets()
-            self.__printGadgets(self.__binary.gadgets, Category.STACK_PIVOT)
+            self.__printGadgets(self.currentFile.gadgets, Category.STACK_PIVOT)
         elif options.opcode:
             self.__searchOpcode(self.__options.opcode)
         elif options.instructions:
@@ -425,26 +446,19 @@ class Console(cmd.Cmd):
          #   self.__checksec()
         elif options.chain:
             self.__loadGadgets()
-            self.__generateChain(self.__gadgets[self.binary], options.chain)
+            self.__generateChain(options.chain)
         elif options.db:
             self.__loaddb(options.db)
-            self.__loadAndPrintGadgets()
+            if options.search:
+                self.__search(options.search, options.quality)
+            else:
+                self.__printGadgetsFromCurrentFile()
         else:
             self.__loadGadgets()
-            self.__loadAndPrintGadgets()
-
-    def optionChanged(self, option, old, new):
-        if option in ['all', 'badbytes']:
-            for binary in self.__binaries:
-                if binary.loaded:
-                    if self.__options.badbytes:
-                        self.__gadgets[binary] = ropper.filterBadBytes(
-                            binary.gadgets, self.__options.badbytes)
-                    else:
-                        self.__gadgets[binary] = binary.gadgets
-                    if not self.__options.all:
-                        self.__gadgets[binary] = ropper.deleteDuplicates(
-                            self.__gadgets[binary])
+            if options.search:
+                self.__search(options.search, options.quality)
+            else:
+                self.__printGadgetsFromCurrentFile()
 
 
 ####### cmd commands ######
@@ -575,7 +589,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printInfo('Gadgets have to be loaded with load')
             return
 
-        self.__printGadgets(self.currentFile.gadgets, detailed=self.__options.detailed)
+        self.__printGadgets(self.currentFile.gadgets, detailed=self.__rs.options.detailed)
 
     def help_gadgets(self):
         self.__printHelpText('gadgets', 'shows all loaded gadgets')
@@ -598,17 +612,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_ppr(self):
         self.__printHelpText('ppr', 'shows all pop,pop,ret instructions')
-
-    @safe_cmd
-    def do_filter(self, text):
-        if len(text) == 0:
-            self.help_filter()
-            return
-
-        self.__printGadgets(self.__filter(self.__gadgets[self.binary], text))
-
-    def help_filter(self):
-        self.__printHelpText('filter <filter>', 'filters gadgets')
 
     @safe_cmd
     def do_search(self, text):
@@ -670,10 +673,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_imagebase(self, text):
         if len(text) == 0:
-            self.binary.imageBase = None
+            self.currentFile.loader.imageBase = None
             self.__printInfo('Imagebase reseted')
         elif isHex(text):
-            self.binary.imageBase = int(text, 16)
+            self.currentFile.loader.imageBase = int(text, 16)
             self.__printInfo('Imagebase set to %s' % text)
         else:
             self.help_imagebase()
@@ -688,7 +691,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.help_type()
             return
 
-        self.__options.setOption('type', text)
+        self.do_settings('type %s' % text)
         self.__printInfo('Gadgets have to be reloaded')
 
     def help_type(self):
@@ -709,10 +712,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_detailed(self, text):
-        if text:
-            self.__options.setOption('detailed', text)
-        else:
-            self.__cprinter.println('on' if self.__options.detailed else 'off')
+        self.do_settings('detailed %s' % text)
 
     def help_detailed(self):
         self.__printHelpText(
@@ -724,22 +724,29 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_settings(self, text):
         if len(text):
-            splits = text.split(' ')
-            if len(splits) == 1:
-                self.__options.getOption(splits[0])
-            elif len(splits) == 2:
-                if self.__options.setOption(splits[0], splits[1]):
-                    self.__printInfo('Gadgets have to be reloaded')
-            else:
-                raise RopperError('Invalid setting')
+            try:
+                splits = text.strip().split(' ')
+                if len(splits) == 1:
+                    self.__rs.options[splits[0]] = None
+                elif len(splits) == 2:
+                    if splits[1] in ['on', 'off']:
+                        self.__rs.options[splits[0]] = True if splits[1] == 'on' else False
+                    else:
+                        self.__rs.options[splits[0]] = splits[1]
+                        
+                else:
+                    raise RopperError('Invalid setting')
+            except TypeError as e:
+                raise RopperError(e)
+            except AttributeError as e:
+                raise RopperError(e)
         else:
-            data = [
-                (cstr('all'), cstr('on' if self.__options.all else 'off')),
-                (cstr('badbytes'), cstr(self.__options.badbytes)),
-                (cstr('color'), cstr('off' if self.__options.nocolor else 'on')),
-                (cstr('inst-count'), cstr(self.__options.inst_count)),
-                (cstr('detailed'), cstr('on' if self.__options.detailed else 'off')),
-                (cstr('type'), cstr(self.__options.type))]
+            data = []
+            for key, value in self.__rs.options.items():
+                if isinstance(value, bool):
+                    data.append((cstr(key), cstr('on' if value else 'off')))
+                else:
+                    data.append((cstr(key), cstr(value)))
 
             printTable('Settings', (cstr('Name'), cstr('Value')), data)
 
@@ -751,9 +758,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.__printInfo('badbytes cleared')
 
-        self.__options.setOption('badbytes', text)
+        self.do_settings('badbytes %s' % text)
 
-        self.__cprinter.printInfo('Filter gadgets of all opened files')
         # for binary in self.__binaries:
         #     if binary.loaded:
         #         self.__gadgets[binary] = ropper.filterBadBytes(binary.gadgets, self.__options.badbytes)
@@ -761,8 +767,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         #         if not self.__options.all:
         #             self.__gadgets[binary] = ropper.deleteDuplicates(self.__gadgets[binary])
 
-        self.__cprinter.printInfo('Filtering gadgets finished')
-        self.__printInfo('Gadgets have to be reloaded')
+        self.__cprinter.printInfo('Filter gadgets')
 
     def help_badbytes(self):
         self.__printHelpText(
@@ -773,10 +778,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if self.__options.isWindows():
             self.__printInfo('No color support for windows')
             return
-        if text:
-            self.__options.setOption('color', text)
-        else:
-            self.__cprinter.println('off' if self.__options.nocolor else 'on')
+        self.do_settings('color %s' % text)
 
     def help_color(self):
         self.__printHelpText('color [on|off]', 'sets colorized output')
@@ -795,7 +797,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         gadgets = []
         for binary in self.__rs.files:
             gadgets.append(binary.gadgets)
-        self.__generateChain(gadgets, text)
+        self.__generateChain(text)
 
     def help_ropchain(self):
         self.__printHelpText('ropchain <generator>[ argname=arg[ argname=arg...]]',
@@ -831,7 +833,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if not text:
             self.help_savedb()
             return
-        if not self.binary.loaded:
+        if not self.currentFile.loaded:
             self.__printInfo('Gadgets have to be loaded with load')
             return
         self.__savedb(text)
@@ -944,30 +946,30 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_stack_pivot(self, text):
-        self.__printGadgets(self.__gadgets[self.binary], Category.STACK_PIVOT)
+        self.__printGadgets(self.currentFile.gadgets, Category.STACK_PIVOT)
 
     def do_EOF(self, text):
         self.__cprinter.println('')
         self.do_quit(text)
 
-    @safe_cmd
-    def do_edit(self, text):
-        cmd = None
-        if self.binary.type == Type.ELF:
-            cmd = ELFConsole(self.binary, self.__cprinter)
-        elif self.binary.type == Type.PE:
-            cmd = PEConsole(self.binary, self.__cprinter)
-        elif self.binary.type == Type.MACH_O:
-            cmd = MachOConsole(self.binary, self.__cprinter)
-        else:
-            self.printError(
-                'This type is currently not supported: %s' % self.binary.type)
-            return
-        if cmd:
-            cmd.cmdloop()
+    # @safe_cmd
+    # def do_edit(self, text):
+    #     cmd = None
+    #     if self.binary.type == Type.ELF:
+    #         cmd = ELFConsole(self.binary, self.__cprinter)
+    #     elif self.binary.type == Type.PE:
+    #         cmd = PEConsole(self.binary, self.__cprinter)
+    #     elif self.binary.type == Type.MACH_O:
+    #         cmd = MachOConsole(self.binary, self.__cprinter)
+    #     else:
+    #         self.printError(
+    #             'This type is currently not supported: %s' % self.binary.type)
+    #         return
+    #     if cmd:
+    #         cmd.cmdloop()
 
-    def help_edit(self):
-        self.__printHelpText('edit', 'edits a file ***experimental***')
+    # def help_edit(self):
+    #     self.__printHelpText('edit', 'edits a file ***experimental***')
 
 
 class ConsolePrinter(object):

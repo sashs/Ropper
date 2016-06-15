@@ -24,6 +24,7 @@ from ropper.loaders.loader import Loader
 from ropper.ropchain.ropchain import RopChain
 from ropper.arch import getArchitecture
 from ropper.rop import Ropper, Format
+from binascii import unhexlify
 import re
 
 def deleteDuplicates(gadgets, callback=None):
@@ -59,13 +60,22 @@ def filterBadBytes(gadgets, badbytes):
     if not badbytes:
         return gadgets
 
-    toReturn = []
+    
 
     badbytes = formatBadBytes(badbytes)
-
-    for gadget in gadgets:
-        if not badbytes or not gadget.addressesContainsBytes(badbytes):
-            toReturn.append(gadget)
+    if isinstance(gadgets, dict):
+        toReturn = {}
+        for file, gadget in gadgets.items():
+            t = []
+            for g in gadget:
+                if not badbytes or not g.addressesContainsBytes(badbytes):
+                    t.append(g)
+            toReturn[file] = t
+    elif isinstance(gadgets, list): 
+        toReturn = []  
+        for gadget in gadgets:
+            if not badbytes or not gadget.addressesContainsBytes(badbytes):
+                toReturn.append(gadget)
 
     return toReturn
 
@@ -140,10 +150,17 @@ class Options(object):
             super(Options, self).__setattr__(key, value)
         else:
             old = self.__options_dict[key]
+            self.__checkOptions({key:value})
             self.__options_dict[key] = value
             self.__checkOptions(self.__options_dict)
             if self.__option_changed:
                 self.__option_changed(key, old, value)
+
+    def __setitem__(self, key, value):
+        self.__setattr__(key, value)
+
+    def __getitem__(self, key):
+        return self.__getattr__(key)
 
 
 class RopperService(object):
@@ -173,8 +190,8 @@ class RopperService(object):
         return list(self.__files)
     
     def __optionChanged(self, option, oldvalue, newvalue):
-        func = getattr(self, '_%s_changed' % option)
-        if func:
+        if hasattr(self, '_%s_changed' % option):
+            func = getattr(self, '_%s_changed' % option)
             func(newvalue)
 
     def __prepareGadgets(self, gadgets):
@@ -194,7 +211,8 @@ class RopperService(object):
 
     def _badbytes_changed(self, value):
         for f in self.__files:
-            f.gadgets = self.__prepareGadgets(f.allGadgets)
+            if f.loaded:
+                f.gadgets = self.__prepareGadgets(f.allGadgets)
 
     def _all_changed(self, value):
         for f in self.__files:
@@ -253,7 +271,7 @@ class RopperService(object):
 
             to_return[name] = self.__ropper.searchPopPopRet(fc.loader)
 
-        return to_return
+        return self.__filterBadBytes(to_return)
 
     def searchJmpReg(self, regs=['esp'],name=None):
         to_return = {}
@@ -367,12 +385,22 @@ class RopperService(object):
             
             s = fc.loader.arch.searcher
             for gadget in s.search(fc.gadgets, searchString, quality):
-                    yield(fc, gadget)
+                    yield(fc.name, gadget)
         else:        
             for fc in self.__files:
                 s = fc.loader.arch.searcher
                 for gadget in s.search(fc.gadgets, searchString, quality):
-                    yield(fc, gadget)
+                    yield(fc.name, gadget)
+
+    def listsearch(self, searchString, quality=None, name=None):
+        to_return = {}
+        for file, gadget in self.search(searchString, quality, name):
+            l = to_return.get(file)
+            if not l:
+                l = []
+                to_return[file] = l
+            l.append(gadget)
+        return to_return
 
     def disassAddress(self, name, address, length):
         fc = self.getFileFor(name)
@@ -392,6 +420,7 @@ class RopperService(object):
                 if length < 0:
                     length = length * -1
                 return g.disassemblyString()
+        return ''
         
     def createRopChain(self, chain, options={}):
         callback = None
@@ -406,21 +435,32 @@ class RopperService(object):
         generator = RopChain.get(b, gadgets, chain, callback, self.options.badbytes)
 
         if not generator:
-            raise RopperError('%s does not have support for %s chain generation at the moment. Its a future feature.' % (self.files.values()[0].loader.arch.__class__.__name__, chain))
+            raise RopperError('%s does not have support for %s chain generation at the moment. Its a future feature.' % (self.files[0].loader.arch.__class__.__name__, chain))
 
         return generator.create(options)
 
     def changeImageBaseFor(self, name, imagebase):
         file = self._getFileFor(name)
+        if not file:
+            raise RopperError('No such file opened: %s' % name)
         file.loader.imageBase = imagebase
         if file.loaded:
             file.gadgets = self.__prepareGadgets(file.allGadgets)
 
     def setArchitectureFor(self, name, arch):
         file = self.getFileFor(name)
+        if not file:
+            raise RopperError('No such file opened: %s' % name)
         file.loader.arch = getArchitecture(arch)
         file.allGadgets = None
         file.gadgets = None
+
+    def _setGadgets(self, name, gadgets):
+        fc = self.getFileFor(name)
+        if not fc:
+            raise RopperError('No such file opened: %s' % name)
+        fc.allGadgets = gadgets
+        fc.gadgets = self.__prepareGadgets(fc.allGadgets)
 
 
 

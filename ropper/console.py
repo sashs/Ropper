@@ -104,7 +104,7 @@ class Console(cmd.Cmd):
         self.__currentFileName = ''
         self.__cprinter = ConsolePrinter()
         self.__dataPrinter = {}
-        self.prompt = cstr('(ropper) ', Color.YELLOW)
+        self.prompt = cstr('(ropper) ', Color.RED)
 
     @property
     def cprinter(self):
@@ -119,6 +119,11 @@ class Console(cmd.Cmd):
     @property
     def currentFile(self):
         return self.__rs.getFileFor(self.currentFileName)
+
+    @currentFileName.setter
+    def currentFileName(self, file):
+        self.__currentFileName = file
+        self.__updatePrompt()
 
     def __getDataPrinter(self, type):
         p = self.__dataPrinter.get(type)
@@ -141,15 +146,21 @@ class Console(cmd.Cmd):
 
         self.__handleOptions(self.__options)
 
+    def __updatePrompt(self):
+        if self.__currentFileName:
+            self.prompt = cstr('(ropper/%s) ' % self.currentFile.arch, Color.RED)
+        else:
+            self.prompt = cstr('(ropper) ', Color.RED)
+
     def __loadFile(self, file):
         try:
             self.__rs.addFile(file, raw=self.__options.raw,
                               arch=self.__options.arch)
-            self.__currentFileName = file
+            self.__options.arch = None
+            self.currentFileName = file
         except BaseException as e:
             raise RopperError(e)
         self.__rs.setImageBaseFor(file, self.__options.I)
-
         #self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
     def __printGadget(self, gadget, detailed=False):
@@ -323,6 +334,7 @@ class Console(cmd.Cmd):
     def __setarch(self, arch):
         if self.currentFile:
             self.__rs.setArchitectureFor(self.currentFileName, arch)
+            self.__updatePrompt()
         else:
             self.__printError('No file loaded')
 
@@ -350,7 +362,7 @@ class Console(cmd.Cmd):
 
         dao = GadgetDAO(dbpath, self.__cprinter)
 
-        self.__rs._setGadgets(self.__currentFileName,dao.load(self.currentFile.loader))
+        self.__rs._setGadgets(self.currentFileName,dao.load(self.currentFile.loader))
 
     def __printStrings(self, string, sec=None):
         strings = self.__rs.searchString(
@@ -488,9 +500,9 @@ class Console(cmd.Cmd):
             if len(self.__rs.files) > idx - 1:
                 self.__rs.removeFile(self.__rs.files[idx - 1].loader.fileName)
                 if len(self.__rs.files) != 0:
-                    self.__currentFile = self.__rs.files[0].loader.fileName
+                    self.currentFileName = self.__rs.files[0].loader.fileName
                 else:
-                    self.__currentFile = None
+                    self.currentFileName = None
             else:
                 self.__cprinter.printError('Index is too small or to large')
         elif text == 'all':
@@ -522,7 +534,7 @@ class Console(cmd.Cmd):
             idx = int(text) - 1
             if idx >= len(self.__rs.files):
                 raise RopperError('Index is too small or to large')
-            self.__currentFileName = self.__rs.files[idx].loader.fileName
+            self.currentFileName = self.__rs.files[idx].loader.fileName
             self.__printInfo('File \'%s\' selected.' % self.currentFileName)
         else:
             self.__loadFile(text)

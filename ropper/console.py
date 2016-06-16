@@ -120,10 +120,7 @@ class Console(cmd.Cmd):
     def currentFile(self):
         return self.__rs.getFileFor(self.currentFileName)
 
-    @currentFileName.setter
-    def currentFileName(self, file):
-        self.__currentFileName = file
-        self.__updatePrompt()
+    
 
     def __getDataPrinter(self, type):
         p = self.__dataPrinter.get(type)
@@ -148,16 +145,25 @@ class Console(cmd.Cmd):
 
     def __updatePrompt(self):
         if self.__currentFileName:
-            self.prompt = cstr('(ropper/%s) ' % self.currentFile.arch, Color.RED)
+            if '/' in self.__currentFileName:
+                name = self.__currentFileName.split('/')[-1]
+            elif '\\' in self.__currentFileName:
+                name = self.__currentFileName.split('\\')[-1]
+            else:
+                name = self.__currentFileName
+            self.prompt = cstr('(%s/%s)> ' % (name, self.currentFile.arch), Color.RED)
         else:
-            self.prompt = cstr('(ropper) ', Color.RED)
+            self.prompt = cstr('(ropper)> ', Color.RED)
 
     def __loadFile(self, file):
         try:
+            
             self.__rs.addFile(file, raw=self.__options.raw,
                               arch=self.__options.arch)
             self.__options.arch = None
-            self.currentFileName = file
+            
+            self.__currentFileName = file
+            self.__updatePrompt()
         except BaseException as e:
             raise RopperError(e)
         self.__rs.setImageBaseFor(file, self.__options.I)
@@ -500,9 +506,10 @@ class Console(cmd.Cmd):
             if len(self.__rs.files) > idx - 1:
                 self.__rs.removeFile(self.__rs.files[idx - 1].loader.fileName)
                 if len(self.__rs.files) != 0:
-                    self.currentFileName = self.__rs.files[0].loader.fileName
+                    self.__currentFileName = self.__rs.files[0].loader.fileName
                 else:
-                    self.currentFileName = None
+                    self.__currentFileName = None
+                self.__updatePrompt()
             else:
                 self.__cprinter.printError('Index is too small or to large')
         elif text == 'all':
@@ -534,7 +541,8 @@ class Console(cmd.Cmd):
             idx = int(text) - 1
             if idx >= len(self.__rs.files):
                 raise RopperError('Index is too small or to large')
-            self.currentFileName = self.__rs.files[idx].loader.fileName
+            self.__currentFileName = self.__rs.files[idx].loader.fileName
+            self.__updatePrompt()
             self.__printInfo('File \'%s\' selected.' % self.currentFileName)
         else:
             self.__loadFile(text)

@@ -371,9 +371,6 @@ class Ropper(object):
                 ending_count += 1
                 if self.__callback:
                     self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
-             
-        for process in processes:
-            process.terminate()
             
         return to_return
 
@@ -391,8 +388,6 @@ class Ropper(object):
             
         except BaseException as e:
             raise RopperError(e)
-        
-        gadget_queue.put(None)
         
 
     def __gatherGadgetsByEnding(self, code, arch, offset, ending, instruction_count):

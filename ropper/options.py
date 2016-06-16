@@ -197,6 +197,8 @@ epilog="""example uses:
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
         parser.add_argument(
             '--nocolor', help='Disables colored output', action='store_true')
+        parser.add_argument(
+            '--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
         return parser
 
     def _analyseArguments(self):

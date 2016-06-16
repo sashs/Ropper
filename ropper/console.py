@@ -199,7 +199,6 @@ class Console(cmd.Cmd):
 
         self.__cprinter.println('\n%d gadgets found' % counter)
 
-
     def __searchGadgets(self, binary):
         r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchGadgets(binary, instructionCount=self.__options.inst_count, gtype=GadgetType[self.__options.type.upper()])

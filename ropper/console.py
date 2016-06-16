@@ -72,6 +72,16 @@ class CallbackClass(object):
         if progress == 1.0:
             self.__console.cprinter.finishProgress()
 
+    def __filterCfgGadgetsProgress__(self, gadget, added, progress):
+        self.__console.cprinter.printProgress('filtering cfg gadgets...', progress)
+        if progress == 1.0:
+            self.__console.cprinter.finishProgress()
+
+    def __filterBadBytesGadgetsProgress__(self, gadget, added, progress):
+        self.__console.cprinter.printProgress('filtering badbytes...', progress)
+        if progress == 1.0:
+            self.__console.cprinter.finishProgress()
+
     def __ropchainMessages__(self, message):
         if message.startswith('[*]'):
             self.__console.cprinter.puts('\r' + message)
@@ -472,15 +482,15 @@ class Console(cmd.Cmd):
 
     def help_show(self):
         desc = 'shows informations about the loaded file'
-        if self.binary.printer:
+        if self.__getDataPrinter(self.currentFile.type).printer:
             desc += ('Available informations:\n' +
-                     ('\n'.join(self.binary.printer.availableInformations)))
+                     ('\n'.join(self.__getDataPrinter(self.currentFile.type).availableInformations)))
         self.__printHelpText(
             'show <info>', desc)
 
     def complete_show(self, text, line, begidx, endidx):
-        if self.binary:
-            return [i for i in self.binary.printer.availableInformations if i.startswith(
+        if self.__getDataPrinter(self.currentFile.type):
+            return [i for i in self.__getDataPrinter(self.currentFile.type).availableInformations if i.startswith(
                     text)]
 
     @safe_cmd

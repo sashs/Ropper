@@ -17,10 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
+from filebytes.pe import ImageDirectoryEntry
 from ropper.common.utils import isHex, toHex
 from ropper.common.coloredstring import cstr, Color
 from ropper.common.error import RopperError
-from ropper.loaders.loader import Loader
+from ropper.loaders.loader import Loader, Type
 from ropper.ropchain.ropchain import RopChain
 from ropper.arch import getArchitecture
 from ropper.rop import Ropper, Format
@@ -45,7 +46,7 @@ def deleteDuplicates(gadgets, callback=None):
     return toReturn
 
 
-def filterBadBytes(gadgets, badbytes):
+def filterBadBytes(gadgets, badbytes, callback=None):
 
     def formatBadBytes(badbytes):
         if len(badbytes) % 2 > 0:
@@ -57,28 +58,85 @@ def filterBadBytes(gadgets, badbytes):
             raise RopperError('Invalid characters in badbytes string')
         return badbytes
 
-
     if not badbytes:
         return gadgets
-
-    
 
     badbytes = formatBadBytes(badbytes)
     if isinstance(gadgets, dict):
         toReturn = {}
+        added = False
+        gadget_count = 0
+        for file, gadget in gadgets.items():
+            gadget_count += len(gadget)
         for file, gadget in gadgets.items():
             t = []
-            for g in gadget:
+            for i,g in enumerate(gadget):
                 if not badbytes or not g.addressesContainsBytes(badbytes):
                     t.append(g)
+                    added = True
+                if callback:
+                    callback(gadget, added, float(i)/(gadget_count-1))
+                    added = False
             toReturn[file] = t
     elif isinstance(gadgets, list): 
         toReturn = []  
-        for gadget in gadgets:
+        for i, gadget in enumerate(gadgets):
             if not badbytes or not gadget.addressesContainsBytes(badbytes):
                 toReturn.append(gadget)
+                added = True
+            if callback:
+                callback(gadget, added, float(i)/(len(gadgets)-1))
+                added = False
 
     return toReturn
+
+
+def cfgFilterGadgets(gadgets, callback=None):
+    
+    def intern(gadgets, callback=None,current=0, length=0):
+        result = []
+        
+        added = False
+        for gadget in gadgets:
+            loadConfig = gadget.binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
+            if not loadConfig:
+                return gadgets
+
+            # calculate relative address of the gadget when loaded to memory
+            gadgetRVA = gadget.address - gadget.binary.imageBase
+
+            # consider Microsoft CFG implementation imprecision - chop off 3 lsbits
+            gadgetRVA8ByteAligend = gadgetRVA - (gadgetRVA % 8)
+
+            inList = gadgetRVA8ByteAligend in loadConfig.cfGuardedFunctions
+
+            if inList:
+                # this is a gadget which passes CFG checks
+                result.append(gadget)
+                added = True
+
+            if callback:
+                # occasional progress reporting
+                callback(gadget, added, float(current)/gadgetLen)
+                added = False
+            current += 1
+        return result
+    
+    if isinstance(gadgets,  list):
+        gadgetLen = len(gadgets)-1
+        return intern(gadgets, callback, length=gadgetLen)
+    elif isinstance(gadgets, dict):
+        result = {}
+        i = 0
+        glen = 0
+        for file, glist in gadgets.items():
+            glen += len(glist)-1
+        for file, glist in gadgets.items():
+            result[file] = intern(glist, callback, i, glen)
+            i += len(result[file])
+
+        return result
+
 
 class Options(object):
 
@@ -108,7 +166,7 @@ class Options(object):
 
         badbytes = options.get('badbytes')
         if badbytes and not isinstance(badbytes, str):
-            raise TypeError('color has to be an instance of bool')
+            raise TypeError('badbytes has to be an instance of str')
         elif badbytes and len(badbytes) % 2 == 1:
             raise AttributeError('length of badbytes has to be even')
         elif badbytes and not isHex('0x'+badbytes):
@@ -118,7 +176,7 @@ class Options(object):
 
         all = options.get('all')
         if all != None and not isinstance(all, bool):
-            raise TypeError('color has to be an instance of bool')
+            raise TypeError('all has to be an instance of bool')
         elif all == None:
             options['all'] = False
 
@@ -132,9 +190,15 @@ class Options(object):
 
         detailed = options.get('detailed')
         if detailed != None and not isinstance(detailed, bool):
-            raise TypeError('color has to be an instance of bool')
+            raise TypeError('detailed has to be an instance of bool')
         elif detailed == None:
             options['detailed'] = False
+
+        cfg_only = options.get('cfg_only')
+        if cfg_only != None and not isinstance(cfg_only, bool):
+            raise TypeError('cfg_only has to be an instance of bool')
+        elif cfg_only == None:
+            options['cfg_only'] = False
 
     def items(self):
         for key, value in self.__options_dict.items():
@@ -196,9 +260,10 @@ class RopperService(object):
             func = getattr(self, '_%s_changed' % option)
             func(newvalue)
 
-    def __prepareGadgets(self, gadgets):
-
+    def __prepareGadgets(self, gadgets, type=None):
+        
         gadgets = self.__filterBadBytes(gadgets)
+        gadgets = self.__filterCfg(gadgets, type) 
         if not self.__options.all:
             callback = None
             if self.__callbacks and hasattr(self.__callbacks, '__deleteDoubleGadgetsProgress__'):
@@ -206,26 +271,44 @@ class RopperService(object):
             gadgets = deleteDuplicates(gadgets, callback)
         return gadgets
 
+
+
     def __filterBadBytes(self, gadgets):
         if self.__options.badbytes:
-            gadgets = filterBadBytes(gadgets, self.options.badbytes)
+            callback = None
+            if self.__callbacks and hasattr(self.__callbacks, '__filterBadBytesGadgetsProgress__'):
+                callback = self.__callbacks.__filterBadBytesGadgetsProgress__
+            gadgets = filterBadBytes(gadgets, self.options.badbytes, callback)
+        return gadgets
+
+    def __filterCfg(self, gadgets, type):
+        if self.__options.cfg_only and type==Type.PE:
+            callback = None
+            if self.__callbacks and hasattr(self.__callbacks, '__filterCfgGadgetsProgress__'):
+                callback = self.__callbacks.__filterCfgGadgetsProgress__
+            gadgets = cfgFilterGadgets(gadgets, callback)
         return gadgets
 
     def _badbytes_changed(self, value):
         for f in self.__files:
             if f.loaded:
-                f.gadgets = self.__prepareGadgets(f.allGadgets)
+                f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
 
     def _all_changed(self, value):
         for f in self.__files:
             if f.loaded:
-                f.gadgets = self.__prepareGadgets(f.allGadgets)
+                f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
 
     def _color_changed(self, value):
         cstr.COLOR = value
 
     def _detailed_changed(self, value):
         Gadget.DETAILED = value
+
+    def _cfg_only_changed(self, value):
+        for f in self.__files:
+            if f.loaded:
+                f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
 
     def _getFileFor(self, name):
         for file in self.__files:
@@ -327,7 +410,7 @@ class RopperService(object):
     def loadGadgetsFor(self, name=None):
         def load_gadgets(f):
             f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count)
-            f.gadgets = self.__prepareGadgets(f.allGadgets)
+            f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
          
         if name is None:
             for f in self.__files:
@@ -451,7 +534,7 @@ class RopperService(object):
             raise RopperError('No such file opened: %s' % name)
         file.loader.imageBase = imagebase
         if file.loaded:
-            file.gadgets = self.__prepareGadgets(file.allGadgets)
+            file.gadgets = self.__prepareGadgets(file.allGadgets, file.type)
 
     def setArchitectureFor(self, name, arch):
         file = self.getFileFor(name)
@@ -466,7 +549,7 @@ class RopperService(object):
         if not fc:
             raise RopperError('No such file opened: %s' % name)
         fc.allGadgets = gadgets
-        fc.gadgets = self.__prepareGadgets(fc.allGadgets)
+        fc.gadgets = self.__prepareGadgets(fc.allGadgets, fc.type)
 
 
 

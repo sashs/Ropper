@@ -189,6 +189,8 @@ epilog="""example uses:
         parser.add_argument(
             '--all', help='Does not remove duplicate gadgets', action='store_true')
         parser.add_argument(
+'--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
+        parser.add_argument(
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
         parser.add_argument(
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
@@ -220,6 +222,7 @@ epilog="""example uses:
         ropper_options['detailed'] = self.__args.detailed
         ropper_options['inst_count'] = self.__args.inst_count
         ropper_options['type'] = self.__args.type
+        ropper_options['cfg_only'] = self.__args.cfg_only
         self.ropper_options = ropper_options
 
 

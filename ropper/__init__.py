@@ -29,7 +29,7 @@ from ropper.loaders import raw
 from ropper.loaders.loader import Loader, Type
 from ropper.gadget import Gadget, GadgetType
 from ropper.service import RopperService, filterBadBytes
-from ropper.service import deleteDuplicates
+from ropper.service import deleteDuplicates, cfgFilterGadgets
 from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
 
 

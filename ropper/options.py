@@ -65,18 +65,19 @@ available rop chain generators:
 """,
 epilog="""example uses:
   [Generic]
-  ropper.py
-  ropper.py --file /bin/ls --console
+  {0}
+  {0} --file /bin/ls --console
 
   [Informations]
-  Ropper.py --file /bin/ls --info
-  Ropper.py --file /bin/ls --imports
-  Ropper.py --file /bin/ls --sections
-  Ropper.py --file /bin/ls --segments
-  Ropper.py --file /bin/ls --set nx
-  Ropper.py --file /bin/ls --unset nx
+  {0} --file /bin/ls --info
+  {0} --file /bin/ls --imports
+  {0} --file /bin/ls --sections
+  {0} --file /bin/ls --segments
+  {0} --file /bin/ls --set nx
+  {0} --file /bin/ls --unset nx
 
   [Gadgets]
+<<<<<<< HEAD
   Ropper.py --file /bin/ls --inst-count 5
   Ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
   Ropper.py --file /bin/ls --search "sub eax" --detail
@@ -91,34 +92,52 @@ epilog="""example uses:
   Ropper.py --file /bin/ls --chain execve=/bin/sh
   Ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
   Ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+=======
+  {0} --file /bin/ls --inst-count 5
+  {0} --file /bin/ls --search "sub eax" --badbytes 000a0d
+  {0} --file /bin/ls --search "sub eax" --detail
+  {0} --file /bin/ls --filter "sub eax"
+  {0} --file /bin/ls --inst-count 5 --filter "sub eax"
+  {0} --file /bin/ls --opcode ffe4
+  {0} --file /bin/ls --opcode ffe?
+  {0} --file /bin/ls --opcode ??e4
+  {0} --file /bin/ls --detailed
+  {0} --file /bin/ls --ppr --nocolor
+  {0} --file /bin/ls --jmp esp,eax
+  {0} --file /bin/ls --type jop
+  {0} --file /bin/ls --chain execve
+  {0} --file /bin/ls --chain execve=/bin/sh
+  {0} --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
+  {0} --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+>>>>>>> master
 
   [Assemble/Disassemble]
-  Ropper.py --asm "jmp esp"
-  Ropper.py --asm "mov eax, ecx; ret"
-  Ropper.py --disasm ffe4
+  {0} --asm "jmp esp"
+  {0} --asm "mov eax, ecx; ret"
+  {0} --disasm ffe4
 
   [Search]
-  Ropper.py --file /bin/ls --search <searchstring>
+  {0} --file /bin/ls --search <searchstring>
   ?\t\tany character
   %\t\tany string
 
   Example:
 
-  ropper.py --file /bin/ls --search "mov e?x"
+  {0} --file /bin/ls --search "mov e?x"
   0x000067f1: mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax
   0x00006d03: mov eax, esi; pop ebx; pop esi; pop edi; pop ebp; ret ;
   0x00006d6f: mov ebx, esi; mov esi, dword ptr [esp + 0x18]; add esp, 0x1c; ret ;
   0x000076f8: mov eax, dword ptr [eax]; mov byte ptr [eax + edx], 0; add esp, 0x18; pop ebx; ret ;
 
-  ropper.py --file /bin/ls --search "mov [%], edx"
+  {0} --file /bin/ls --search "mov [%], edx"
   0x000067ed: mov dword ptr [esp + 4], edx; mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;
   0x00006f4e: mov dword ptr [ecx + 0x14], edx; add esp, 0x2c; pop ebx; pop esi; pop edi; pop ebp; ret ;
   0x000084b8: mov dword ptr [eax], edx; ret ;
   0x00008d9b: mov dword ptr [eax], edx; add esp, 0x18; pop ebx; ret ;
 
-  ropper.py --file /bin/ls --search "mov [%], edx" --quality 1
+  {0} --file /bin/ls --search "mov [%], edx" --quality 1
   0x000084b8: mov dword ptr [eax], edx; ret ;
-  \n""")
+  \n""".format(sys.argv[0]))
 
 
         parser.add_argument(
@@ -189,7 +208,7 @@ epilog="""example uses:
         parser.add_argument(
             '--all', help='Does not remove duplicate gadgets', action='store_true')
         parser.add_argument(
-'--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
+            '--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
         parser.add_argument(
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
         parser.add_argument(

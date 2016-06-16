@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from filebytes.pe import ImageDirectoryEntry
 from .console import Console
 from .options import Options
 from .common.error import *
@@ -31,7 +31,6 @@ from ropper.gadget import Gadget, GadgetType
 from ropper.service import RopperService, filterBadBytes
 from ropper.service import deleteDuplicates, cfgFilterGadgets
 from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
-
 
 app_options = None
 VERSION=[1,9,6]

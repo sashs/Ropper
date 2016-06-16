@@ -252,20 +252,7 @@ class Console(cmd.Cmd):
 
         self.__cprinter.println('\n%d gadgets found' % counter)
 
-    def __deleteDoubleGadgetsCallback(self, gadget, added, progress):
-        self.__cprinter.printProgress('removing...', progress)
-        if progress == 1.0:
-            self.__cprinter.finishProgress()
 
-    def __searchGadgetCallback(self, section, gadgets, progress):
-        if gadgets is not None:
-            self.__cprinter.printProgress('loading...', progress)
-
-            if progress == 1.0:
-                self.__cprinter.finishProgress()
-        else:
-            self.__cprinter.printInfo(
-                'Loading gadgets for section: ' + section.name)
 
     def __printProgress(self, gadget, gnr, count):
         if gnr >= 0:

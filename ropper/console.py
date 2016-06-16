@@ -138,7 +138,7 @@ class Console(cmd.Cmd):
             self.__currentFileName = file
         except BaseException as e:
             raise RopperError(e)
-        self.__rs.changeImageBaseFor(file, self.__options.I)
+        self.__rs.setImageBaseFor(file, self.__options.I)
 
         #self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
@@ -673,10 +673,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_imagebase(self, text):
         if len(text) == 0:
-            self.currentFile.loader.imageBase = None
+            self.__rs.setImageBaseFor(self.currentFileName, None)
             self.__printInfo('Imagebase reseted')
         elif isHex(text):
-            self.currentFile.loader.imageBase = int(text, 16)
+            self.__rs.setImageBaseFor(self.currentFileName, int(text, 16))
             self.__printInfo('Imagebase set to %s' % text)
         else:
             self.help_imagebase()

@@ -24,6 +24,7 @@ from ropper.loaders.loader import Loader
 from ropper.ropchain.ropchain import RopChain
 from ropper.arch import getArchitecture
 from ropper.rop import Ropper, Format
+from ropper.gadget import Gadget
 from binascii import unhexlify
 import re
 
@@ -176,6 +177,7 @@ class RopperService(object):
         self.__callbacks = callbacks
         if self.__options.color:
             cstr.COLOR = self.__options.color
+        Gadget.DETAILED = self.__options.detailed
 
     @property
     def ropper(self):
@@ -216,10 +218,14 @@ class RopperService(object):
 
     def _all_changed(self, value):
         for f in self.__files:
-            f.gadgets = self.__prepareGadgets(f.allGadgets)
+            if f.loaded:
+                f.gadgets = self.__prepareGadgets(f.allGadgets)
 
     def _color_changed(self, value):
         cstr.COLOR = value
+
+    def _detailed_changed(self, value):
+        Gadget.DETAILED = value
 
     def _getFileFor(self, name):
         for file in self.__files:
@@ -344,7 +350,7 @@ class RopperService(object):
             for f in self.__files:
                 print_gadgets(f)
         else:
-            for f in self.__files.items():
+            for f in self.__files:
                 if f.loader.fileName == name:
                     print_gadgets(f)
 
@@ -377,24 +383,24 @@ class RopperService(object):
 
         return to_return
 
-    def search(self, searchString, quality=None, name=None):
+    def search(self, search, quality=None, name=None):
         if name:
             fc = self._getFileFor(name)
             if not fc:
                 raise RopperError('No such file opened: %s' % name)
             
             s = fc.loader.arch.searcher
-            for gadget in s.search(fc.gadgets, searchString, quality):
+            for gadget in s.search(fc.gadgets, search, quality):
                     yield(fc.name, gadget)
         else:        
             for fc in self.__files:
                 s = fc.loader.arch.searcher
-                for gadget in s.search(fc.gadgets, searchString, quality):
+                for gadget in s.search(fc.gadgets, search, quality):
                     yield(fc.name, gadget)
 
-    def listsearch(self, searchString, quality=None, name=None):
+    def searchdict(self, search, quality=None, name=None):
         to_return = {}
-        for file, gadget in self.search(searchString, quality, name):
+        for file, gadget in self.search(search, quality, name):
             l = to_return.get(file)
             if not l:
                 l = []
@@ -439,7 +445,7 @@ class RopperService(object):
 
         return generator.create(options)
 
-    def changeImageBaseFor(self, name, imagebase):
+    def setImageBaseFor(self, name, imagebase):
         file = self._getFileFor(name)
         if not file:
             raise RopperError('No such file opened: %s' % name)

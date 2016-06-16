@@ -158,7 +158,7 @@ class Loader(Abstract):
         if Raw:
             if not arch:
                 raise ArgumentError('Architecture has to be set, if raw file should be loaded')
-            return Raw(fileName, arch=arch)
+            return Raw(fileName, bytes=bytes, arch=arch)
         else:
             raise LoaderError('Not supported file type')
 

@@ -42,6 +42,8 @@ class GadgetType(enum.Enum):
 
 class Gadget(object):
 
+    DETAILED = False
+
     def __init__(self, binary, section):
         super(Gadget, self).__init__()
         self.__arch = None
@@ -191,6 +193,8 @@ class Gadget(object):
         return toReturn
 
     def __str__(self):
+        if not Gadget.DETAILED:
+            return self.simpleString()
         if not len(self.__lines):
             return "empty gadget"
         address = self.__lines[0][0]

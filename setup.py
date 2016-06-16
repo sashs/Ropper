@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = '1.9.5'
+version = '1.9.6'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
@@ -15,7 +15,7 @@ for p in packages:
     if p.startswith('ropper'):
         valid_packages.append(p)
 
-install_requires = ['filebytes>=0.9.9']
+install_requires = ['filebytes>=0.9.11']
 try:
     import capstone
     if capstone.cs_version()[0] < 3:

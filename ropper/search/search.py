@@ -66,16 +66,15 @@ class Searcher(object):
             if not g.match(filter):
                 if quality:
                     if len(g) <= quality+1:
-                        fg.append(g)
+                        yield g
                 else:
-                    fg.append(g)
+                    yield g
             count += 1
             if pprinter:
                 pprinter.printProgress('filtering gadgets...', float(count) / max_count)
             
         if pprinter:
             pprinter.finishProgress();
-        return fg
 
 
 class Searcherx86(Searcher):
@@ -103,4 +102,5 @@ class SearcherARM(Searcher):
     def search(self, gadgets, filter, quality = None, pprinter=None):
         if pprinter:
             pprinter.printInfo('r9=sb r10=sl r11=fp r12=ip r13=sp r14=lr r15=pc')
-        return super(SearcherARM, self).search(gadgets, filter, quality, pprinter)
+        for x in super(SearcherARM, self).search(gadgets, filter, quality, pprinter):
+            yield x

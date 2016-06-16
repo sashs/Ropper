@@ -35,9 +35,9 @@ class ImageImportDescriptorData(DataContainer):
 
 class PE(Loader):
 
-    def __init__(self, filename):
+    def __init__(self, filename, bytes=None):
 
-        super(PE, self).__init__(filename)
+        super(PE, self).__init__(filename, bytes)
 
     @property
     def entryPoint(self):
@@ -110,11 +110,13 @@ class PE(Loader):
                 'ASLR' : self.imageNtHeaders.OptionalHeader.DllCharacteristics & ImageDllCharacteristics.DYNAMIC_BASE != 0,
                 'DEP' : self.imageNtHeaders.OptionalHeader.DllCharacteristics & ImageDllCharacteristics.NX_COMPAT != 0}
 
-    def _loadFile(self, fileName):
-        return pe.PE(fileName)
+    def _loadFile(self, fileName, bytes=None):
+        return pe.PE(fileName, bytes)
 
     @classmethod
-    def isSupportedFile(cls, fileName):
+    def isSupportedFile(cls, fileName, bytes=None):
+        if bytes:
+            return pe.PE.isSupportedContent(bytes)
         return pe.PE.isSupportedFile(fileName)
 
 def getArch(*params):

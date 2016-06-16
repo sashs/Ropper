@@ -26,12 +26,12 @@ import os
 
 class ELF(Loader):
 
-    def __init__(self, filename):
+    def __init__(self, filename, bytes=None):
 
         self.__execSections = None
         self.__dataSections = None
 
-        super(ELF, self).__init__(filename)
+        super(ELF, self).__init__(filename, bytes)
 
     @property
     def entryPoint(self):
@@ -102,11 +102,13 @@ class ELF(Loader):
     def checksec(self):
         return {}
 
-    def _loadFile(self, fileName):
-        return elf.ELF(fileName)
+    def _loadFile(self, fileName, bytes=None):
+        return elf.ELF(fileName, bytes)
 
     @classmethod
-    def isSupportedFile(cls, fileName):
+    def isSupportedFile(cls, fileName, bytes=None):
+        if bytes:
+            return elf.ELF.isSupportedContent(bytes)
         return elf.ELF.isSupportedFile(fileName)
 
 def getArch(*params):

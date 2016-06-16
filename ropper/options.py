@@ -37,6 +37,7 @@ class Options(object):
         self.__parser = self._createArgParser()
         self._analyseArguments()
         self.__callbacks = []
+        self.__ropper_options = {}
 
     def _createArgParser(self):
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -76,6 +77,22 @@ epilog="""example uses:
   {0} --file /bin/ls --unset nx
 
   [Gadgets]
+<<<<<<< HEAD
+  Ropper.py --file /bin/ls --inst-count 5
+  Ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
+  Ropper.py --file /bin/ls --search "sub eax" --detail
+  Ropper.py --file /bin/ls --opcode ffe4
+  Ropper.py --file /bin/ls --opcode ffe?
+  Ropper.py --file /bin/ls --opcode ??e4
+  Ropper.py --file /bin/ls --detailed
+  Ropper.py --file /bin/ls --ppr --nocolor
+  Ropper.py --file /bin/ls --jmp esp,eax
+  Ropper.py --file /bin/ls --type jop
+  Ropper.py --file /bin/ls --chain execve
+  Ropper.py --file /bin/ls --chain execve=/bin/sh
+  Ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
+  Ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+=======
   {0} --file /bin/ls --inst-count 5
   {0} --file /bin/ls --search "sub eax" --badbytes 000a0d
   {0} --file /bin/ls --search "sub eax" --detail
@@ -92,6 +109,7 @@ epilog="""example uses:
   {0} --file /bin/ls --chain execve=/bin/sh
   {0} --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
   {0} --file /bin/ls --chain mprotect=0xbfdff000:0x21000
+>>>>>>> master
 
   [Assemble/Disassemble]
   {0} --asm "jmp esp"
@@ -180,8 +198,6 @@ epilog="""example uses:
         parser.add_argument(
             '--quality', help='The quality for gadgets which are found by search (1 = best)', metavar='<quality>', type=int)
         parser.add_argument(
-            '--filter', help='Filters gadgets', metavar='<regex>')
-        parser.add_argument(
             '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(
             '--instructions', help='Searchs for instructions (e.g. "jmp esp", "pop eax; ret")', metavar='<instructions>')
@@ -192,13 +208,13 @@ epilog="""example uses:
         parser.add_argument(
             '--all', help='Does not remove duplicate gadgets', action='store_true')
         parser.add_argument(
+            '--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
+        parser.add_argument(
             '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
         parser.add_argument(
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
         parser.add_argument(
             '--nocolor', help='Disables colored output', action='store_true')
-        parser.add_argument(
-            '--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
         return parser
 
     def _analyseArguments(self):
@@ -217,6 +233,18 @@ epilog="""example uses:
                 raise ArgumentError('Imagebase should be in hex (0x.....)')
             else:
                 self.__args.I = int(self.__args.I, 16)
+
+        ropper_options = {}
+        ropper_options['all'] = self.__args.all
+        ropper_options['color'] = not self.__args.nocolor
+        ropper_options['badbytes'] = self.__args.badbytes
+        ropper_options['detailed'] = self.__args.detailed
+        ropper_options['inst_count'] = self.__args.inst_count
+        ropper_options['type'] = self.__args.type
+        ropper_options['cfg_only'] = self.__args.cfg_only
+        self.ropper_options = ropper_options
+
+
 
 
     def __missingArgument(self, arg):

@@ -37,7 +37,7 @@ except:
     pass
 
 
-class FORMAT(Enum):
+class Format(Enum):
     _enum_ = 'RAW STRING HEX'
 
 class Ropper(object):
@@ -57,7 +57,7 @@ class Ropper(object):
             self.__cs = capstone.Cs(arch.arch, arch.mode)
         return self.__cs
 
-    def assemble(self, code, arch=x86, format=FORMAT.HEX):
+    def assemble(self, code, arch=x86, format=Format.HEX):
         if 'keystone' not in globals():
             raise RopperError('Keystone is not installed! Please install Keystone. \nLook at http://keystone-engine.org')
 
@@ -71,17 +71,17 @@ class Ropper(object):
             return "invalid"
         to_return = byte_list
 
-        if format == FORMAT.STRING:
+        if format == Format.STRING:
             to_return = '"'
             for byte in byte_list:
                 to_return += '\\x%02x' % byte
 
             to_return += '"'
-        elif format == FORMAT.HEX:
+        elif format == Format.HEX:
             to_return = ''
             for byte in byte_list:
                 to_return += '%02x' % byte
-        elif format == FORMAT.RAW:
+        elif format == Format.RAW:
             to_return = ''
             for byte in byte_list:
                 to_return += '%s' % chr(byte)
@@ -135,7 +135,7 @@ class Ropper(object):
             insts = [toBytes(0xff , 0xe0 | Register[reg_tmp]), toBytes(0xff, 0xd0 | Register[reg_tmp]),  toBytes(0x50 | Register[reg_tmp] , 0xc3)]
 
             for inst in insts:
-                toReturn.extend(self._searchOpcode(section, binary, inst, True))
+                toReturn.extend(self._searchOpcode(section, binary, inst, len(inst),True))
 
         return sorted(toReturn, key=lambda x: str(x))
 
@@ -146,7 +146,7 @@ class Ropper(object):
             raise RopperError('The length of the opcode has to be a multiple of two')
 
         opcode = opcode.encode('ascii')
-        size = len(opcode)/2
+        size = int(len(opcode)/2)
         for b in (b'5c',b'5d',b'5b',b'28',b'29',b'2b',b'2a',b'2e',b'3f'):
            
             if opcode.find(b) % 2 == 0:
@@ -154,9 +154,11 @@ class Ropper(object):
 
         m = re.search(b'\?', opcode)
         while m:
-
             if m.start() % 2 == 0:
-                if opcode[m.start()+1] == '?':
+                char = opcode[m.start()+1]
+                if type(char) == int:
+                    char = chr(char)
+                if char == '?':
                     opcode = opcode[:m.start()] + hexlify(b'[\x00-\xff]') +  opcode[m.start()+2:]
                 else:
                     raise RopperError('A ? for the highest 4 bit of a byte is not supported (e.g. ?1, ?2, ..., ?a)')
@@ -288,7 +290,7 @@ class Ropper(object):
 
         max_progress = len(code) * len(arch.endings[gtype])
 
-        vaddrs = set() # to prevent that the gadget is added several times
+        vaddrs = set()
         for ending in arch.endings[gtype]:
             offset_tmp = 0
             tmp_code = code[:]
@@ -315,7 +317,7 @@ class Ropper(object):
                             none_count = 0
                         else:
                             none_count += 1
-                            if none_count == 5:
+                            if none_count == arch.maxInvalid:
                                 break
 
                 tmp_code = tmp_code[index+arch.align:]
@@ -352,7 +354,7 @@ class Ropper(object):
             ending_queue.put(ending)
 
         for cpu in range(process_count):
-            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
@@ -369,21 +371,19 @@ class Ropper(object):
                 ending_count += 1
                 if self.__callback:
                     self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
-            #else:
-             #   count +=1
-        
+             
         for process in processes:
             process.terminate()
             
         return to_return
 
-    def __gatherGadgetsByEndings(self, section, binary, code, arch, ending_queue, gadget_queue, instruction_count):
+    def __gatherGadgetsByEndings(self,code, arch, offset, ending_queue, gadget_queue, instruction_count):
         
         try:
             while not ending_queue.empty():
                 try:
                     ending = ending_queue.get(False)
-                    gadgets = self.__gatherGadgetsByEnding(section, code, arch, ending, instruction_count)
+                    gadgets = self.__gatherGadgetsByEnding(code, arch, offset, ending, instruction_count)
                     
                     gadget_queue.put(gadgets)
                 except:
@@ -395,10 +395,10 @@ class Ropper(object):
         gadget_queue.put(None)
         
 
-    def __gatherGadgetsByEnding(self, section, code, arch, ending, instruction_count):
-        vaddrs = set() # to prevent that the gadget is added several times
+    def __gatherGadgetsByEnding(self, code, arch, offset, ending, instruction_count):
+        vaddrs = set()
         offset_tmp = 0
-        offset = section.offset
+        
         tmp_code = code[:]
         to_return = []
         match = re.search(ending[0], tmp_code)
@@ -418,13 +418,11 @@ class Ropper(object):
                         if leng > instruction_count:
                             break
                         if gadget:
-                            #if gadget.address not in vaddrs:
-                            #    vaddrs.update([gadget.address])
                             to_return.append(gadget)
                         none_count = 0
                     else:
                         none_count += 1
-                        if none_count == 5:
+                        if none_count == arch.maxInvalid:
                             break
 
             tmp_code = tmp_code[index+arch.align:]
@@ -432,12 +430,7 @@ class Ropper(object):
 
             match = re.search(ending[0], tmp_code)
 
-            #if self.__callback:
-            #    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-            #    self.__callback(section, toReturn, float(progress) / max_progress)
         return to_return
-        #if self.__callback:
-        #    self.__callback(section, toReturn, 1.0)
 
     def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
         gadget = Gadget(binary, section)

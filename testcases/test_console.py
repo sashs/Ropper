@@ -41,8 +41,6 @@ class ConsoleTest(unittest.TestCase):
 
         c.do_load('')
 
-        c.do_filter('xor al')
-
         c.do_gadgets('')
 
         c.do_help('load')
@@ -66,7 +64,7 @@ class ConsoleTest(unittest.TestCase):
         c.do_ppr('')
 
         c.do_ropchain('execve')
-        c.do_ropchain('mprotect=0xbfdff000,0x21000')
+        c.do_ropchain('mprotect address=0xbfdff000 size=0x20ffff')
 
         c.do_unset('nx')
         c.do_set('nx')

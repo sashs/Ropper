@@ -22,6 +22,7 @@ from ropper.rop import Ropper
 from ropper.gadget import GadgetDAO
 from ropper.arch import *
 from ropper.common.error import *
+from ropper.service import RopperService
 
 
 from sys import version_info
@@ -29,82 +30,79 @@ import unittest
 import os
 import ropper
 
+FILE = 'test-binaries/ls-x86_64'
+
 class GeneralTests(unittest.TestCase):
 
     def setUp(self):
-        self.file = Loader.open('test-binaries/ls-x86_64')
-
+        self.rs = RopperService()
+        self.rs.addFile('test-binaries/ls-x86_64')
+        self.rs.loadGadgetsFor()
 
     def test_search(self):
-        r = Ropper()
 
-        gadgets = r.searchGadgets(self.file)
+        found_gadgets = self.rs.searchdict('mov [rax]')[FILE]
+        self.assertEqual(len(found_gadgets), 2)
 
-        found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [rax]')
-        self.assertEqual(len(found_gadgets), 1)
+        found_gadgets = self.rs.searchdict('mov [r?x]')[FILE]
+        self.assertEqual(len(found_gadgets), 12)
 
-        found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [r?x]')
-        self.assertEqual(len(found_gadgets), 10)
-
-        found_gadgets = self.file.arch.searcher.search(gadgets, 'mov [r?x%]')
-        self.assertGreater(len(found_gadgets), 10)
+        found_gadgets = self.rs.searchdict('mov [r?x%]')[FILE]
+        self.assertGreater(len(found_gadgets), 12)
 
 
     def test_badbytes(self):
-        r = Ropper()
+
+        self.rs.options.badbytes = 'adfd'
 
         badbytes = 'adfd'
-        gadgets = r.searchGadgets(self.file)
-        gadgets = ropper.filterBadBytes(gadgets, badbytes)
-        gadget = gadgets[0]
+        
+        gadget = self.rs.files[0].gadgets[0]
         self.assertNotEqual(gadget.lines[0][0], 0x1adfd)
 
-        badbytes = '52f8'
-        gadgets = r.searchPopPopRet(self.file)
-        gadgets = ropper.filterBadBytes(gadgets, badbytes)
-        self.assertNotEqual(gadgets[0].lines[0][0], 0x52f8)
+        self.rs.options.badbytes = '52f8'
+        gadgets = self.rs.searchPopPopRet()
+        self.assertNotEqual(int(gadgets[FILE][0].lines[0][0]), 0x52f8)
 
-        badbytes = 'b1c7'
-        gadgets = r.searchJmpReg(self.file, ['rsp'])
-        gadgets = ropper.filterBadBytes(gadgets, badbytes)
-        gadget = gadgets[0]
-        self.assertNotEqual(gadget.lines[0][0], 0xb1c7)
+        self.rs.options.badbytes =  'b1c7'
+        gadgets = self.rs.searchJmpReg(['rsp'])
+        self.assertNotEqual(gadgets[FILE][0].lines[0][0], 0xb1c7)
 
-        with self.assertRaises(RopperError):
-            badbytes = 'b1c'
-            gadgets = ropper.filterBadBytes(gadgets, badbytes)
+        with self.assertRaises(AttributeError):
+            self.rs.options.badbytes = 'b1c'
+            
 
-        with self.assertRaises(RopperError):
-            badbytes = 'qwer'
-            gadgets = ropper.filterBadBytes(gadgets, badbytes)
+        with self.assertRaises(AttributeError):
+            self.rs.options.badbytes = 'qwer'
+            
 
     def test_opcode_failures(self):
-        r = Ropper()
+        r = RopperService()
 
         if version_info.major == 3 and version_info.minor >= 2:
             # Wrong question mark position
             with self.assertRaisesRegex(RopperError,'A \? for the highest 4 bit of a byte is not supported.*'):
-                r.searchOpcode(self.file, 'ff?4')
+                self.rs.searchOpcode('ff?4')
             # Wrong lengh
             with self.assertRaisesRegex(RopperError,'The length of the opcode has to be a multiple of two'):
-                r.searchOpcode(self.file, 'ff4')
+                self.rs.searchOpcode('ff4')
             # Unallowed character
             with self.assertRaisesRegex(RopperError,'Invalid characters in opcode string'):
-                r.searchOpcode(self.file, 'ff4r')
+                self.rs.searchOpcode('ff4r')
         else:
             # Wrong question mark position
             with self.assertRaisesRegexp(RopperError,'A \? for the highest 4 bit of a byte is not supported.*'):
-                r.searchOpcode(self.file, 'ff?4')
+                self.rs.searchOpcode('ff?4')
             # Wrong lengh
             with self.assertRaisesRegexp(RopperError,'The length of the opcode has to be a multiple of two'):
-                r.searchOpcode(self.file, 'ff4')
+                self.rs.searchOpcode('ff4')
             # Unallowed character
             with self.assertRaisesRegexp(RopperError,'Invalid characters in opcode string'):
-                r.searchOpcode(self.file, 'ff4r')
+                self.rs.searchOpcode('ff4r')
 
 
     def test_database(self):
-        r = Ropper()
+        
 
         db = './testdb.db'
         if os.path.exists(db):
@@ -112,12 +110,12 @@ class GeneralTests(unittest.TestCase):
 
         dao = GadgetDAO(db)
 
-        gadgets = r.searchGadgets(self.file)
+        gadgets = self.rs.files[0].allGadgets
 
         dao.save(gadgets)
         self.assertTrue(os.path.exists(db))
 
-        loaded_gadgets = dao.load(self.file)
+        loaded_gadgets = dao.load(self.rs.files[0].loader)
         self.assertEqual(len(gadgets), len(loaded_gadgets))
         self.assertEqual(gadgets[0].lines[0][0], loaded_gadgets[0].lines[0][0])
 

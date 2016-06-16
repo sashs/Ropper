@@ -16,7 +16,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from filebytes.pe import ImageDirectoryEntry, ImageDllCharacteristics
+from loaders.pe import PE
 from ropper.loaders.loader import Loader,Type
 from ropper.printer.printer import FileDataPrinter
 from ropper.rop import Ropper, FORMAT
@@ -198,10 +199,21 @@ class Console(cmd.Cmd):
 
         self.__cprinter.println('\n%d gadgets found' % counter)
 
+
     def __searchGadgets(self, binary):
         r = Ropper(self.__searchGadgetCallback)
         gadgets = r.searchGadgets(binary, instructionCount=self.__options.inst_count, gtype=GadgetType[self.__options.type.upper()])
         binary.loaded = True
+
+        if self.__options.cfg_only:
+            if isinstance(binary, PE):
+                optHeader = binary._binary.imageNtHeaders.header.OptionalHeader
+                characteristics = optHeader.DllCharacteristics
+                if characteristics == ImageDllCharacteristics.CONTROL_FLOW_GUARD:
+                    # do some filtering here
+                    self.__cprinter.printInfo('deleting CFG invalid gadgets...')
+                    gadgets = ropper.cfgFilterGadgets(gadgets, callback=self.__printCfgFilterProgress)
+
         binary.gadgets = gadgets
         self.__gadgets[binary] = ropper.filterBadBytes(gadgets, self.__options.badbytes)
         if not self.__options.all:
@@ -218,6 +230,14 @@ class Console(cmd.Cmd):
                 self.__cprinter.finishProgress()
         else:
             self.__cprinter.printInfo('Loading gadgets for section: ' + section.name)
+
+    def __printCfgFilterProgress(self, progress):
+        if progress == 1.0:
+            self.__cprinter.printProgress('clearing up...', 1)
+            self.__cprinter.finishProgress()
+        else:
+            self.__cprinter.printProgress('CFG filtering...', progress)
+
 
     def __printProgress(self, gadget, gnr, count):
         if gnr >= 0:

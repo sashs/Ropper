@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from filebytes.pe import ImageDirectoryEntry
 from .console import Console
 from .options import Options
 from .common.error import *
@@ -29,7 +29,6 @@ from ropper.loaders import raw
 from ropper.loaders.loader import Loader, Type
 from ropper.gadget import Gadget, GadgetType
 from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
-
 
 app_options = None
 VERSION=[1,9,5]
@@ -91,3 +90,32 @@ def search(gadgets, searchString):
 
     searcher = gadgets[0].binary.arch.searcher
     return searcher.search(gadgets, searchString)
+
+
+def cfgFilterGadgets(gadgets, callback=None):
+    result = []
+    gadgetLen = float(len(gadgets))
+    i = 0
+    for gadget in gadgets:
+        # calculate relative address of the gadget when loaded to memory
+        gadgetRVA = gadget.address - gadget.binary.imageBase
+
+        # consider Microsoft CFG implementation imprecision - chop off 3 lsbits
+        gadgetRVA8ByteAligend = gadgetRVA - (gadgetRVA % 8)
+        loadConfig = gadget.binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
+        inList = gadgetRVA8ByteAligend in loadConfig.cfGuardedFunctions
+
+        if inList:
+            # this is a gadget which passes CFG checks
+            result.append(gadget)
+
+        if callback and i % 0x100 == 0:
+            # occasional progress reporting
+            callback(i/gadgetLen)
+
+        i += 1
+
+    if callback:
+        callback(1.0)
+
+    return result

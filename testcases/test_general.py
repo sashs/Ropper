@@ -41,13 +41,13 @@ class GeneralTests(unittest.TestCase):
 
     def test_search(self):
 
-        found_gadgets = self.rs.listsearch('mov [rax]')[FILE]
+        found_gadgets = self.rs.searchdict('mov [rax]')[FILE]
         self.assertEqual(len(found_gadgets), 2)
 
-        found_gadgets = self.rs.listsearch('mov [r?x]')[FILE]
+        found_gadgets = self.rs.searchdict('mov [r?x]')[FILE]
         self.assertEqual(len(found_gadgets), 12)
 
-        found_gadgets = self.rs.listsearch('mov [r?x%]')[FILE]
+        found_gadgets = self.rs.searchdict('mov [r?x%]')[FILE]
         self.assertGreater(len(found_gadgets), 12)
 
 

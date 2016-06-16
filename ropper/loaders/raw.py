@@ -25,9 +25,8 @@ from filebytes.binary import Binary
 class Raw(Loader):
 
     def __init__(self, filename, bytes=None, arch=x86):
-        super(Raw, self).__init__(filename, bytes)
+        super(Raw, self).__init__(filename, bytes, arch)
         self.__codeSection = Section('bytes', self._binary._bytes, 0x0, 0x0)
-        self.arch = arch
 
     @property
     def entryPoint(self):

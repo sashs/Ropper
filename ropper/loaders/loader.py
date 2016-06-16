@@ -54,13 +54,13 @@ class Section(object):
 
 class Loader(Abstract):
 
-    def __init__(self, filename, bytes=None):
+    def __init__(self, filename, bytes=None, arch=None):
         super(Loader, self).__init__()
 
         self._fileName = filename
         self._bytes = None
         self._bytes_p = None
-        self._arch = None
+        self._arch = arch
 
 
         self._gadgets = {}
@@ -70,7 +70,8 @@ class Loader(Abstract):
         self.loaded = False
 
         self.__binary = self._loadFile(filename, bytes)
-        self._arch = self._loadDefaultArch()
+        if not arch:
+            self._arch = self._loadDefaultArch()
 
     @property
     def _binary(self):
@@ -151,7 +152,10 @@ class Loader(Abstract):
         for subclass in sc:
             if subclass.__name__ != 'Raw':
                 if not raw and subclass.isSupportedFile(fileName, bytes):
-                    return subclass(fileName, bytes)
+                    if arch:
+                        return subclass(fileName, bytes, arch=arch)
+                    else:
+                        return subclass(fileName, bytes)
             else:
                 Raw = subclass
 

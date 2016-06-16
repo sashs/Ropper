@@ -35,9 +35,9 @@ class ImageImportDescriptorData(DataContainer):
 
 class PE(Loader):
 
-    def __init__(self, filename, bytes=None):
+    def __init__(self, filename, bytes=None, arch=None):
 
-        super(PE, self).__init__(filename, bytes)
+        super(PE, self).__init__(filename, bytes, arch)
 
     @property
     def entryPoint(self):

@@ -26,12 +26,12 @@ import os
 
 class ELF(Loader):
 
-    def __init__(self, filename, bytes=None):
+    def __init__(self, filename, bytes=None, arch=None):
 
         self.__execSections = None
         self.__dataSections = None
 
-        super(ELF, self).__init__(filename, bytes)
+        super(ELF, self).__init__(filename, bytes, arch)
 
     @property
     def entryPoint(self):

@@ -22,7 +22,7 @@ import filebytes.mach_o as macho
 
 class MachO(Loader):
 
-    def __init__(self, filename, bytes=None):
+    def __init__(self, filename, bytes=None, arch=None):
 
         self.loaderCommands = []
         self.header = None
@@ -30,7 +30,7 @@ class MachO(Loader):
         self.__module = None
         self.__imageBase = None
 
-        super(MachO, self).__init__(filename, bytes)
+        super(MachO, self).__init__(filename, bytes, arch)
 
     @property
     def entryPoint(self):

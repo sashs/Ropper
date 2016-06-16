@@ -28,6 +28,8 @@ from ropper.loaders import mach_o
 from ropper.loaders import raw
 from ropper.loaders.loader import Loader, Type
 from ropper.gadget import Gadget, GadgetType
+from ropper.service import RopperService, filterBadBytes
+from ropper.service import deleteDuplicates
 from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
 
 
@@ -42,12 +44,3 @@ def start(args):
     except RopperError as e:
         print(e)
 
-
-
-
-def search(gadgets, searchString):
-    if not gadgets:
-        return []
-
-    searcher = gadgets[0].binary.arch.searcher
-    return searcher.search(gadgets, searchString)

@@ -290,7 +290,7 @@ class Ropper(object):
 
         max_progress = len(code) * len(arch.endings[gtype])
 
-        vaddrs = set() # to prevent that the gadget is added several times
+        vaddrs = set()
         for ending in arch.endings[gtype]:
             offset_tmp = 0
             tmp_code = code[:]
@@ -354,7 +354,7 @@ class Ropper(object):
             ending_queue.put(ending)
 
         for cpu in range(process_count):
-            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(section, binary, tmp_code, arch, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
@@ -371,21 +371,19 @@ class Ropper(object):
                 ending_count += 1
                 if self.__callback:
                     self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
-            #else:
-             #   count +=1
-        
+             
         for process in processes:
             process.terminate()
             
         return to_return
 
-    def __gatherGadgetsByEndings(self, section, binary, code, arch, ending_queue, gadget_queue, instruction_count):
+    def __gatherGadgetsByEndings(self,code, arch, offset, ending_queue, gadget_queue, instruction_count):
         
         try:
             while not ending_queue.empty():
                 try:
                     ending = ending_queue.get(False)
-                    gadgets = self.__gatherGadgetsByEnding(code, arch, ending, instruction_count)
+                    gadgets = self.__gatherGadgetsByEnding(code, arch, offset, ending, instruction_count)
                     
                     gadget_queue.put(gadgets)
                 except:
@@ -397,11 +395,10 @@ class Ropper(object):
         gadget_queue.put(None)
         
 
-    def __gatherGadgetsByEnding(self, code, arch, ending, instruction_count):
-        vaddrs = set() # to prevent that the gadget is added several times
+    def __gatherGadgetsByEnding(self, code, arch, offset, ending, instruction_count):
+        vaddrs = set()
         offset_tmp = 0
-        #offset = section.offset
-        offset = 0
+        
         tmp_code = code[:]
         to_return = []
         match = re.search(ending[0], tmp_code)
@@ -421,8 +418,6 @@ class Ropper(object):
                         if leng > instruction_count:
                             break
                         if gadget:
-                            #if gadget.address not in vaddrs:
-                            #    vaddrs.update([gadget.address])
                             to_return.append(gadget)
                         none_count = 0
                     else:
@@ -435,12 +430,7 @@ class Ropper(object):
 
             match = re.search(ending[0], tmp_code)
 
-            #if self.__callback:
-            #    progress = arch.endings[gtype].index(ending) * len(code) + len(code) - len(tmp_code)
-            #    self.__callback(section, toReturn, float(progress) / max_progress)
         return to_return
-        #if self.__callback:
-        #    self.__callback(section, toReturn, 1.0)
 
     def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
         gadget = Gadget(binary, section)

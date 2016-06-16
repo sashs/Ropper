@@ -264,7 +264,7 @@ class ArchitectureArmThumb(Architecture):
         super(ArchitectureArmThumb, self).__init__(CS_ARCH_ARM, CS_MODE_THUMB, 4, 2)
         self._searcher = SearcherARM()
         self._name = 'ARMTHUMB'
-
+        self._maxInvalid = 2
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_THUMB)
 

@@ -209,7 +209,8 @@ class Console(cmd.Cmd):
             if isinstance(binary, PE):
                 optHeader = binary._binary.imageNtHeaders.header.OptionalHeader
                 characteristics = optHeader.DllCharacteristics
-                if characteristics == ImageDllCharacteristics.CONTROL_FLOW_GUARD:
+                cfgFlag = ImageDllCharacteristics.CONTROL_FLOW_GUARD
+                if characteristics & cfgFlag == cfgFlag:
                     # do some filtering here
                     self.__cprinter.printInfo('deleting CFG invalid gadgets...')
                     gadgets = ropper.cfgFilterGadgets(gadgets, callback=self.__printCfgFilterProgress)

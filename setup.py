@@ -15,7 +15,7 @@ for p in packages:
     if p.startswith('ropper'):
         valid_packages.append(p)
 
-install_requires = ['filebytes>=0.9.11']
+install_requires = ['filebytes>=0.9.12']
 try:
     import capstone
     if capstone.cs_version()[0] < 3:

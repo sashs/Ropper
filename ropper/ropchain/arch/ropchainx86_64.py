@@ -575,8 +575,9 @@ class RopChainX86_64(RopChain):
         return (toReturn,)
 
     def _createOpcode(self, opcode):
-
-        return self._printRopInstruction(self._searchOpcode(opcode))
+        gadget = self._searchOpcode(opcode)
+        if gadget:
+            return self._printRopInstruction(gadget)
 
 
     def _searchOpcode(self, opcode):
@@ -646,6 +647,7 @@ class RopChainSystemX86_64(RopChainX86_64):
 
         self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)
+        
         try:
             self._printMessage('Look for syscall gadget')
             chain_tmp += self._createSyscall()[0]
@@ -656,7 +658,7 @@ class RopChainSystemX86_64(RopChainX86_64):
                 self._printMessage('No syscall gadget found!')
                 self._printMessage('Look for syscall opcode')
 
-                chain_tmp += self._createOpcode('0f0f')
+                chain_tmp += self._createOpcode('0f05')
                 self._printMessage('syscall opcode found')
 
             except RopChainError:

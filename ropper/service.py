@@ -60,11 +60,11 @@ def filterBadBytes(gadgets, badbytes, callback=None):
 
     if not badbytes:
         return gadgets
-
+    added = False
     badbytes = formatBadBytes(badbytes)
     if isinstance(gadgets, dict):
         toReturn = {}
-        added = False
+        
         gadget_count = 0
         for file, gadget in gadgets.items():
             gadget_count += len(gadget)

@@ -151,7 +151,7 @@ class Console(cmd.Cmd):
                 name = self.__currentFileName.split('\\')[-1]
             else:
                 name = self.__currentFileName
-            self.prompt = cstr('(%s/%s)> ' % (name, self.currentFile.arch), Color.RED)
+            self.prompt = cstr('(%s/%s/%s)> ' % (name, str(self.currentFile.type),self.currentFile.arch), Color.RED)
         else:
             self.prompt = cstr('(ropper)> ', Color.RED)
 

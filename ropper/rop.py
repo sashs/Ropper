@@ -63,7 +63,7 @@ class Ropper(object):
 
         ks = keystone.Ks(arch.ksarch[0], arch.ksarch[1])
         try:
-            byte_list =  ks.asm(code)[0]
+            byte_list =  ks.asm(code.encode('ascii'))[0]
         except BaseException as e:
             raise RopperError(e)
 
@@ -209,10 +209,14 @@ class Ropper(object):
 
             if (offset + match.start()) % binary.arch.align == 0:
                 if disass:
+                    could_disass = False
                     #for i in disassembler.disasm(struct.pack('B' * size, *code[match.start():match.end()]), offset + match.start()):
                     for i in disassembler.disasm(struct.pack('B' * size, *code[match.start():match.end()]), offset + match.start()):
                         opcodeGadget.append(
                             i.address, i.mnemonic , i.op_str, bytes=i.bytes)
+                        could_disass = True
+                    if not could_disass:
+                        continue
                 else:
                     opcodeGadget.append(
                         offset + match.start(), hexlify(match.group(0)).decode('utf-8'),bytes=match.group())

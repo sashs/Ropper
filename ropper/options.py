@@ -210,7 +210,7 @@ epilog="""example uses:
         parser.add_argument(
             '--cfg-only', help='Filters out gadgets which fail the Microsoft CFG check. Only for PE files which are compiled with CFG check enabled (check DllCharachteristics) [PE]', action='store_true')
         parser.add_argument(
-            '--chain', help='Generates a ropchain [generator=parameter]', metavar='<generator>')
+            '--chain', help='Generates a ropchain [generator parameter=value[ parameter=value]]', metavar='<generator>')
         parser.add_argument(
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
         parser.add_argument(

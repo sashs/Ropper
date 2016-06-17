@@ -50,6 +50,11 @@ def safe_cmd(func):
             func(self, text)
         except RopperError as e:
             ConsolePrinter().printError(e)
+        except KeyboardInterrupt:
+            ConsolePrinter().println()
+        except BaseException as e:
+            ConsolePrinter().printError(e)
+            ConsolePrinter().printError('Please report this error on https://github.com/sashs/ropper')
     return cmd
 
 class CallbackClass(object):
@@ -151,7 +156,7 @@ class Console(cmd.Cmd):
                 name = self.__currentFileName.split('\\')[-1]
             else:
                 name = self.__currentFileName
-            self.prompt = cstr('(%s/%s)> ' % (name, self.currentFile.arch), Color.RED)
+            self.prompt = cstr('(%s/%s/%s)> ' % (name, str(self.currentFile.type),self.currentFile.arch), Color.RED)
         else:
             self.prompt = cstr('(ropper)> ', Color.RED)
 
@@ -279,15 +284,7 @@ class Console(cmd.Cmd):
             self.__cprinter.finishProgress()
 
     def __loadAllGadgets(self):
-
-        #self.__cprinter.printInfo('Load %s' % binary.fileName)
         self.__rs.loadGadgetsFor()
-
-    # def __loadUnloadedGadgets(self):
-
-    #     for binary in self.__binaries:
-    #         if not binary.loaded:
-    #             self.__searchGadgetsFor(binary)
 
     def __printGadgetsFromCurrentFile(self):
         gadgets = self.currentFile.gadgets
@@ -388,9 +385,12 @@ class Console(cmd.Cmd):
         self.__cprinter.println(ds)
 
     def __printSectionInHex(self, section):
-        section = self.currentFile.loader.getSection(section.encode('ASCII'))
-        printHexFormat(section.bytes, section.virtualAddress,
+        section = self.currentFile.loader.getSection(section)
+        if section.bytes:
+            printHexFormat(section.bytes, section.virtualAddress,
                        not self.__rs.options.color)
+        else:
+            self.__printInfo('No bytes to print')
 
     def __handleOptions(self, options):
         if options.sections:
@@ -487,7 +487,7 @@ class Console(cmd.Cmd):
 
     def help_show(self):
         desc = 'shows informations about the loaded file'
-        if self.__getDataPrinter(self.currentFile.type).printer:
+        if self.__getDataPrinter(self.currentFile.type):
             desc += ('Available informations:\n' +
                      ('\n'.join(self.__getDataPrinter(self.currentFile.type).availableInformations)))
         self.__printHelpText(
@@ -561,7 +561,7 @@ class Console(cmd.Cmd):
 
     def help_file(self):
         self.__printHelpText(
-            'file <file>|<idx>', 'file - loads a file\nidx - select this loaded file')
+            'file [<file>|<idx>]', '\nno argument shows all opened files\n<file> - loads the file <file>\n<idx> - select the file with number <idx>')
 
     @safe_cmd
     def do_set(self, text):
@@ -621,7 +621,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_load(self):
         self.__printHelpText(
-            'load [all|unloaded]', 'all - loads gadgets of all opened files\n\t loads gadgets')
+            'load [all]', '\nall - loads gadgets of all opened files\nwithout argument loads gadgets of current file')
 
     @safe_cmd
     def do_ppr(self, text):
@@ -685,7 +685,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_opcode(self):
         self.__printHelpText(
-            'opcode <opcode>', 'searchs opcode in executable sections')
+            'opcode <opcode>', 'searchs opcode in executable sections\nExample:\nopcode ffe4\nopcode ff4?\nopcode ff??\n\nNot allowed:\nopcode ff?4')
 
     @safe_cmd
     def do_imagebase(self, text):
@@ -709,7 +709,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             return
 
         self.do_settings('type %s' % text)
-        self.__printInfo('Gadgets have to be reloaded')
 
     def help_type(self):
         self.__printHelpText(
@@ -748,6 +747,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 elif len(splits) == 2:
                     if splits[1] in ['on', 'off']:
                         self.__rs.options[splits[0]] = True if splits[1] == 'on' else False
+                    elif splits[0] == 'inst_count':
+                        self.__rs.options[splits[0]] = int(splits[1])
                     else:
                         self.__rs.options[splits[0]] = splits[1]
                         
@@ -768,7 +769,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             printTable('Settings', (cstr('Name'), cstr('Value')), data)
 
     def help_settings(self):
-        self.__printHelpText('settings', 'shows the current settings')
+        self.__printHelpText('settings', 'shows the current settings or set the settings\nHow to set:\nsettings badbytes 00 - sets badbytes to 00\nsettings badbytes - sets badbytes to default (empty)')
 
     @safe_cmd
     def do_badbytes(self, text):
@@ -818,7 +819,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_ropchain(self):
         self.__printHelpText('ropchain <generator>[ argname=arg[ argname=arg...]]',
-                             'uses the given generator and create a ropchain with args')
+                             'uses the given generator and create a ropchain with args\n\nAvailable generators:\nexecve\nargs: cmd (optional)\navailable: x86, x86_64\nOS: linux\n\nmprotect\nargs: address, size\navailable: x86, x86_64\nOS: linux\n\nvirtualprotect\nargs: address (IAT)(optional)\navailable: x86\nOS: Windows\n\nExamples:\nropchain execve\nropchain mprotect address=0xbfff0000 size=0x21000')
 
     def do_quit(self, text):
         exit(0)
@@ -936,10 +937,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__disasm(text, arch)
 
     def help_disasm(self):
-        self.__printHelpText('disasm <bytes>', 'disassembles the given bytes')
+        self.__printHelpText('disasm <bytes>', 'disassembles the given bytes.\nExample:\ndisasm ffe4')
 
     @safe_cmd
-    def do_disass_address(self, text):
+    def do_disasm_address(self, text):
         split = text.split(' ')
         length = 1
         if not isHex(split[0]):
@@ -957,9 +958,9 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         addr = int(split[0], 16)
         self.__disassembleAddress(addr, length)
 
-    def help_disass_address(self):
+    def help_disasm_address(self):
         self.__printHelpText(
-            'disassembleAddress <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)')
+            'disassembleAddress <address> [<length>]', 'Disassembles instruction at address <address>. The count of instructions to disassemble can be specified (0x....:L...)\nExample:\ndisasm_address 0x8048cd8\ndisasm_address 0x8048cd8 L2\ndisasm_address 0x8048cd8 L-2')
 
     @safe_cmd
     def do_stack_pivot(self, text):
@@ -1031,7 +1032,7 @@ class ConsolePrinter(object):
         self.printMessage(cstr('[ERROR]', Color.RED), message)
 
     def printInfo(self, message):
-        self.printMessage(cstr('[INFO]', Color.BLUE), message)
+        self.printMessage(cstr('[INFO]', Color.GREEN), message)
 
     def startProgress(self, message=None):
         if message:

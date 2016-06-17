@@ -94,7 +94,7 @@ class ELF(Loader):
 
     def getSection(self, name):
         for shdr in self._binary.sections:
-            if shdr.name == name.decode('ascii'):
+            if shdr.name == name:
                 
                 return Section(shdr.name, shdr.raw, shdr.header.sh_addr, shdr.header.sh_offset)
         raise RopperError('No such section: %s' % name)

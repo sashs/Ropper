@@ -104,7 +104,7 @@ class Console(cmd.Cmd):
         self.__currentFileName = ''
         self.__cprinter = ConsolePrinter()
         self.__dataPrinter = {}
-        self.prompt = cstr('(ropper) ', Color.RED)
+        self.__updatePrompt()
 
     @property
     def cprinter(self):

@@ -25,7 +25,7 @@ from ropper.loaders.loader import Loader, Type
 from ropper.ropchain.ropchain import RopChain
 from ropper.arch import getArchitecture
 from ropper.rop import Ropper, Format
-from ropper.gadget import Gadget
+from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
 import re
 
@@ -308,6 +308,16 @@ class RopperService(object):
             if f.loaded:
                 f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
 
+    def _type_changed(self, value):
+        for f in self.__files:
+            if f.loaded:
+                self.loadGadgetsFor(f.name)
+
+    def _inst_count_changed(self, value):
+        for f in self.__files:
+            if f.loaded:
+                self.loadGadgetsFor(f.name)
+
     def _getFileFor(self, name):
         for file in self.__files:
             if file.loader.fileName == name:
@@ -407,7 +417,16 @@ class RopperService(object):
 
     def loadGadgetsFor(self, name=None):
         def load_gadgets(f):
-            f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count)
+            gtype = None
+            if self.options.type == 'rop':
+                gtype = GadgetType.ROP
+            elif self.options.type == 'jop':
+                gtype = GadgetType.JOP
+            elif self.options.type == 'sys':
+                gtype = GadgetType.SYS
+            elif self.options.type == 'all':
+                gtype = GadgetType.ALL    
+            f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
             f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
          
         if name is None:

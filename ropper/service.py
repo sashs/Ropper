@@ -271,8 +271,6 @@ class RopperService(object):
             gadgets = deleteDuplicates(gadgets, callback)
         return gadgets
 
-
-
     def __filterBadBytes(self, gadgets):
         if self.__options.badbytes:
             callback = None

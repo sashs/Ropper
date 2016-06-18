@@ -641,7 +641,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_inst(self, text):
         if len(text) == 0:
-            self.help_instructions()
+            self.help_inst()
             return
 
         self.__searchInstructions(text)

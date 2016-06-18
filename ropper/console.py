@@ -490,6 +490,8 @@ class Console(cmd.Cmd):
         elif text == 'all':
             for file in self.__rs.files:
                 self.__rs.removeFile(file.loader.fileName)
+            self.__currentFileName = None
+            self.__updatePrompt()
         else:
             self.help_close()
 
@@ -877,7 +879,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             arch = text[:index]
             text = text[index:].strip()
             arch = getArchitecture(arch)
-
+        import pdb;pdb.set_trace()
         if not arch:
             if self.__currentFileName:
                 arch = str(self.currentFile.arch)

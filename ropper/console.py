@@ -720,7 +720,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             try:
                 splits = text.strip().split(' ')
                 if len(splits) == 1:
-                    self.__rs.options[splits[0]] = None
+                    if splits[0] == 'color':
+                        self.__rs.options[splits[0]] = True
+                    else:
+                        self.__rs.options[splits[0]] = None
                 elif len(splits) == 2:
                     if splits[1] in ['on', 'off']:
                         self.__rs.options[splits[0]] = True if splits[1] == 'on' else False

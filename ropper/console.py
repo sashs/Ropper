@@ -919,7 +919,10 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_stack_pivot(self, text):
-        self.__printGadgets(self.currentFile.gadgets, Category.STACK_PIVOT)
+        if self.currentFile.loaded:
+            self.__printGadgets(self.currentFile.gadgets, Category.STACK_PIVOT)
+        else:
+            self.__printInfo('No gadgets loaded. Please load gadgets with \'load\'')
 
     def help_stack_pivot(self):
         self.__printHelpText('stack_pivot','Prints all stack pivot gadgets')

@@ -109,6 +109,9 @@ class Architecture(AbstractSingleton):
     def __str__(self):
         return self._name
 
+    def __repr__(self):
+        return 'getArchitecture(%s)' % repr(str(self))
+
 
 class ArchitectureX86(Architecture):
 

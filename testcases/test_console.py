@@ -29,9 +29,9 @@ class ConsoleTest(unittest.TestCase):
         c.do_detailed('off')
         c.do_detailed('invalid')
 
-        c.do_disass_address('0x8048abc')
-        c.do_disass_address('0x9048abc')
-        c.do_disass_address('invalid')
+        c.do_disasm_address('0x8048abc')
+        c.do_disasm_address('0x9048abc')
+        c.do_disasm_address('invalid')
 
         c.do_file('test-binaries/ls-x86')
         c.do_file('')

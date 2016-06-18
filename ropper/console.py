@@ -22,9 +22,8 @@ from ropper.printer.printer import FileDataPrinter
 from ropper.rop import Ropper
 from ropper.common.error import *
 from ropper.gadget import GadgetType
-from ropper.gadget import GadgetDAO
 from ropper.gadget import Category
-from ropper.common.utils import isHex
+from ropper.common.utils import isHex, getFileNameFromPath
 from ropper.common.coloredstring import *
 from ropper.common.utils import *
 from ropper.ropchain.ropchain import *
@@ -91,7 +90,11 @@ class CallbackClass(object):
         if message.startswith('[*]'):
             self.__console.cprinter.puts('\r' + message)
         else:
+            self.__console.cprinter.println()
             self.__console.cprinter.printInfo(message)
+
+    def __message__(self, message):
+        self.__console.cprinter.printInfo(message)
 
 class Console(cmd.Cmd):
 
@@ -125,7 +128,12 @@ class Console(cmd.Cmd):
     def currentFile(self):
         return self.__rs.getFileFor(self.currentFileName)
 
-    
+    def cmdloop(self):
+        try:
+            cmd.Cmd.cmdloop(self)
+        except KeyboardInterrupt:
+            print()
+            self.cmdloop()
 
     def __getDataPrinter(self, type):
         p = self.__dataPrinter.get(type)
@@ -146,16 +154,14 @@ class Console(cmd.Cmd):
         if self.__options.console:
             self.cmdloop()
 
+        if self.__options.clear_cache:
+            self.__rs.clearCache()
+
         self.__handleOptions(self.__options)
 
     def __updatePrompt(self):
         if self.__currentFileName:
-            if '/' in self.__currentFileName:
-                name = self.__currentFileName.split('/')[-1]
-            elif '\\' in self.__currentFileName:
-                name = self.__currentFileName.split('\\')[-1]
-            else:
-                name = self.__currentFileName
+            name = getFileNameFromPath(self.__currentFileName)
             self.prompt = cstr('(%s/%s/%s)> ' % (name, str(self.currentFile.type),self.currentFile.arch), Color.RED)
         else:
             self.prompt = cstr('(ropper)> ', Color.RED)
@@ -341,32 +347,6 @@ class Console(cmd.Cmd):
         else:
             self.__printError('No file loaded')
 
-    def __savedb(self, dbpath):
-        if not dbpath.endswith('.db'):
-            dbpath = dbpath + '.db'
-        if os.path.exists(dbpath):
-            self.__cprinter.printInfo('db exists')
-            overwrite = input('Overwrite? [Y/n]: ')
-            if not overwrite or overwrite.upper() == 'Y':
-                self.__cprinter.printInfo('overwrite db')
-                os.remove(dbpath)
-            else:
-                self.__cprinter.printInfo('choose another db name')
-                return
-        dao = GadgetDAO(dbpath, self.__cprinter)
-
-        dao.save(self.currentFile.allGadgets)
-
-    def __loaddb(self, dbpath):
-        if not dbpath.endswith('.db'):
-            dbpath = dbpath + '.db'
-        if not os.path.exists(dbpath):
-            raise RopperError('db does not exist: ' + dbpath)
-
-        dao = GadgetDAO(dbpath, self.__cprinter)
-
-        self.__rs._setGadgets(self.currentFileName,dao.load(self.currentFile.loader))
-
     def __printStrings(self, string, sec=None):
         strings = self.__rs.searchString(
             string=string, name=self.currentFileName)
@@ -392,6 +372,7 @@ class Console(cmd.Cmd):
         else:
             self.__printInfo('No bytes to print')
 
+    @safe_cmd
     def __handleOptions(self, options):
         if options.sections:
             self.__printData('sections')
@@ -462,12 +443,6 @@ class Console(cmd.Cmd):
         elif options.chain:
             self.__loadGadgets()
             self.__generateChain(options.chain)
-        elif options.db:
-            self.__loaddb(options.db)
-            if options.search:
-                self.__search(options.search, options.quality)
-            else:
-                self.__printGadgetsFromCurrentFile()
         else:
             self.__loadGadgets()
             if options.search:
@@ -838,31 +813,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText(
             'arch <arch>', 'sets the architecture <arch> for the loaded file')
 
-    def help_savedb(self):
-        self.__printHelpText(
-            'savedb <dbname>', 'saves all gadgets in database <dbname>')
-
-    def help_loaddb(self):
-        self.__printHelpText(
-            'loaddb <dbname>', 'loads all gadgets from database <dbname>')
-
-    @safe_cmd
-    def do_savedb(self, text):
-        if not text:
-            self.help_savedb()
-            return
-        if not self.currentFile.loaded:
-            self.__printInfo('Gadgets have to be loaded with load')
-            return
-        self.__savedb(text)
-
-    @safe_cmd
-    def do_loaddb(self, text):
-        if not text:
-            self.help_loaddb()
-            return
-        self.__loaddb(text)
-
     @safe_cmd
     def do_string(self, text):
 
@@ -966,9 +916,19 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_stack_pivot(self, text):
         self.__printGadgets(self.currentFile.gadgets, Category.STACK_PIVOT)
 
+    def help_stack_pivot(self):
+        self.__printHelpText('stack_pivot','Prints all stack pivot gadgets')
+
     def do_EOF(self, text):
         self.__cprinter.println('')
         self.do_quit(text)
+
+    @safe_cmd
+    def do_clearcache(self, text):
+        self.__rs.clearCache()
+
+    def help_clearcache(self):
+        self.__printHelpText('clearcache','Clears the cache')
 
     # @safe_cmd
     # def do_edit(self, text):

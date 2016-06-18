@@ -19,7 +19,6 @@
 
 from ropper.loaders.loader import *
 from ropper.rop import Ropper
-from ropper.gadget import GadgetDAO
 from ropper.arch import *
 from ropper.common.error import *
 from ropper.service import RopperService
@@ -100,23 +99,3 @@ class GeneralTests(unittest.TestCase):
             with self.assertRaisesRegexp(RopperError,'Invalid characters in opcode string'):
                 self.rs.searchOpcode('ff4r')
 
-
-    def test_database(self):
-        
-
-        db = './testdb.db'
-        if os.path.exists(db):
-            os.remove(db)
-
-        dao = GadgetDAO(db)
-
-        gadgets = self.rs.files[0].allGadgets
-
-        dao.save(gadgets)
-        self.assertTrue(os.path.exists(db))
-
-        loaded_gadgets = dao.load(self.rs.files[0].loader)
-        self.assertEqual(len(gadgets), len(loaded_gadgets))
-        self.assertEqual(gadgets[0].lines[0][0], loaded_gadgets[0].lines[0][0])
-
-        os.remove(db)

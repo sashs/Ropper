@@ -75,24 +75,6 @@ epilog="""example uses:
   {0} --file /bin/ls --segments
   {0} --file /bin/ls --set nx
   {0} --file /bin/ls --unset nx
-
-  [Gadgets]
-<<<<<<< HEAD
-  Ropper.py --file /bin/ls --inst-count 5
-  Ropper.py --file /bin/ls --search "sub eax" --badbytes 000a0d
-  Ropper.py --file /bin/ls --search "sub eax" --detail
-  Ropper.py --file /bin/ls --opcode ffe4
-  Ropper.py --file /bin/ls --opcode ffe?
-  Ropper.py --file /bin/ls --opcode ??e4
-  Ropper.py --file /bin/ls --detailed
-  Ropper.py --file /bin/ls --ppr --nocolor
-  Ropper.py --file /bin/ls --jmp esp,eax
-  Ropper.py --file /bin/ls --type jop
-  Ropper.py --file /bin/ls --chain execve
-  Ropper.py --file /bin/ls --chain execve=/bin/sh
-  Ropper.py --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
-  Ropper.py --file /bin/ls --chain mprotect=0xbfdff000:0x21000
-=======
   {0} --file /bin/ls --inst-count 5
   {0} --file /bin/ls --search "sub eax" --badbytes 000a0d
   {0} --file /bin/ls --search "sub eax" --detail
@@ -106,10 +88,9 @@ epilog="""example uses:
   {0} --file /bin/ls --jmp esp,eax
   {0} --file /bin/ls --type jop
   {0} --file /bin/ls --chain execve
-  {0} --file /bin/ls --chain execve=/bin/sh
-  {0} --file /bin/ls --chain execve=/bin/sh --badbytes 000a0d
-  {0} --file /bin/ls --chain mprotect=0xbfdff000:0x21000
->>>>>>> master
+  {0} --file /bin/ls --chain "execve cmd=/bin/sh" --badbytes 000a0d
+  {0} --file /bin/ls --chain "mprotect address=0xbfdff000 size=0x21000"
+
 
   [Assemble/Disassemble]
   {0} --asm "jmp esp"
@@ -148,8 +129,6 @@ epilog="""example uses:
             '-f', '--file', metavar="<file>", help='The file to load')
         parser.add_argument(
             '-r', '--raw', help='Loads the file as raw file', action='store_true')
-        parser.add_argument(
-             '--db', metavar="<dbfile>", help='The dbfile to load')
         parser.add_argument(
             '-a', '--arch', metavar="<arch>", help='The architecture of the loaded file')
         parser.add_argument(
@@ -215,17 +194,26 @@ epilog="""example uses:
             '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
         parser.add_argument(
             '--nocolor', help='Disables colored output', action='store_true')
+        parser.add_argument(
+            '--clear-cache', help='Clears the cache', action='store_true')
         return parser
 
     def _analyseArguments(self):
 
-        if len(self.__argv) == 0 or (len(self.__argv) == 1 and self.__argv[0] == '--nocolor'):
+        if len(self.__argv) == 0:
             self.__argv.append('--console')
+        elif (len(self.__argv) == 1 and self.__argv[0] == '--nocolor' or self.__argv[0] == '--clear-cache'):
+            self.__argv.append('--console')
+        elif (len(self.__argv) == 2 and self.__argv[0] == '--nocolor' and self.__argv[1] == '--clear-cache'):
+            self.__argv.append('--console')
+        elif(len(self.__argv) == 2 and self.__argv[1] == '--nocolor' and self.__argv[0] == '--clear-cache'):
+            self.__argv.append('--console')
+            
         self.__args = self.__parser.parse_args(self.__argv)
 
         self.nocolor = self.__args.nocolor or self.isWindows()
 
-        if not self.__args.asm and not self.disasm and not self.__args.console and not self.__args.file and not self.__args.version:
+        if not self.__args.clear_cache and not self.__args.asm and not self.disasm and not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
 
         if self.__args.I:

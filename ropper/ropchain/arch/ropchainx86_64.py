@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ropper.gadget import Category
+from ropper.gadget import Category, Gadget
 from ropper.common.error import *
 from ropper.common.utils import *
 from ropper.rop import Ropper
@@ -52,8 +52,8 @@ class RopChainX86_64(RopChain):
         toReturn = ''
 
         for binary,section in self._usedBinaries:
-            imageBase = binary.imageBase
-            toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase ,8), binary.fileName))
+            imageBase = Gadget.IMAGE_BASES[binary]
+            toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase ,8), binary))
             toReturn += ('rebase_%d = lambda x : p(x + IMAGE_BASE_%d)\n\n'% (self._usedBinaries.index((binary, section)),self._usedBinaries.index((binary, section))))
         return toReturn
 
@@ -161,7 +161,7 @@ class RopChainX86_64(RopChain):
 
 
     def _printRopInstruction(self, gadget, padding=True):
-        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget._binary, gadget._section)),toHex(gadget.lines[0][0],8), gadget.simpleString()))
+        toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],8), gadget.simpleString()))
         if padding:
             regs = self._paddingNeededFor(gadget)
             for i in range(len(regs)):
@@ -220,18 +220,18 @@ class RopChainX86_64(RopChain):
                             continue
                         if reg:
                             if gadget.category[2][srcdst] == reg:
-                                if (gadget._binary, gadget._section) not in self._usedBinaries:
-                                    self._usedBinaries.append((gadget._binary, gadget._section))
+                                if (gadget.fileName, gadget.section) not in self._usedBinaries:
+                                    self._usedBinaries.append((gadget.fileName, gadget.section))
                                 return gadget
                             elif switchRegs:
                                 other = 'src' if srcdst == 'dst' else 'dst'
                                 if gadget.category[2][other] == reg:
-                                    if (gadget._binary, gadget._section) not in self._usedBinaries:
-                                        self._usedBinaries.append((gadget._binary, gadget._section))
+                                    if (gadget.fileName, gadget.section) not in self._usedBinaries:
+                                        self._usedBinaries.append((gadget.fileName, gadget.section))
                                     return gadget
                         else:
-                            if (gadget._binary, gadget._section) not in self._usedBinaries:
-                                self._usedBinaries.append((gadget._binary, gadget._section))
+                            if (gadget.fileName, gadget.section) not in self._usedBinaries:
+                                self._usedBinaries.append((gadget.fileName, gadget.section))
                             return gadget
 
             quali += 1
@@ -556,7 +556,7 @@ class RopChainX86_64(RopChain):
         toReturn = ''
 
         toReturn += self._printRopInstruction(popReg,False)
-        toReturn += self._printRebasedAddress(toHex(address, 8), idx=self._usedBinaries.index((popReg._binary, popReg._section)))
+        toReturn += self._printRebasedAddress(toHex(address, 8), idx=self._usedBinaries.index((popReg.fileName, popReg.section)))
         regs = self._paddingNeededFor(popReg)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -618,7 +618,7 @@ class RopChainSystemX86_64(RopChainX86_64):
         self._printMessage('ROPchain Generator for syscall execve:\n')
         self._printMessage('\nwrite command into data section\nrax 0xb\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
 
-        section = self._binaries[0].getSection(b'.data')
+        section = self._binaries[0].getSection('.data')
 
         length = math.ceil(float(len(cmd))/8) * 8
         chain = self._printHeader()
@@ -697,8 +697,8 @@ class RopChainMprotectX86_64(RopChainX86_64):
 
 
         if len(gadgets) > 0:
-            if (gadgets[0]._binary, gadgets[0]._section) not in self._usedBinaries:
-                self._usedBinaries.append((gadgets[0]._binary, gadgets[0]._section))
+            if (gadgets[0].fileName, gadgets[0].section) not in self._usedBinaries:
+                self._usedBinaries.append((gadgets[0].fileName, gadgets[0].section))
             return self._printRopInstruction(gadgets[0])
         else:
             return None

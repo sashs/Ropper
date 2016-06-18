@@ -23,6 +23,7 @@ import ropper.common.enum as enum
 from ropper.common.utils import toHex
 from ropper.common.error import RopperError
 from ropper.common.coloredstring import *
+from binascii import hexlify, unhexlify
 import ropper.arch
 
 # Optional sqlite support
@@ -43,64 +44,96 @@ class GadgetType(enum.Enum):
 class Gadget(object):
 
     DETAILED = False
+    IMAGE_BASES = {}
 
-    def __init__(self, binary, section):
-        super(Gadget, self).__init__()
-        self.__arch = None
-        self.__lines = []
-        self._gadget = ''
+    def __init__(self, fileName, section, arch, lines=None, bytes=None, init=False):
+        #super(Gadget, self).__init__()
+        self.__arch = arch
+        self.__lines = None
+        self.__gadget = None
         self.__category = None
-        self._binary = binary
-        if binary:
-            self.__arch = binary.arch
+        self._fileName = fileName
         self._section = section
-        self._bytes = bytearray()
+        self.__bytes = None
+        if init:
+            self.__initialize(lines, bytes)
 
     @property
     def lines(self):
+        if self.__lines == None:
+            self.__lines = []
         return self.__lines
+
+    @property
+    def _lines(self):
+        if self.__lines == None:
+            self.__lines = []
+        return self.__lines
+
+    @_lines.setter
+    def _lines(self, value):
+        self.__lines = value
 
     @property
     def section(self):
         return self._section
 
-    @section.setter
-    def section(self, section):
-        self._section = section
+    @property
+    def fileName(self):
+        return self._fileName
 
     @property
-    def binary(self):
-        return self._binary
+    def _bytes(self):
+        if self.__bytes == None:
+            self.__bytes = bytearray()
+        return self.__bytes
 
-    @binary.setter
-    def binary(self, binary):
-        self._binary = binary
-        self.__arch = binary.arch
+    @_bytes.setter
+    def _bytes(self, value):
+        self.__bytes = bytes
+
 
     @property
     def bytes(self):
-        return self._bytes
+        if self.__bytes == None:
+            self.__bytes = bytearray()
+        return self.__bytes
 
     @bytes.setter
     def bytes(self, bytes):
-        self._bytes = bytes
+        self.__bytes = bytes
 
     @property
     def imageBase(self):
-        if not self._binary:
-            return 0
-        return self._binary.imageBase
+        return Gadget.IMAGE_BASES.get(self._fileName,0)
 
     @property
     def address(self):
         return self.imageBase + self.lines[0][0]
 
+    @property
+    def _gadget(self):
+        if not self.__gadget:
+            self.__gadget = ''
+            for line in self.lines:
+                self.__gadget += line[1] + '; '
+        return self.__gadget
+
+    @_gadget.setter
+    def _gadget(self, value):
+        self.__gadget = value
+
+    def __initialize(self, lines, bytes):
+        if bytes:
+            self._bytes = bytes
+        self.__lines = lines
+
     def append(self, address, mnem, args='', bytes=None):
         if args:
-            self.__lines.append((address, mnem + ' ' + args, mnem ,args))
+            self._lines.append((address, mnem + ' ' + args, mnem ,args))
             self._gadget += mnem + ' ' + args + '; '
         else:
-            self.__lines.append((address, mnem, mnem,args))
+            self._lines.append((address, mnem, mnem,args))
             self._gadget += mnem + '; '
 
         if bytes:
@@ -117,7 +150,7 @@ class Gadget(object):
 
 
     def addressesContainsBytes(self, badbytes):
-        line =  self.__lines[0]
+        line =  self._lines[0]
         for b in badbytes:
 
             address = self.address
@@ -135,7 +168,7 @@ class Gadget(object):
 
     def simpleInstructionString(self):
         toReturn = ''
-        for line in self.__lines:
+        for line in self._lines:
             if line[3]:
                 toReturn += cstr(line[2], Color.LIGHT_YELLOW)+ ' ' + cstr(line[3], Color.LIGHT_GRAY)+ cstr('; ', Color.LIGHT_BLUE)
             else:
@@ -148,9 +181,9 @@ class Gadget(object):
         address = self.__lines[0][0]
         if self.__arch == ropper.arch.ARMTHUMB:
             address += 1
-            toReturn = '%s (%s): ' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
+            toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
         else:
-            toReturn = '%s: ' % cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
+            toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
         toReturn += self.simpleInstructionString()
         return toReturn
 
@@ -178,7 +211,7 @@ class Gadget(object):
         return self.__category
 
     def __len__(self):
-        return len(self.__lines)
+        return len(self._lines)
 
     def __cmp__(self, other):
         if isinstance(other, self.__class__) and len(self) == len(other):
@@ -187,7 +220,7 @@ class Gadget(object):
 
     def disassemblyString(self):
         toReturn = ''
-        for line in self.__lines:
+        for line in self._lines:
             toReturn += cstr(toHex(line[0] + self.imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 
         return toReturn
@@ -195,112 +228,19 @@ class Gadget(object):
     def __str__(self):
         if not Gadget.DETAILED:
             return self.simpleString()
-        if not len(self.__lines):
+        if not len(self._lines):
             return "empty gadget"
-        address = self.__lines[0][0]
+        address = self._lines[0][0]
         if self.__arch == ropper.arch.ARMTHUMB:
             address += 1
-            toReturn = cstr('Gadget', Color.BLUE)+': %s (%s)\n' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.YELLOW),cstr(toHex(address+ self.imageBase, self.__arch.addressLength), Color.GREEN))
+            toReturn = cstr('Gadget', Color.BLUE)+': %s (%s)\n' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.YELLOW),cstr(toHex(address+ self.imageBase, self.__arch.addressLength), Color.GREEN))
         else:
-            toReturn = cstr('Gadget', Color.BLUE)+': %s\n' % (cstr(toHex(self.__lines[0][0] + self.imageBase, self.__arch.addressLength), Color.YELLOW))
-        for line in self.__lines:
+            toReturn = cstr('Gadget', Color.BLUE)+': %s\n' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.YELLOW))
+        for line in self._lines:
             toReturn += cstr(toHex(line[0] + self.imageBase, self.__arch.addressLength), Color.RED) +': '+ cstr(line[1], Color.LIGHT_GRAY) + '\n'
 
         return toReturn
 
 
-class GadgetDAO(object):
-
-    def __init__(self, dbname, printer=None):
-        self.__dbname = dbname
-        self._printer = printer
-
-
-
-    def save(self, gadgets):
-        if 'sqlite3' not in globals():
-            self._printer.printError('sqlite is not installed!')
-            return
-        conn = sqlite3.connect(self.__dbname)
-        c = conn.cursor()
-        c.execute('create table sections(nr INTEGER PRIMARY KEY ASC, name, offs,gcount INTEGER, hash)')
-        c.execute('create table gadgets(nr INTEGER PRIMARY KEY ASC, snr INTEGER, lcount INTEGER)')
-        c.execute('create table lines(gnr INTEGER, addr INTEGER, inst, mnem, op)')
-        scount = 0
-        gcount = 0
-        endcount = len(gadgets)
-        saved_sections = {}
-
-        for gadget in gadgets:
-            if gadget._section not in saved_sections:
-                section = gadget._section
-                saved_sections[section] = scount
-                c.execute('insert into sections values(?, ?,?,?,?)' ,(scount, section.name, section.offset, len(gadgets), hashlib.md5(section.bytes).hexdigest()))
-                scount +=1
-
-            c.execute('insert into gadgets values(?,?,?)', (gcount, saved_sections[gadget._section], len(gadget.lines)))
-
-            for addr, line, mnem, op in gadget.lines:
-                c.execute('insert into lines values(?,?,?,?,?)', (gcount, addr, line, mnem, op))
-
-            gcount +=1
-            if self._printer:
-                self._printer.printProgress('saving gadgets...', float(gcount) / endcount)
-        if self._printer:
-            self._printer.finishProgress('gadgets saved in: ' + self.__dbname)
-        conn.commit()
-        conn.close()
-
-
-    def load(self, binary):
-        if 'sqlite3' not in globals():
-            self._printer.printError('sqlite is not installed!')
-            return
-
-        execSect = binary.executableSections
-        gcount = 0
-        lcount = 0
-        endcount = 0
-
-        conn = sqlite3.connect(self.__dbname)
-        c = conn.cursor()
-
-        c.execute('select * from sections')
-        sectionrows = c.fetchall()
-        c.execute('select * from gadgets')
-        gadgetrows = c.fetchall()
-        c.execute('select * from lines')
-        linerows = c.fetchall()
-
-        if self._printer:
-            for i in sectionrows:
-                endcount += i[3]
-
-        gadgets = []
-        sections = {}
-        for s in sectionrows:
-            for section in execSect:
-                if s[1] == section.name and int(s[2]) == section.offset:
-                    if s[4] != hashlib.md5(section.bytes).hexdigest():
-                        raise RopperError('wrong checksum: '+s[4] + ' and ' + hashlib.md5(section.bytes).hexdigest())
-                    else:
-                        sections[s[0]] = section
-
-        for g in range(s[3]):
-            grow = gadgetrows[gcount]
-            gcount +=1
-
-            gadget = Gadget(binary, sections[grow[1]])
-            gadgets.append(gadget)
-
-            for l in range(grow[2]):
-                lrow = linerows[lcount]
-                lcount += 1
-                gadget.append(int(lrow[1]), lrow[3], lrow[4])
-
-            if self._printer:
-                self._printer.printProgress('loading gadgets...', float(gcount)/endcount)
-        if self._printer:
-            self._printer.finishProgress('gadgets loaded from: ' + self.__dbname)
-        conn.close()
-        return gadgets
+    def __repr__(self):
+        return 'Gadget(%s,%s,%s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(True))

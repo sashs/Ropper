@@ -112,6 +112,7 @@ class Ropper(object):
 
     def searchJmpReg(self, binary, regs):
         toReturn = []
+        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
         for section in binary.executableSections:
 
             gadgets = self._searchJmpReg(section, binary, regs)
@@ -124,6 +125,7 @@ class Ropper(object):
         if binary.arch.arch != capstone.CS_ARCH_X86:
             raise NotSupportedError(
                 'Wrong architecture, \'jmp <reg>\' only supported on x86/x86_64')
+
         cs = self.__getCs(binary.arch)
         toReturn = []
         Register = Enum('Register', 'ax cx dx bx sp bp si di')
@@ -184,12 +186,13 @@ class Ropper(object):
 
 
     def searchInstructions(self, binary, code):
-
+        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
         opcode = self.assemble(code, binary.arch)
         return self.searchOpcode(binary, opcode, disass=True)
 
 
     def searchOpcode(self, binary, opcode, disass=False):
+        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
         opcode, size = self._formatOpcodeString(opcode)
         gadgets = []
         for section in binary.executableSections:
@@ -205,7 +208,7 @@ class Ropper(object):
         code = bytearray(section.bytes)
         offset = section.offset
         for match in re.finditer(opcode, code):
-            opcodeGadget = Gadget(binary, section)
+            opcodeGadget = Gadget(binary.fileName, section.name, binary.arch)
 
             if (offset + match.start()) % binary.arch.align == 0:
                 if disass:
@@ -229,6 +232,7 @@ class Ropper(object):
 
 
     def searchPopPopRet(self, binary):
+        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
         toReturn = []
         for section in binary.executableSections:
 
@@ -250,7 +254,7 @@ class Ropper(object):
 
         for index in range(len(code)):
             if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
-                ppr = Gadget(binary,section)
+                ppr = Gadget(binary.fileName,section.name, binary.arch)
                 for i in disassembler.disasm(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
                     if i.mnemonic != 'pop' and i.mnemonic != 'ret':
                         break
@@ -265,6 +269,7 @@ class Ropper(object):
         return toReturn
 
     def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):
+        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.imageBase
@@ -277,9 +282,6 @@ class Ropper(object):
             else:
                 newGadgets = self._searchGadgetsForked(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
             
-                for gadget in newGadgets:
-                    gadget.binary = binary
-                    gadget.section = section
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
@@ -310,7 +312,7 @@ class Ropper(object):
 
                     for x in range(0, index, arch.align):
                         code_part = tmp_code[index - x-1:index + ending[1]]
-                        gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending,binary, section)
+                        gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending,binary.fileName, section.name)
                         if gadget:
                             if leng > instruction_count:
                                 break
@@ -358,7 +360,7 @@ class Ropper(object):
             ending_queue.put(ending)
 
         for cpu in range(process_count):
-            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.fileName, section.name, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
@@ -378,23 +380,25 @@ class Ropper(object):
             
         return to_return
 
-    def __gatherGadgetsByEndings(self,code, arch, offset, ending_queue, gadget_queue, instruction_count):
+    def __gatherGadgetsByEndings(self,code, arch, fileName, sectionName, offset, ending_queue, gadget_queue, instruction_count):
         
         try:
             while not ending_queue.empty():
                 try:
+                    if ending_queue.empty():
+                        break
                     ending = ending_queue.get(False)
-                    gadgets = self.__gatherGadgetsByEnding(code, arch, offset, ending, instruction_count)
+                    gadgets = self.__gatherGadgetsByEnding(code, arch, fileName, sectionName, offset, ending, instruction_count)
                     
                     gadget_queue.put(gadgets)
-                except:
+                except BaseException as e:
                     pass
             
         except BaseException as e:
             raise RopperError(e)
         
 
-    def __gatherGadgetsByEnding(self, code, arch, offset, ending, instruction_count):
+    def __gatherGadgetsByEnding(self, code, arch, fileName, sectionName, offset, ending, instruction_count):
         vaddrs = set()
         offset_tmp = 0
         
@@ -412,7 +416,7 @@ class Ropper(object):
 
                 for x in range(0, index+1, arch.align):
                     code_part = tmp_code[index - x:index + ending[1]]
-                    gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x , ending)
+                    gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x , ending, fileName, sectionName)
                     if gadget:
                         if leng > instruction_count:
                             break
@@ -432,7 +436,7 @@ class Ropper(object):
         return to_return
 
     def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
-        gadget = Gadget(binary, section)
+        gadget = Gadget(binary, section, arch)
         hasret = False
 
         disassembler = self.__getCs(arch)
@@ -457,14 +461,14 @@ class Ropper(object):
 
 
     def __disassembleBackward(self, section, binary, vaddr,offset, count):
-        gadget = Gadget(binary, section)
+        gadget = Gadget(binary.fileName, section.name, binary.arch)
         counter = 0
         toReturn = None
         code = bytes(bytearray(section.bytes))
         disassembler = self.__getCs(binary.arch)
 
         while len(gadget) < count:
-            gadget = Gadget(binary, section)
+            gadget = Gadget(binary.fileName, section.name, binary.arch)
             for i in disassembler.disasm(struct.pack('B' * len(code[offset - counter:]), *bytearray(code[offset - counter:])), vaddr-counter):
                 gadget.append(i.address, i.mnemonic , i.op_str, i.bytes)
                 if i.address == vaddr:
@@ -473,7 +477,7 @@ class Ropper(object):
                 if i.address > vaddr:
                     if len(gadget) > count:
                         return toReturn
-                    gadget = Gadget(binary, section)
+                    gadget = Gadget(binary.fileName, section.name, binary.arch)
                     break
 
 
@@ -482,7 +486,7 @@ class Ropper(object):
                 return toReturn
 
             if not toReturn:
-                toReturn = Gadget(binary, section)
+                toReturn = Gadget(binary.fileName, section.name, binary.arch)
                 toReturn.append(vaddr,'bad instructions')
         return toReturn
 
@@ -490,13 +494,13 @@ class Ropper(object):
     def disassembleAddress(self, section, binary, vaddr, offset, count):
         if vaddr % binary.arch.align != 0:
             raise RopperError('The address doesn\'t have the correct alignment')
-
+        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
         code = bytes(bytearray(section.bytes))
         disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         if count < 0:
             return self.__disassembleBackward(section, binary, vaddr, offset, count*-1)
-        gadget  = Gadget(binary, section)
+        gadget  = Gadget(binary.fileName, section.name, binary.arch)
         c = 0
 
         for i in disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), offset):

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 from filebytes.pe import ImageDirectoryEntry
-from ropper.common.utils import isHex, toHex
+from ropper.common.utils import isHex, toHex, getFileNameFromPath
 from ropper.common.coloredstring import cstr, Color
 from ropper.common.error import RopperError
 from ropper.loaders.loader import Loader, Type
@@ -27,7 +27,13 @@ from ropper.arch import getArchitecture
 from ropper.rop import Ropper, Format
 from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
+from codecs import encode, decode
+from hashlib import md5
+import tempfile
 import re
+import os
+
+CACHE_FOLDER = 'ropper_cache'
 
 def deleteDuplicates(gadgets, callback=None):
     toReturn = []
@@ -91,19 +97,19 @@ def filterBadBytes(gadgets, badbytes, callback=None):
     return toReturn
 
 
-def cfgFilterGadgets(gadgets, callback=None):
+def cfgFilterGadgets(binary, gadgets, callback=None):
     
     def intern(gadgets, callback=None,current=0, length=0):
         result = []
         
         added = False
         for gadget in gadgets:
-            loadConfig = gadget.binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
+            loadConfig = binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
             if not loadConfig:
                 return gadgets
 
             # calculate relative address of the gadget when loaded to memory
-            gadgetRVA = gadget.address - gadget.binary.imageBase
+            gadgetRVA = gadget.address - binary.imageBase
 
             # consider Microsoft CFG implementation imprecision - chop off 3 lsbits
             gadgetRVA8ByteAligend = gadgetRVA - (gadgetRVA % 8)
@@ -260,10 +266,10 @@ class RopperService(object):
             func = getattr(self, '_%s_changed' % option)
             func(newvalue)
 
-    def __prepareGadgets(self, gadgets, type=None):
+    def __prepareGadgets(self, file, gadgets, type=None):
         
         gadgets = self.__filterBadBytes(gadgets)
-        gadgets = self.__filterCfg(gadgets, type) 
+        gadgets = self.__filterCfg(file, gadgets, type) 
         if not self.__options.all:
             callback = None
             if self.__callbacks and hasattr(self.__callbacks, '__deleteDoubleGadgetsProgress__'):
@@ -279,23 +285,59 @@ class RopperService(object):
             gadgets = filterBadBytes(gadgets, self.options.badbytes, callback)
         return gadgets
 
-    def __filterCfg(self, gadgets, type):
+    def __filterCfg(self, file, gadgets, type):
         if self.__options.cfg_only and type==Type.PE:
             callback = None
             if self.__callbacks and hasattr(self.__callbacks, '__filterCfgGadgetsProgress__'):
                 callback = self.__callbacks.__filterCfgGadgetsProgress__
-            gadgets = cfgFilterGadgets(gadgets, callback)
+            gadgets = cfgFilterGadgets(file.loader, gadgets, callback)
         return gadgets
+
+    def __getCacheFileName(self, file):
+        m = md5()
+        m.update(file.loader._binary._bytes)
+        d = m.hexdigest()
+        return "%s_%s_%d_%s_%s" % (getFileNameFromPath(file.name), str(file.arch), self.options.inst_count,str(self.options.type), d)
+
+    def __saveCache(self, file):
+        try:
+            temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
+            if not os.path.exists(temp):
+                os.mkdir(temp)
+
+            cache_file = temp + os.path.sep + self.__getCacheFileName(file)
+
+            with open(cache_file,'wb') as f:
+                f.write(encode(repr(file.allGadgets).encode('ascii'),'zip'))
+        except:
+            if os.path.exists(cache_file):
+                os.remove(cache_file)
+
+
+    def __loadCache(self, file):
+        try:
+            temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
+            
+            cache_file = temp + os.path.sep + self.__getCacheFileName(file)
+            if not os.path.exists(cache_file):
+                return
+            with open(cache_file,'rb') as f:
+                data = f.read()
+                return eval(decode(data,'zip'))
+        except:
+            if os.path.exists(cache_file):
+                os.remove(cache_file)
+
 
     def _badbytes_changed(self, value):
         for f in self.__files:
             if f.loaded:
-                f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
+                f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
 
     def _all_changed(self, value):
         for f in self.__files:
             if f.loaded:
-                f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
+                f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
 
     def _color_changed(self, value):
         cstr.COLOR = value
@@ -305,8 +347,8 @@ class RopperService(object):
 
     def _cfg_only_changed(self, value):
         for f in self.__files:
-            if f.loaded:
-                f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
+            if f.loaded and f.type == Type.PE:
+                f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
 
     def _type_changed(self, value):
         for f in self.__files:
@@ -324,6 +366,13 @@ class RopperService(object):
                 return file
 
         return None
+
+    def clearCache(self):
+        temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
+        if os.path.exists(temp):
+            import shutil
+            shutil.rmtree(temp)
+
 
     def getFileFor(self, name):
         return self._getFileFor(name)
@@ -418,6 +467,8 @@ class RopperService(object):
     def loadGadgetsFor(self, name=None):
         def load_gadgets(f):
             gtype = None
+            cache = False
+            Gadget.IMAGE_BASES[f.name] = f.loader.imageBase
             if self.options.type == 'rop':
                 gtype = GadgetType.ROP
             elif self.options.type == 'jop':
@@ -426,16 +477,30 @@ class RopperService(object):
                 gtype = GadgetType.SYS
             elif self.options.type == 'all':
                 gtype = GadgetType.ALL    
-            f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
-            f.gadgets = self.__prepareGadgets(f.allGadgets, f.type)
+            if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                self.__callbacks.__message__('Try to load gadgets from cache')
+            f.allGadgets = self.__loadCache(f)
+            if f.allGadgets == None:
+                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                    self.__callbacks.__message__('Could not load gadgets from cache')
+                cache = True
+                f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
+            else:
+                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                    self.__callbacks.__message__('Gadgets loaded from cache')
+            if cache:
+                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                    self.__callbacks.__message__('Create cache')
+                self.__saveCache(f)
+            f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
          
         if name is None:
-            for f in self.__files:
-                load_gadgets(f)
+            for fc in self.__files:
+                load_gadgets(fc)
         else:
-            for f in self.__files:
-                if f.loader.fileName == name:
-                    load_gadgets(f)
+            for fc in self.__files:
+                if fc.loader.fileName == name:
+                    load_gadgets(fc)
                 
     def printGadgetsFor(self, name=None):
         def print_gadgets(f):
@@ -550,23 +615,24 @@ class RopperService(object):
         if not file:
             raise RopperError('No such file opened: %s' % name)
         file.loader.imageBase = imagebase
-        if file.loaded:
-            file.gadgets = self.__prepareGadgets(file.allGadgets, file.type)
+        Gadget.IMAGE_BASES[name] = file.loader.imageBase
+        if file.loaded and (self.options.badbytes or self.options.cfg_only and file.type == Type.PE):
+            file.gadgets = self.__prepareGadgets(file, file.allGadgets, file.type)
 
     def setArchitectureFor(self, name, arch):
         file = self.getFileFor(name)
         if not file:
             raise RopperError('No such file opened: %s' % name)
         file.loader.arch = getArchitecture(arch)
-        file.allGadgets = None
-        file.gadgets = None
+        if file.loaded:
+            self.loadGadgetsFor(name)
 
     def _setGadgets(self, name, gadgets):
         fc = self.getFileFor(name)
         if not fc:
             raise RopperError('No such file opened: %s' % name)
         fc.allGadgets = gadgets
-        fc.gadgets = self.__prepareGadgets(fc.allGadgets, fc.type)
+        fc.gadgets = self.__prepareGadgets(fc, fc.allGadgets, fc.type)
 
 
 

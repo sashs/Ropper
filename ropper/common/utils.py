@@ -21,7 +21,15 @@ from .coloredstring import *
 import ropper
 import re
 
+def getFileNameFromPath(path):
+    if '/' in path:
+        name = path.split('/')[-1]
+    elif '\\' in path:
+        name = path.split('\\')[-1]
+    else:
+        name = path
 
+    return name
 
 def isHex(num):
     return re.match('^0x[0-9A-Fa-f]+$', num) != None

@@ -32,6 +32,7 @@ from hashlib import md5
 import tempfile
 import re
 import os
+import multiprocessing
 
 CACHE_FOLDER = 'ropper_cache'
 
@@ -307,24 +308,78 @@ class RopperService(object):
 
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
 
+            if len(file.allGadgets) > 1000:
+                if os.path.exists(cache_file):
+                    os.remove(cache_file)
+
+                length = len(file.allGadgets)
+                count = multiprocessing.cpu_count()+1
+                step = int(length / count)
+                for i in range(count-1):
+                    gadgets = file.allGadgets[i*step: (i+1)*step]
+                    with open(cache_file+'_%d' % i,'wb') as f:
+                        f.write(encode(repr(gadgets).encode('ascii'),'zip'))
+
+                gadgets = file.allGadgets[(count-1)*step:]
+                with open(cache_file+'_%d' % (count-1),'wb') as f:
+                    f.write(encode(repr(gadgets).encode('ascii'),'zip'))
+                return
+
             with open(cache_file,'wb') as f:
                 f.write(encode(repr(file.allGadgets).encode('ascii'),'zip'))
-        except:
+        except BaseException as e:
+            raise e
             if os.path.exists(cache_file):
                 os.remove(cache_file)
 
 
+    def __loadCachePerProcess(self, cacheFileName, gqueue):
+        with open(cacheFileName,'rb') as f:
+            data = f.read()
+            gqueue.put(eval(decode(data,'zip')))
+
     def __loadCache(self, file):
+        mp = False
+        processes = []
+        count = multiprocessing.cpu_count()+1
         try:
             temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
-            
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
             if not os.path.exists(cache_file):
-                return
-            with open(cache_file,'rb') as f:
-                data = f.read()
-                return eval(decode(data,'zip'))
+                if not os.path.exists(cache_file+'_%d' % 1):
+                    return
+                else:
+                    mp = True
+            if not mp:
+                with open(cache_file,'rb') as f:
+                    data = f.read()
+                    return eval(decode(data,'zip'))
+            else:
+                
+                gqueue = multiprocessing.Queue()
+                all_gadgets = []
+                for i in range(count):
+                    p=multiprocessing.Process(target=self.__loadCachePerProcess, args=(cache_file+'_%d' % i, gqueue))
+                    p.start()
+                    processes.append(p)
+                for i in range(count):
+                    gadgets = gqueue.get()
+                    all_gadgets.extend(gadgets)
+                return sorted(all_gadgets, key=Gadget.simpleInstructionString)
+        except KeyboardInterrupt:
+            if mp:
+                for i in range(count):
+                    p = processes[i]
+                    if p and p.is_alive():
+                        p.terminate()
         except:
+            if mp:
+                for i in range(count):
+                    if os.path.exists(cache_file+'_%d' % i):
+                        os.remove(cache_file+'_%d' % i)
+                    p = processes[i]
+                    if p.is_alive():
+                        p.terminate()
             if os.path.exists(cache_file):
                 os.remove(cache_file)
 

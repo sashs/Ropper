@@ -882,7 +882,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             arch = text[:index]
             text = text[index:].strip()
             arch = getArchitecture(arch)
-        import pdb;pdb.set_trace()
         if not arch:
             if self.__currentFileName:
                 arch = str(self.currentFile.arch)

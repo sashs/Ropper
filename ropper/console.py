@@ -148,14 +148,16 @@ class Console(cmd.Cmd):
             self.__printVersion()
             return
 
-        if self.__options.file:
-            self.__loadFile(self.__options.file)
-
-        if self.__options.console:
-            self.cmdloop()
-
         if self.__options.clear_cache:
             self.__rs.clearCache()
+
+        if self.__options.file:
+            self.__loadFile(self.__options.file)
+            if not self.__options.no_load:
+                self.__loadGadgets()
+                
+        if self.__options.console:
+            self.cmdloop()
 
         self.__handleOptions(self.__options)
 

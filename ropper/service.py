@@ -351,6 +351,8 @@ class RopperService(object):
                 else:
                     mp = True
             if not mp:
+                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                    self.__callbacks.__message__('Load gadgets from cache')
                 with open(cache_file,'rb') as f:
                     data = f.read()
                     return eval(decode(data,'zip'))
@@ -358,6 +360,8 @@ class RopperService(object):
                 
                 gqueue = multiprocessing.Queue()
                 all_gadgets = []
+                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                    self.__callbacks.__message__('Load gadgets from cache')
                 for i in range(count):
                     p=multiprocessing.Process(target=self.__loadCachePerProcess, args=(cache_file+'_%d' % i, gqueue))
                     p.start()
@@ -365,6 +369,9 @@ class RopperService(object):
                 for i in range(count):
                     gadgets = gqueue.get()
                     all_gadgets.extend(gadgets)
+                    if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
+                        self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, float(i+1)/count)
+
                 return sorted(all_gadgets, key=Gadget.simpleInstructionString)
         except KeyboardInterrupt:
             if mp:
@@ -372,7 +379,7 @@ class RopperService(object):
                     p = processes[i]
                     if p and p.is_alive():
                         p.terminate()
-        except:
+        except BaseException as e:
             if mp:
                 for i in range(count):
                     if os.path.exists(cache_file+'_%d' % i):
@@ -532,20 +539,11 @@ class RopperService(object):
                 gtype = GadgetType.SYS
             elif self.options.type == 'all':
                 gtype = GadgetType.ALL    
-            if self.__callbacks and hasattr(self.__callbacks, '__message__'):
-                self.__callbacks.__message__('Try to load gadgets from cache')
             f.allGadgets = self.__loadCache(f)
             if f.allGadgets == None:
-                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
-                    self.__callbacks.__message__('Could not load gadgets from cache')
                 cache = True
                 f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
-            else:
-                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
-                    self.__callbacks.__message__('Gadgets loaded from cache')
             if cache:
-                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
-                    self.__callbacks.__message__('Create cache')
                 self.__saveCache(f)
             f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
          

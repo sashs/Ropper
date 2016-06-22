@@ -196,17 +196,15 @@ epilog="""example uses:
             '--nocolor', help='Disables colored output', action='store_true')
         parser.add_argument(
             '--clear-cache', help='Clears the cache', action='store_true')
+        parser.add_argument(
+            '--no-load', help='Don\'t load the gadgets automatically when start the console (--console)', action='store_true', default=False)
         return parser
 
     def _analyseArguments(self):
 
         if len(self.__argv) == 0:
             self.__argv.append('--console')
-        elif (len(self.__argv) == 1 and self.__argv[0] == '--nocolor' or self.__argv[0] == '--clear-cache'):
-            self.__argv.append('--console')
-        elif (len(self.__argv) == 2 and self.__argv[0] == '--nocolor' and self.__argv[1] == '--clear-cache'):
-            self.__argv.append('--console')
-        elif(len(self.__argv) == 2 and self.__argv[1] == '--nocolor' and self.__argv[0] == '--clear-cache'):
+        elif (len(self.__argv) == 1 and self.__argv[0] == '--nocolor'):
             self.__argv.append('--console')
             
         self.__args = self.__parser.parse_args(self.__argv)

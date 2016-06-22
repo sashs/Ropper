@@ -153,8 +153,6 @@ class Console(cmd.Cmd):
 
         if self.__options.file:
             self.__loadFile(self.__options.file)
-            if not self.__options.no_load and self.__options.console:
-                self.__loadGadgets()
 
         if self.__options.console:
             self.cmdloop()
@@ -177,6 +175,9 @@ class Console(cmd.Cmd):
             
             self.__currentFileName = file
             self.__updatePrompt()
+
+            if not self.__options.no_load and self.__options.console:
+                self.__loadGadgets()
         except BaseException as e:
             raise RopperError(e)
         self.__rs.setImageBaseFor(file, self.__options.I)

@@ -153,9 +153,9 @@ class Console(cmd.Cmd):
 
         if self.__options.file:
             self.__loadFile(self.__options.file)
-            if not self.__options.no_load:
+            if not self.__options.no_load and self.__options.console:
                 self.__loadGadgets()
-                
+
         if self.__options.console:
             self.cmdloop()
 
@@ -445,7 +445,7 @@ class Console(cmd.Cmd):
         elif options.chain:
             self.__loadGadgets()
             self.__generateChain(options.chain)
-        else:
+        elif self.__options.file:
             self.__loadGadgets()
             if options.search:
                 self.__search(options.search, options.quality)

@@ -33,8 +33,7 @@ import tempfile
 import re
 import os
 import multiprocessing
-
-CACHE_FOLDER = 'ropper_cache'
+import sys
 
 def deleteDuplicates(gadgets, callback=None):
     toReturn = []
@@ -237,6 +236,9 @@ class Options(object):
 
 class RopperService(object):
 
+    CACHE_FOLDER = 'ropper_cache'
+    CACHE_FILE_COUNT = 16
+
     def __init__(self, options={}, callbacks=None):
         super(RopperService, self).__init__()
         self.__options = Options(options, self.__optionChanged)
@@ -298,79 +300,105 @@ class RopperService(object):
         m = md5()
         m.update(file.loader._binary._bytes)
         d = m.hexdigest()
-        return "%s_%s_%d_%s_%s" % (getFileNameFromPath(file.name), str(file.arch), self.options.inst_count,str(self.options.type), d)
+        return "%s_%s_%d_%s_%d_%s" % (getFileNameFromPath(file.name), str(file.arch), self.options.inst_count,str(self.options.type), sys.version_info.major,d)
 
     def __saveCache(self, file):
         try:
-            temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
+            temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
             if not os.path.exists(temp):
                 os.mkdir(temp)
 
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
-
+            count = RopperService.CACHE_FILE_COUNT
             if len(file.allGadgets) > 1000:
                 if os.path.exists(cache_file):
                     os.remove(cache_file)
 
                 length = len(file.allGadgets)
-                count = multiprocessing.cpu_count()+1
+                
                 step = int(length / count)
                 for i in range(count-1):
                     gadgets = file.allGadgets[i*step: (i+1)*step]
-                    with open(cache_file+'_%d' % i,'wb') as f:
+                    with open(cache_file+'_%d' % (i+1),'wb') as f:
                         f.write(encode(repr(gadgets).encode('ascii'),'zip'))
 
                 gadgets = file.allGadgets[(count-1)*step:]
-                with open(cache_file+'_%d' % (count-1),'wb') as f:
+                with open(cache_file+'_%d' % (count),'wb') as f:
                     f.write(encode(repr(gadgets).encode('ascii'),'zip'))
                 return
 
             with open(cache_file,'wb') as f:
                 f.write(encode(repr(file.allGadgets).encode('ascii'),'zip'))
         except BaseException as e:
-            raise e
-            if os.path.exists(cache_file):
-                os.remove(cache_file)
+            for i in range(1, RopperService.CACHE_FILE_COUNT+1):
+                if os.path.exists(cache_file+'_%d' % i):
+                    os.remove(cache_file+'_%d' % i)
 
 
-    def __loadCachePerProcess(self, cacheFileName, gqueue):
-        with open(cacheFileName,'rb') as f:
-            data = f.read()
-            gqueue.put(eval(decode(data,'zip')))
+    def __loadCachePerProcess(self, fqueue, gqueue):
+        while not fqueue.empty():
+            cacheFileName = fqueue.get()
+            if os.path.exists(cacheFileName):
+                with open(cacheFileName,'rb') as f:
+                    data = f.read()
+                    gqueue.put(eval(decode(data,'zip')))
+            else:
+                gqueue.put([])
+
 
     def __loadCache(self, file):
         mp = False
         processes = []
-        count = multiprocessing.cpu_count()+1
+        single = False
         try:
-            temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
+            temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
+
             if not os.path.exists(cache_file):
                 if not os.path.exists(cache_file+'_%d' % 1):
                     return
                 else:
-                    mp = True
+                    mp = True and multiprocessing.cpu_count()>1
+            else: 
+                single = True
+            if self.__callbacks and hasattr(self.__callbacks, '__message__'):
+                self.__callbacks.__message__('Load gadgets from cache')
+            if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
+                        self.__callbacks.__gadgetSearchProgress__(None, [], 0)
             if not mp:
-                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
-                    self.__callbacks.__message__('Load gadgets from cache')
-                with open(cache_file,'rb') as f:
-                    data = f.read()
-                    return eval(decode(data,'zip'))
-            else:
-                
-                gqueue = multiprocessing.Queue()
                 all_gadgets = []
-                if self.__callbacks and hasattr(self.__callbacks, '__message__'):
-                    self.__callbacks.__message__('Load gadgets from cache')
+                if single:
+                    with open(cache_file,'rb') as f:
+                        data = f.read()
+                        all_gadgets.extend(eval(decode(data,'zip')))
+                else:
+                    for i in range(1,RopperService.CACHE_FILE_COUNT+1):
+                        if os.path.exists(cache_file+'_%d' % i):
+                            with open(cache_file+'_%d' % i,'rb') as f:
+                                data = f.read()
+                                all_gadgets.extend(eval(decode(data,'zip')))
+                                if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
+                                    self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, float(i)/RopperService.CACHE_FILE_COUNT)
+                return all_gadgets
+                
+            else:
+                count = max(multiprocessing.cpu_count(),RopperService.CACHE_FILE_COUNT)
+
+                gqueue = multiprocessing.Queue()
+                fqueue = multiprocessing.Queue()
+                for i in range(1,RopperService.CACHE_FILE_COUNT+1):
+                    fqueue.put(cache_file+'_%d' % i)
+                all_gadgets = []
                 for i in range(count):
-                    p=multiprocessing.Process(target=self.__loadCachePerProcess, args=(cache_file+'_%d' % i, gqueue))
+                    p=multiprocessing.Process(target=self.__loadCachePerProcess, args=(fqueue, gqueue))
                     p.start()
                     processes.append(p)
-                for i in range(count):
+
+                for i in range(RopperService.CACHE_FILE_COUNT):
                     gadgets = gqueue.get()
                     all_gadgets.extend(gadgets)
                     if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
-                        self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, float(i+1)/count)
+                        self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, float(i+1)/RopperService.CACHE_FILE_COUNT)
 
                 return sorted(all_gadgets, key=Gadget.simpleInstructionString)
         except KeyboardInterrupt:
@@ -382,13 +410,12 @@ class RopperService(object):
         except BaseException as e:
             if mp:
                 for i in range(count):
-                    if os.path.exists(cache_file+'_%d' % i):
-                        os.remove(cache_file+'_%d' % i)
                     p = processes[i]
-                    if p.is_alive():
+                    if p and p.is_alive():
                         p.terminate()
-            if os.path.exists(cache_file):
-                os.remove(cache_file)
+            for i in range(1,RopperService.CACHE_FILE_COUNT+1):
+                if os.path.exists(cache_file+'_%d' % i):
+                    os.remove(cache_file+'_%d' % i)
 
 
     def _badbytes_changed(self, value):
@@ -430,7 +457,7 @@ class RopperService(object):
         return None
 
     def clearCache(self):
-        temp = tempfile.gettempdir() + os.path.sep + CACHE_FOLDER
+        temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
         if os.path.exists(temp):
             import shutil
             shutil.rmtree(temp)

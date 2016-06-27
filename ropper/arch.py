@@ -154,7 +154,7 @@ class ArchitectureX86(Architecture):
 
     def _initCategories(self):
         self._categories = {
-                gadget.Category.STACK_PIVOT : (('^mov (?P<dst>.sp), .+ ptr \[(?P<src>...)\]$','^mov (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>...), (?P<src>.sp)$','ret.+'),('mov','call','jmp')),
+                gadget.Category.STACK_PIVOT : (('^sub (?P<dst>.sp), (?P<src>[x0-9a-fA-F]+)$','^add (?P<dst>.sp), (?P<src>[x0-9a-fA-F]+)$','^mov (?P<dst>.sp), .+ ptr \[(?P<src>...)\]$','^mov (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>.sp), (?P<src>...)$','^xchg (?P<dst>...), (?P<src>.sp)$','ret.+'),('mov','call','jmp')),
                 gadget.Category.LOAD_MEM : (('mov (?P<dst>...), .+ ptr \[(?P<src>...)\]',),('mov','call','jmp')),
                 gadget.Category.WRITE_MEM : (('^mov .+ ptr \[(?P<dst>...)\], (?P<src>...)$',),('mov','call','jmp')),
                 gadget.Category.LOAD_REG : (('pop (?P<dst>...)',),('mov','call','jmp')),

@@ -313,29 +313,34 @@ class Console(cmd.Cmd):
 
     def __generateChain(self, command):
         split = command.split(' ')
-
-        old = self.__rs.options.color
-        self.__rs.options.color = False
-
-        generator = split[0]
-        options = {}
-        if len(split) > 1:
-            for option in split[1:]:
-                key, value = option.split('=')
-                options[key] = value
         try:
-            chain = self.__rs.createRopChain(generator, options)
+            old = self.__rs.options.color
+            generator = split[0]
+            options = {}
+            if len(split) > 1:
+                for option in split[1:]:
+                    if option.count('=') == 0 or option.count('=') > 1:
+                        raise RopperError('Wrong option format. An option has to be set in the following format: option=value')
+                    key, value = option.split('=')
+                    options[key] = value
+            try:
+                
+                self.__rs.options.color = False
+                chain = self.__rs.createRopChain(generator, options)
 
-            #generator = RopChain.get(self.__binaries, self.__gadgets, split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
+                #generator = RopChain.get(self.__binaries, self.__gadgets, split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
 
-            self.__printInfo('generating rop chain')
-            # self.__printSeparator(behind='\n\n')
+                self.__printInfo('generating rop chain')
+                # self.__printSeparator(behind='\n\n')
 
-            self.__cprinter.println(chain)
-            # self.__printSeparator(before='\n\n')
-            self.__printInfo('rop chain generated!')
-        except RopperError as e:
-            self.__printError(e)
+                self.__cprinter.println(chain)
+                # self.__printSeparator(before='\n\n')
+                self.__printInfo('rop chain generated!')
+            except RopperError as e:
+                self.__printError(e)
+        except BaseException as e:
+            self.__rs.options.color = old
+            raise e
         self.__rs.options.color = old
 
     def __ropchainInfoCallback(self, message):

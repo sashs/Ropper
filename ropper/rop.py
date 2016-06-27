@@ -251,21 +251,15 @@ class Ropper(object):
         code = section.bytes
         offset = section.offset
         toReturn = []
-
-        for index in range(len(code)):
-            if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
-                ppr = Gadget(binary.fileName,section.name, binary.arch)
-                for i in disassembler.disasm(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
-                    if i.mnemonic != 'pop' and i.mnemonic != 'ret':
-                        break
-                    ppr.append(
-                        i.address, i.mnemonic , i.op_str, bytes=i.bytes)
-
-                    if i.mnemonic.startswith('ret'):
-                        break
-                if len(ppr) == 3:
-
-                    toReturn.append(ppr)
+        pprs = binary.arch.pprs
+        for ppr in pprs:
+            for match in re.finditer(ppr, code):
+                if (offset + match.start()) % binary.arch.align == 0:
+                    pprg = Gadget(binary.fileName,section.name, binary.arch)
+                    for i in disassembler.disasm(bytes(bytearray(code)[match.start():match.end()]), offset + match.start()):
+                        pprg.append(i.address, i.mnemonic , i.op_str, bytes=i.bytes)
+        
+                    toReturn.append(pprg)
         return toReturn
 
     def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):

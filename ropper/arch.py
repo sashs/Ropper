@@ -123,6 +123,15 @@ class ArchitectureX86(Architecture):
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_32)
 
         self._searcher = Searcherx86()
+        self._pprs = [b'[\x58-\x5f]{2}\xc3', # pop reg; pop reg; ret
+                        b'\x83\xc4\x04[\x58-\x5f]\xc3', # add esp, 4; pop reg; ret
+                        b'[\x58-\x5f]\x83\xc4\x04\xc3', # pop reg; add esp, 4; ret
+                        b'\x83\xc4\x08\xc3'             # add esp, 8; ret;
+                        ]
+
+    @property
+    def pprs(self):
+        return self._pprs
 
     def _initGadgets(self):
         super(ArchitectureX86, self)._initGadgets()
@@ -186,6 +195,15 @@ class ArchitectureX86_64(ArchitectureX86):
         self._mode = CS_MODE_64
 
         self._addressLength = 8
+        self._pprs = [b'[\x58-\x5f]{2}\xc3', # pop reg; pop reg; ret
+                        b'\x83\xc4\x08[\x58-\x5f]\xc3', # add esp, 4; pop reg; ret
+                        b'[\x58-\x5f]\x83\xc4\x08\xc3', # pop reg; add esp, 4; ret
+                        b'\x83\xc4\x10\xc3'             # add esp, 8; ret;
+                        ]
+        self._pprs.append(b'\x41?[\x58-\x5f]\x48\x83\xc4\x08\xc3')
+        self._pprs.append(b'\x48\x83\xc4\x08\x41?[\x58-\x5f]\xc3')
+        self._pprs.append(b'(\x41?[\x58-\x5f]){2}\xc3')
+        self._pprs.append(b'\x48\x83\xc4\x10\xc3')
 
     def _initCategories(self):
         self._categories = {

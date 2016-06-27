@@ -126,7 +126,7 @@ epilog="""example uses:
         parser.add_argument(
             '--console', help='Starts interactive commandline', action='store_true')
         parser.add_argument(
-            '-f', '--file', metavar="<file>", help='The file to load')
+            '-f', '--file', metavar="<file>", help='The file to load', nargs='+')
         parser.add_argument(
             '-r', '--raw', help='Loads the file as raw file', action='store_true')
         parser.add_argument(

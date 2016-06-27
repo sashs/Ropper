@@ -152,7 +152,10 @@ class Console(cmd.Cmd):
             self.__rs.clearCache()
 
         if self.__options.file:
-            self.__loadFile(self.__options.file)
+            for file in self.__options.file:
+                self.__loadFile(file)
+            if len(self.__options.file) > 1:
+                self.do_file('1')
 
         if self.__options.console:
             self.cmdloop()

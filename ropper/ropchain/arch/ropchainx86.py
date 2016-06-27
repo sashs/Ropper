@@ -332,7 +332,7 @@ class RopChainX86(RopChain):
                     break;
 
         toReturn = self._printRopInstruction(popReg2, False)
-        toReturn += self._printRebasedAddress(toHex(from_re,4), idx=idx)
+        toReturn += self._printRebasedAddress(toHex(from_reg,4), idx=idx)
         regs = self._paddingNeededFor(popReg2)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -846,17 +846,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         self._printMessage('Ropchain Generator for VirtualProtect:\n')
         self._printMessage('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
         
-        address = options.get('address')
-
-        
-
-        if not match('0x[0-9a-fA-F]+', size):
-            raise RopChainError('Parameter size have to have the following format: <hexnumber>')
-
-        address = int(address, 16)
-        size = int(address, 16)
-
-        
+        address = options.get('address')      
         given = False
         if not address:
             address = self.__getVirtualProtectEntry()
@@ -867,6 +857,7 @@ class RopChainX86VirtualProtect(RopChainX86):
             if address:
                 if not match('0x[0-9a-fA-F]{1,8}', address):
                     raise RopChainError('Parameter address have to have the following format: <hexnumber>')
+                address = int(address, 16)
             given = True
 
         writeable_ptr = self._binaries[0].getWriteableSection().offset + 0x4

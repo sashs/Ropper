@@ -690,7 +690,7 @@ class RopperService(object):
         for binary in self.__files:
             gadgets[binary.loader] = binary.gadgets
             b.append(binary.loader)
-        generator = RopChain.get(b, gadgets, chain, callback, self.options.badbytes)
+        generator = RopChain.get(b, gadgets, chain, callback, unhexlify(self.options.badbytes))
 
         if not generator:
             raise RopperError('%s does not have support for %s chain generation at the moment. Its a future feature.' % (self.files[0].loader.arch.__class__.__name__, chain))

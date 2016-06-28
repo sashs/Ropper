@@ -83,7 +83,7 @@ class ELF_x86_84(unittest.TestCase):
         
         gadgets = ropper.searchPopPopRet(self.file)
         
-        self.assertEqual(len(gadgets), 18)
+        self.assertEqual(len(gadgets), 118)
         self.assertEqual(gadgets[0].lines[0][0], 0x52f8)
 
 
@@ -140,7 +140,7 @@ class PE_x86_84(unittest.TestCase):
         
         gadgets = ropper.searchPopPopRet(self.file)
         
-        self.assertEqual(len(gadgets), 113)
+        self.assertEqual(len(gadgets), 242)
         self.assertEqual(gadgets[0].lines[0][0], 0x14ec)
 
 
@@ -201,7 +201,7 @@ class MACHO_x86_84(unittest.TestCase):
         
         gadgets = ropper.searchPopPopRet(self.file)
         
-        self.assertEqual(len(gadgets), 16)
+        self.assertEqual(len(gadgets), 32)
         self.assertEqual(gadgets[0].lines[0][0], 0x1cdc)
     
 if __name__ == '__main__':

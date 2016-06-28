@@ -90,6 +90,7 @@ epilog="""example uses:
   {0} --file /bin/ls --chain execve
   {0} --file /bin/ls --chain "execve cmd=/bin/sh" --badbytes 000a0d
   {0} --file /bin/ls --chain "mprotect address=0xbfdff000 size=0x21000"
+  {0} --file /bin/ls /lib/libc.so.6 --console
 
 
   [Assemble/Disassemble]

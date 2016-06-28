@@ -75,7 +75,7 @@ class ELF_x86(unittest.TestCase):
         
         gadgets = ropper.searchPopPopRet(self.file)
         
-        self.assertEqual(len(gadgets), 109)
+        self.assertEqual(len(gadgets), 137)
         self.assertEqual(gadgets[0].lines[0][0], 0x444a)
 
 

@@ -152,7 +152,10 @@ class Console(cmd.Cmd):
             self.__rs.clearCache()
 
         if self.__options.file:
-            self.__loadFile(self.__options.file)
+            for file in self.__options.file:
+                self.__loadFile(file)
+            if len(self.__options.file) > 1:
+                self.do_file('1')
 
         if self.__options.console:
             self.cmdloop()
@@ -313,29 +316,34 @@ class Console(cmd.Cmd):
 
     def __generateChain(self, command):
         split = command.split(' ')
-
-        old = self.__rs.options.color
-        self.__rs.options.color = False
-
-        generator = split[0]
-        options = {}
-        if len(split) > 1:
-            for option in split[1:]:
-                key, value = option.split('=')
-                options[key] = value
         try:
-            chain = self.__rs.createRopChain(generator, options)
+            old = self.__rs.options.color
+            generator = split[0]
+            options = {}
+            if len(split) > 1:
+                for option in split[1:]:
+                    if option.count('=') == 0 or option.count('=') > 1:
+                        raise RopperError('Wrong option format. An option has to be set in the following format: option=value')
+                    key, value = option.split('=')
+                    options[key] = value
+            try:
+                
+                self.__rs.options.color = False
+                chain = self.__rs.createRopChain(generator, options)
 
-            #generator = RopChain.get(self.__binaries, self.__gadgets, split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
+                #generator = RopChain.get(self.__binaries, self.__gadgets, split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
 
-            self.__printInfo('generating rop chain')
-            # self.__printSeparator(behind='\n\n')
+                self.__printInfo('generating rop chain')
+                # self.__printSeparator(behind='\n\n')
 
-            self.__cprinter.println(chain)
-            # self.__printSeparator(before='\n\n')
-            self.__printInfo('rop chain generated!')
-        except RopperError as e:
-            self.__printError(e)
+                self.__cprinter.println(chain)
+                # self.__printSeparator(before='\n\n')
+                self.__printInfo('rop chain generated!')
+            except RopperError as e:
+                self.__printError(e)
+        except BaseException as e:
+            self.__rs.options.color = old
+            raise e
         self.__rs.options.color = old
 
     def __ropchainInfoCallback(self, message):
@@ -743,13 +751,20 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 raise RopperError(e)
         else:
             data = []
+            desc = {'cfg_only':'if on gadgets are filtered for use in CFG exploits (only PE)',
+                    'all':'If on shows all found gadgets including double gadgets',
+                    'color':'If on output is colored',
+                    'badbytes':'Gadget addresses are not allowed to contain this bytes',
+                    'type':'The file is scanned for this type of gadgets. (rop, jop, sys, all)',
+                    'detailed':'If on the gadgets will be printed with more detailed information',
+                    'inst_count':'The max count of instructions in a gadgets'}
             for key, value in self.__rs.options.items():
                 if isinstance(value, bool):
-                    data.append((cstr(key), cstr('on' if value else 'off')))
+                    data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc[key])))
                 else:
-                    data.append((cstr(key), cstr(value)))
+                    data.append((cstr(key), cstr(value), cstr(desc[key])))
 
-            printTable('Settings', (cstr('Name'), cstr('Value')), data)
+            printTable('Settings', (cstr('Name'), cstr('Value'), cstr('Description')), data)
 
     def help_settings(self):
         self.__printHelpText('settings', 'shows the current settings or set the settings\nHow to set:\nsettings badbytes 00 - sets badbytes to 00\nsettings badbytes - sets badbytes to default (empty)')

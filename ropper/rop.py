@@ -21,7 +21,7 @@ from ropper.common.utils import *
 from ropper.common.error import *
 from ropper.common.enum import Enum
 from ropper.arch import x86
-from multiprocessing import Process, Pool, Queue, cpu_count, current_process
+from multiprocessing import Process, Pool, Queue, cpu_count, current_process, JoinableQueue
 from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
 from struct import pack
@@ -251,21 +251,15 @@ class Ropper(object):
         code = section.bytes
         offset = section.offset
         toReturn = []
-
-        for index in range(len(code)):
-            if code[index] == 0xc3 and 0 not in code[index - 2:index + 1]:
-                ppr = Gadget(binary.fileName,section.name, binary.arch)
-                for i in disassembler.disasm(struct.pack('BBB', *code[index - 2:index + 1]), offset + index -2):
-                    if i.mnemonic != 'pop' and i.mnemonic != 'ret':
-                        break
-                    ppr.append(
-                        i.address, i.mnemonic , i.op_str, bytes=i.bytes)
-
-                    if i.mnemonic.startswith('ret'):
-                        break
-                if len(ppr) == 3:
-
-                    toReturn.append(ppr)
+        pprs = binary.arch.pprs
+        for ppr in pprs:
+            for match in re.finditer(ppr, code):
+                if (offset + match.start()) % binary.arch.align == 0:
+                    pprg = Gadget(binary.fileName,section.name, binary.arch)
+                    for i in disassembler.disasm(bytes(bytearray(code)[match.start():match.end()]), offset + match.start()):
+                        pprg.append(i.address, i.mnemonic , i.op_str, bytes=i.bytes)
+        
+                    toReturn.append(pprg)
         return toReturn
 
     def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):
@@ -350,20 +344,23 @@ class Ropper(object):
 
         max_progress = len(code) * len(arch.endings[gtype])
 
-        ending_queue = Queue()
+        ending_queue = JoinableQueue()
         gadget_queue = Queue()
         tmp_code = code[:]
 
         process_count = min(cpu_count()+1, len(arch.endings[gtype]))
-
         for ending in arch.endings[gtype]:
             ending_queue.put(ending)
+
+        for cpu in range(process_count):
+            ending_queue.put(None)
 
         for cpu in range(process_count):
             processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.fileName, section.name, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
+        
         
         count = 0
         ending_count = 0
@@ -382,20 +379,21 @@ class Ropper(object):
 
     def __gatherGadgetsByEndings(self,code, arch, fileName, sectionName, offset, ending_queue, gadget_queue, instruction_count):
         
-        try:
-            while not ending_queue.empty():
-                try:
-                    if ending_queue.empty():
-                        break
-                    ending = ending_queue.get(False)
-                    gadgets = self.__gatherGadgetsByEnding(code, arch, fileName, sectionName, offset, ending, instruction_count)
-                    
-                    gadget_queue.put(gadgets)
-                except BaseException as e:
-                    pass
+        #try:
+        while True:
+            ending = ending_queue.get()
+            if ending is None:
+                ending_queue.task_done()
+                break
             
-        except BaseException as e:
-            raise RopperError(e)
+            gadgets = self.__gatherGadgetsByEnding(code, arch, fileName, sectionName, offset, ending, instruction_count)
+            
+            gadget_queue.put(gadgets)
+            ending_queue.task_done()
+            
+            
+        #except BaseException as e:
+        #    raise RopperError(e)
         
 
     def __gatherGadgetsByEnding(self, code, arch, fileName, sectionName, offset, ending, instruction_count):

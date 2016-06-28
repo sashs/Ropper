@@ -171,6 +171,7 @@ Usage
       ./Ropper.py --file /bin/ls --chain execve
       ./Ropper.py --file /bin/ls --chain "execve cmd=/bin/sh" --badbytes 000a0d
       ./Ropper.py --file /bin/ls --chain "mprotect address=0xbfdff000 size=0x21000"
+      ./Ropper.py --file /bin/ls /lib/libc.so.6 --console
 
       [Assemble/Disassemble]
       ./Ropper.py --asm "jmp esp"

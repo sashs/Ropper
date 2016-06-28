@@ -51,7 +51,6 @@ class RopChainX86(RopChain):
 
     def _printRebase(self):
         toReturn = ''
-
         for binary,section in self._usedBinaries:
             imageBase = Gadget.IMAGE_BASES[binary]
             toReturn += ('IMAGE_BASE_%d = %s # %s\n' % (self._usedBinaries.index((binary, section)),toHex(imageBase , 4), binary))
@@ -594,6 +593,7 @@ class RopChainX86(RopChain):
                 gadgets.extend(r.searchOpcode(binary,opcode=opcode,disass=True))
 
         if len(gadgets) > 0:
+            self._usedBinaries.append((gadgets[0].fileName, gadgets[0]._section))
             return gadgets[0]
         else:
             raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
@@ -625,7 +625,6 @@ class RopChainX86System(RopChainX86):
         self._printMessage('\nwrite command into data section\neax 0xb\nebx address to cmd\necx address to null\nedx address to null\n')
 
         section = self._binaries[0].getSection('.data')
-
         length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
         chain_tmp = '\n'

@@ -336,14 +336,18 @@ class RopperService(object):
 
 
     def __loadCachePerProcess(self, fqueue, gqueue):
-        while not fqueue.empty():
+        while True:
             cacheFileName = fqueue.get()
+            if cacheFileName is None:
+                fqueue.task_done()
+                break
             if os.path.exists(cacheFileName):
                 with open(cacheFileName,'rb') as f:
                     data = f.read()
                     gqueue.put(eval(decode(data,'zip')))
             else:
                 gqueue.put([])
+            fqueue.task_done()
 
 
     def __loadCache(self, file):
@@ -382,10 +386,10 @@ class RopperService(object):
                 return all_gadgets
                 
             else:
-                count = max(multiprocessing.cpu_count(),RopperService.CACHE_FILE_COUNT)
+                count = min(multiprocessing.cpu_count(),RopperService.CACHE_FILE_COUNT)
 
                 gqueue = multiprocessing.Queue()
-                fqueue = multiprocessing.Queue()
+                fqueue = multiprocessing.JoinableQueue()
                 for i in range(1,RopperService.CACHE_FILE_COUNT+1):
                     fqueue.put(cache_file+'_%d' % i)
                 all_gadgets = []
@@ -393,6 +397,9 @@ class RopperService(object):
                     p=multiprocessing.Process(target=self.__loadCachePerProcess, args=(fqueue, gqueue))
                     p.start()
                     processes.append(p)
+
+                for i in range(count):
+                    fqueue.put(None)
 
                 for i in range(RopperService.CACHE_FILE_COUNT):
                     gadgets = gqueue.get()

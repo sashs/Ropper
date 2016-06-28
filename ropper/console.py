@@ -135,6 +135,9 @@ class Console(cmd.Cmd):
             print()
             self.cmdloop()
 
+    def emptyline(self):
+        pass
+
     def __getDataPrinter(self, type):
         p = self.__dataPrinter.get(type)
         if not p:
@@ -178,12 +181,13 @@ class Console(cmd.Cmd):
             
             self.__currentFileName = file
             self.__updatePrompt()
-
+            if self.__options.I is not None:
+                self.__rs.setImageBaseFor(file, self.__options.I)
             if not self.__options.no_load and self.__options.console:
                 self.__loadGadgets()
         except BaseException as e:
             raise RopperError(e)
-        self.__rs.setImageBaseFor(file, self.__options.I)
+        
         #self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
     def __printGadget(self, gadget, detailed=False):

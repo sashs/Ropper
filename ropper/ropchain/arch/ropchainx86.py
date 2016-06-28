@@ -827,7 +827,7 @@ class RopChainX86VirtualProtect(RopChainX86):
     def __getVirtualProtectEntry(self):
         for binary in self._binaries:
             if binary.type == Type.PE:
-                imports = binary.fileName.dataDirectory[ImageDirectoryEntry.IMPORT]
+                imports = binary._binary.dataDirectory[ImageDirectoryEntry.IMPORT]
                 if not imports:
                     return None
                 for descriptorData in imports:

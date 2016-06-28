@@ -751,13 +751,20 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 raise RopperError(e)
         else:
             data = []
+            desc = {'cfg_only':'if on gadgets are filtered for use in CFG exploits (only PE)',
+                    'all':'If on shows all found gadgets including double gadgets',
+                    'color':'If on output is colored',
+                    'badbytes':'Gadget addresses are not allowed to contain this bytes',
+                    'type':'The file is scanned for this type of gadgets. (rop, jop, sys, all)',
+                    'detailed':'If on the gadgets will be printed with more detailed information',
+                    'inst_count':'The max count of instructions in a gadgets'}
             for key, value in self.__rs.options.items():
                 if isinstance(value, bool):
-                    data.append((cstr(key), cstr('on' if value else 'off')))
+                    data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc[key])))
                 else:
-                    data.append((cstr(key), cstr(value)))
+                    data.append((cstr(key), cstr(value), cstr(desc[key])))
 
-            printTable('Settings', (cstr('Name'), cstr('Value')), data)
+            printTable('Settings', (cstr('Name'), cstr('Value'), cstr('Description')), data)
 
     def help_settings(self):
         self.__printHelpText('settings', 'shows the current settings or set the settings\nHow to set:\nsettings badbytes 00 - sets badbytes to 00\nsettings badbytes - sets badbytes to default (empty)')

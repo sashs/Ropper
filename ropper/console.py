@@ -103,10 +103,16 @@ class Console(cmd.Cmd):
         self.__options = options
         if not options.isWindows():
             import readline
-            old_delims = readline.get_completer_delims()  # <-
+            old_delims = readline.get_completer_delims() 
             old_delims = old_delims.replace('-', '')
             old_delims = old_delims.replace('/', '')
-            readline.set_completer_delims(old_delims)  # <-
+            readline.set_completer_delims(old_delims)
+            #ää Fix completion on mac os
+            import rlcompleter
+            if 'libedit' in readline.__doc__:
+                readline.parse_and_bind("bind ^I rl_complete")
+            else:
+                readline.parse_and_bind("tab: complete")
 
         self.__rs = RopperService(self.__options.ropper_options, callbacks=CallbackClass(self))
         self.__currentFileName = ''

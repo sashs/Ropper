@@ -246,7 +246,7 @@ epilog="""example uses:
             return vars(self.__args)[key]
 
     def isWindows(self):
-      return sys.platform.startswith('win')
+      return sys.platform.lower().startswith('win')
 
     def __setattr__(self, key, value):
         if key.startswith('_'):

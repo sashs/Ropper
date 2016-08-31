@@ -60,15 +60,15 @@ supported architectures:
 
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
-  mprotect  (mprotect=<address>:<size>) [Linux x86, x86_64]
-  virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
+  mprotect  (mprotect address=0xdeadbeef size=0x10000) [Linux x86, x86_64]
+  virtualprotect (virtualprotect address=0xdeadbeef) [Windows x86]
 """,
 epilog="""example uses:
   [Generic]
   {0}
   {0} --file /bin/ls --console
 
-  [Informations]
+  [Information]
   {0} --file /bin/ls --info
   {0} --file /bin/ls --imports
   {0} --file /bin/ls --sections
@@ -79,7 +79,6 @@ epilog="""example uses:
   {0} --file /bin/ls --search "sub eax" --badbytes 000a0d
   {0} --file /bin/ls --search "sub eax" --detail
   {0} --file /bin/ls --filter "sub eax"
-  {0} --file /bin/ls --inst-count 5 --filter "sub eax"
   {0} --file /bin/ls --opcode ffe4
   {0} --file /bin/ls --opcode ffe?
   {0} --file /bin/ls --opcode ??e4

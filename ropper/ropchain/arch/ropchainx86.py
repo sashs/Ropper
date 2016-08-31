@@ -909,7 +909,7 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain_tmp += self._createPushad()
 
         if not got_jmp_esp and jmp_esp:
-            chain_tmp += self._createAddress(jmp_esp.lines[0][0])[0]
+            chain_tmp += self._printRopInstruction(jmp_esp)
 
 
         chain += self._printRebase()

@@ -90,7 +90,7 @@ class Gadget(object):
 
     @_bytes.setter
     def _bytes(self, value):
-        self.__bytes = bytes
+        self.__bytes = value
 
 
     @property

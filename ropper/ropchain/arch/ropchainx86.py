@@ -593,8 +593,13 @@ class RopChainX86(RopChain):
                 gadgets.extend(r.searchOpcode(binary,opcode=opcode,disass=True))
 
         if len(gadgets) > 0:
-            self._usedBinaries.append((gadgets[0].fileName, gadgets[0]._section))
-            return gadgets[0]
+            for gadget in gadgets:
+                if not gadget:
+                    continue
+                if not self.containsBadbytes(gadget.IMAGE_BASES.get(gadget.fileName,0) + gadget.lines[0][0]):
+                    if (gadget.fileName, gadget._section) not in self._usedBinaries:
+                        self._usedBinaries.append((gadget.fileName, gadget._section))
+                    return gadget
         else:
             raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
 
@@ -830,7 +835,7 @@ class RopChainX86VirtualProtect(RopChainX86):
                 if not imports:
                     return None
                 for descriptorData in imports:
-                    for thunk in descriptorData.importNameTable:
+                    for thunk in descriptorData.importAddressTable:
 
                         if thunk.importByName and thunk.importByName.name == 'VirtualProtect':
                             return thunk.rva + binary.imageBase
@@ -859,7 +864,12 @@ class RopChainX86VirtualProtect(RopChainX86):
                 address = int(address, 16)
             given = True
 
-        writeable_ptr = self._binaries[0].getWriteableSection().offset + 0x4
+
+        writeable_ptr = self._binaries[0].getWriteableSection().offset
+        for i in range(0xfff):
+            if not self.containsBadbytes(writeable_ptr + i):
+                writeable_ptr += i
+                break
         jmp_esp = self._createJmp()
         ret_addr = self._searchOpcode('c3')
 

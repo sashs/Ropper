@@ -33,7 +33,7 @@ from ropper.service import deleteDuplicates, cfgFilterGadgets
 from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
 
 app_options = None
-VERSION=[1,10,9]
+VERSION=[1,10,10]
 
 def start(args):
     try:

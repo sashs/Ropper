@@ -126,7 +126,11 @@ class ArchitectureX86(Architecture):
         self._pprs = [b'[\x58-\x5f]{2}\xc3', # pop reg; pop reg; ret
                         b'\x83\xc4\x04[\x58-\x5f]\xc3', # add esp, 4; pop reg; ret
                         b'[\x58-\x5f]\x83\xc4\x04\xc3', # pop reg; add esp, 4; ret
-                        b'\x83\xc4\x08\xc3'             # add esp, 8; ret;
+                        b'\x83\xc4\x08\xc3',            # add esp, 8; ret;
+                        b'\xff\x54\x24[\x08\x14\x1c\x2c\x44\x50]',            # call [esp+n] 
+                        b'\xff\x64\x24[\x08\x14\x1c\x2c\x44\x50]',            # jmp [esp+n]
+                        b'\xff\x65[\x0c\x24\x30\xfc\xf4\xe8]',                            # jmp [ebp+n]
+                        b'\xff\x55[\x0c\x24\x30\xfc\xf4\xe8]'                             # call [ebp+n]
                         ]
 
     @property

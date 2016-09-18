@@ -866,8 +866,9 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
         writeable_ptr = self._binaries[0].getWriteableSection().offset
-        for i in range(0xfff):
-            if not self.containsBadbytes(writeable_ptr + i):
+
+        for i in range(0,0x10000,4):
+            if not self.containsBadbytes((writeable_ptr + i) & 0xffff,2):
                 writeable_ptr += i
                 break
         jmp_esp = self._createJmp()

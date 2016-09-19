@@ -331,7 +331,7 @@ class RopChainX86(RopChain):
                     break;
 
         toReturn = self._printRopInstruction(popReg2, False)
-        toReturn += self._printRebasedAddress(toHex(from_reg,4), idx=idx)
+        toReturn += self._printPaddingInstruction(toHex(from_reg,4), idx=idx)
         regs = self._paddingNeededFor(popReg2)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()

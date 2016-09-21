@@ -110,7 +110,7 @@ class Architecture(AbstractSingleton):
         return self._name
 
     def __repr__(self):
-        return 'getArchitecture(%s)' % repr(str(self))
+        return repr(str(self))
 
 
 class ArchitectureX86(Architecture):

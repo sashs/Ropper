@@ -48,6 +48,8 @@ class Gadget(object):
 
     def __init__(self, fileName, section, arch, lines=None, bytes=None, init=False):
         #super(Gadget, self).__init__()
+        if isinstance(arch, str):
+            arch = ropper.arch.getArchitecture(arch)
         self.__arch = arch
         self.__lines = None
         self.__gadget = None

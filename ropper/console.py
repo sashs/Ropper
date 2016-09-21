@@ -35,6 +35,7 @@ import ropper
 import cmd
 import re
 import os
+import traceback
 
 # Python2 compatibility
 try:
@@ -45,15 +46,16 @@ except:
 
 def safe_cmd(func):
     def cmd(self, text):
+        cp = ConsolePrinter()
         try:
             func(self, text)
         except RopperError as e:
-            ConsolePrinter().printError(e)
+            cp.printError(e)
         except KeyboardInterrupt:
-            ConsolePrinter().println()
-        except BaseException as e:
-            ConsolePrinter().printError(e)
-            ConsolePrinter().printError('Please report this error on https://github.com/sashs/ropper')
+            cp.println()
+        except:
+            cp.printError( traceback.format_exc())
+            cp.printError('Please report this error on https://github.com/sashs/ropper')
     return cmd
 
 class CallbackClass(object):
@@ -272,7 +274,6 @@ class Console(cmd.Cmd):
                             [0], header='Instructions')
 
     def __searchPopPopRet(self):
-
         pprs = self.__rs.searchPopPopRet(self.currentFileName)
         self.__printGadgets([g for g in pprs.values()][0],
                             header='POP;POP;RET Instructions')

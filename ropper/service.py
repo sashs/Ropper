@@ -375,6 +375,8 @@ class RopperService(object):
                     with open(cache_file,'rb') as f:
                         data = f.read()
                         all_gadgets.extend(eval(decode(data,'zip')))
+                        if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
+                            self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, 1.0)
                 else:
                     for i in range(1,RopperService.CACHE_FILE_COUNT+1):
                         if os.path.exists(cache_file+'_%d' % i):
@@ -481,8 +483,6 @@ class RopperService(object):
             arch=getArchitecture(arch)
 
         loader = Loader.open(name, bytes=bytes, raw=raw, arch=arch)
-        if len(self.__files) > 0 and self.__files[0].loader.arch != loader.arch:
-            raise RopperError('It is not supported to open file with different architectures! Loaded: %s; File to open: %s' % (str(self.__files[0].loader.arch), str(loader.arch)))
         file = FileContainer(loader)
         self.__files.append(file)
 
@@ -680,7 +680,7 @@ class RopperService(object):
                 return g.disassemblyString()
         return ''
         
-    def createRopChain(self, chain, options={}):
+    def createRopChain(self, chain, arch, options={}):
         callback = None
         if self.__callbacks and hasattr(self.__callbacks, '__ropchainMessages__'):
             callback = self.__callbacks.__ropchainMessages__
@@ -688,8 +688,9 @@ class RopperService(object):
         b = []
         gadgets = {}
         for binary in self.__files:
-            gadgets[binary.loader] = binary.gadgets
-            b.append(binary.loader)
+            if str(binary.arch) == arch:
+                gadgets[binary.loader] = binary.gadgets
+                b.append(binary.loader)
         generator = RopChain.get(b, gadgets, chain, callback, unhexlify(self.options.badbytes))
 
         if not generator:

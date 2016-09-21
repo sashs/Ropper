@@ -339,7 +339,7 @@ class Console(cmd.Cmd):
             try:
                 
                 self.__rs.options.color = False
-                chain = self.__rs.createRopChain(generator, options)
+                chain = self.__rs.createRopChain(generator, str(self.currentFile.arch) ,options)
 
                 #generator = RopChain.get(self.__binaries, self.__gadgets, split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
 
@@ -350,6 +350,7 @@ class Console(cmd.Cmd):
                 # self.__printSeparator(before='\n\n')
                 self.__printInfo('rop chain generated!')
             except RopperError as e:
+                self.__rs.options.color = old
                 self.__printError(e)
         except BaseException as e:
             self.__rs.options.color = old
@@ -817,7 +818,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_ropchain()
             return
-        if not self.currentFile.gadgets:
+        if not self.currentFile.loaded:
             self.do_load(text)
 
         gadgets = []

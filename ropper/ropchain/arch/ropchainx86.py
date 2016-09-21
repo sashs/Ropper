@@ -331,7 +331,7 @@ class RopChainX86(RopChain):
                     break;
 
         toReturn = self._printRopInstruction(popReg2, False)
-        toReturn += self._printPaddingInstruction(toHex(from_reg,4), idx=idx)
+        toReturn += self._printPaddingInstruction(toHex(from_reg,4))
         regs = self._paddingNeededFor(popReg2)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -364,7 +364,7 @@ class RopChainX86(RopChain):
 
 
         toReturn = self._printRopInstruction(popReg2, False)
-        toReturn += self._printRebasedAddress(toHex(from_reg,4), idx=idx)
+        toReturn += self._printPaddingInstruction(toHex(from_reg,4))
         regs = self._paddingNeededFor(popReg2)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -838,7 +838,7 @@ class RopChainX86VirtualProtect(RopChainX86):
                     for thunk in descriptorData.importAddressTable:
 
                         if thunk.importByName and thunk.importByName.name == 'VirtualProtect':
-                            return thunk.rva + binary.imageBase
+                            return thunk.rva, binary.imageBase
             else:
                 self._printMessage('File is not a PE file.')
         return None
@@ -850,10 +850,11 @@ class RopChainX86VirtualProtect(RopChainX86):
         self._printMessage('Ropchain Generator for VirtualProtect:\n')
         self._printMessage('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
         
+        image_base = 0
         address = options.get('address')      
         given = False
         if not address:
-            address = self.__getVirtualProtectEntry()
+            address, image_base = self.__getVirtualProtectEntry()
             if not address:
                 self._printMessage('No IAT-Entry for VirtualProtect found!')
                 raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
@@ -882,8 +883,8 @@ class RopChainX86VirtualProtect(RopChainX86):
         chain_tmp = ''
         got_jmp_esp = False
         try:
-            self._printMessage('Try to create gadget to fill esi with content of IAT address: 0x%x' % address)
-            chain_tmp += self._createLoadRegValueFrom('esi', address)[0]
+            self._printMessage('Try to create gadget to fill esi with content of IAT address: 0x%x' % (address + image_base))
+            chain_tmp += self._createLoadRegValueFrom('esi', address+image_base)[0]
             gadgets.append((self._createNumber, [0x90909090],{'reg':'eax'},['eax', 'ax', 'ah', 'al','esi','si']))
 
             to_extend = ['esi','si']
@@ -897,10 +898,9 @@ class RopChainX86VirtualProtect(RopChainX86):
 
             jmp_eax = self._searchOpcode('ff20') # jmp [eax]
             gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
-            if given:
-                gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
-            else:
-                gadgets.append((self._createAddress, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
+            
+            gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
+            
             pop_ebp = self._searchOpcode('5dc3')
             if pop_ebp:
                 gadgets.append((self._createAddress, [pop_ebp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))

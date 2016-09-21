@@ -529,13 +529,13 @@ class Console(cmd.Cmd):
             for index, binary in enumerate(self.__rs.files):
                 if self.currentFileName == binary.loader.fileName:
                     data.append(
-                        (cstr(index + 1), cstr(binary.loader.fileName + '*'), cstr(binary.loaded)))
+                        (cstr(index + 1), cstr(binary.loader.fileName + '*'), cstr(binary.arch),cstr(binary.loaded)))
                 else:
                     data.append(
-                        (cstr(index + 1), cstr(binary.loader.fileName), cstr(binary.loaded)))
+                        (cstr(index + 1), cstr(binary.loader.fileName), cstr(binary.arch),cstr(binary.loaded)))
 
             printTable('Opened Files', (cstr('No.'),
-                                        cstr('Name'), cstr('Loaded')), data)
+                                        cstr('Name'), cstr('Architecture'),cstr('Loaded')), data)
 
         elif text.isdigit():
             idx = int(text) - 1

@@ -25,6 +25,15 @@ from ropper.common.error import RopperError
 from ropper.common.coloredstring import *
 from binascii import hexlify, unhexlify
 import ropper.arch
+import sys
+
+try:
+    if sys.version_info.major < 3:
+        import z3
+        import pyvex
+        import archinfo
+except:
+    pass
 
 # Optional sqlite support
 try:
@@ -60,6 +69,10 @@ class Gadget(object):
         if init:
             self.__initialize(lines, bytes)
 
+    @property
+    def arch(self):
+        return self.__arch
+    
     @property
     def lines(self):
         if self.__lines == None:
@@ -243,6 +256,40 @@ class Gadget(object):
 
         return toReturn
 
-
     def __repr__(self):
         return 'Gadget(%s,%s,%s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(True))
+
+
+class GadgetInformation():
+
+    def __init__(self, category, clobbered_regs, sp_offset):
+        self.__clobberedRegs = clobbered_regs
+        self.__category = category
+        self.__spOffset = sp_offset
+
+
+class Analyser():
+
+    def __init__(self):
+        self.__work = True
+        if 'z3' not in globals():
+            self.__work = False
+            return
+
+    def analyse(self, gadget):
+        if not self.__work:
+            return False
+        print(len(gadget.bytes))
+        irsb = pyvex.IRSB(str(gadget.bytes), gadget.address, gadget.arch.info, num_bytes=len(gadget.bytes))
+        irsb_anal = IRSBAnalyser()
+        irsb_anal.analyse(irsb)
+
+
+class IRSBAnalyser():
+
+    def __init__(self):
+        self.__cRegs = []
+
+    def analyse(self, irsb):
+        irsb.pp()
+

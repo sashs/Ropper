@@ -22,7 +22,7 @@ from ropper.printer.printer import FileDataPrinter
 from ropper.rop import Ropper
 from ropper.common.error import *
 from ropper.gadget import GadgetType
-from ropper.gadget import Category
+from ropper.gadget import Category, Analyser
 from ropper.common.utils import isHex, getFileNameFromPath
 from ropper.common.coloredstring import *
 from ropper.common.utils import *
@@ -56,6 +56,7 @@ def safe_cmd(func):
         except:
             cp.printError( traceback.format_exc())
             cp.printError('Please report this error on https://github.com/sashs/ropper')
+            cp.printError('Please provide a little description what you have done.')
     return cmd
 
 class CallbackClass(object):
@@ -966,6 +967,21 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_clearcache(self):
         self.__printHelpText('clearcache','Clears the cache')
+
+    @safe_cmd
+    def do_analyse(self, text):
+        if text and isHex(text):
+            addr = int(text, 16)
+            for g in self.currentFile.gadgets:
+                if g.address == addr:
+                    if Analyser().analyse(g) == False:
+                        self.__printInfo('z3 and pyvex need to be installed')
+                        return
+        else:
+            self.__printInfo('No such gadget')
+
+
+        
 
     # @safe_cmd
     # def do_edit(self, text):

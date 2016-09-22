@@ -25,6 +25,13 @@ from ropper.search.search import SearcherARM
 from re import compile
 from capstone import *
 from . import gadget
+try:
+    import sys
+    if sys.version_info.major < 3:
+        import archinfo
+except:
+    pass
+
 # Optional keystone support
 try:
     import keystone
@@ -39,6 +46,7 @@ class Architecture(AbstractSingleton):
         self._name = 'raw'
         self._arch = arch
         self._mode = mode
+        self._info = None
 
         self._ksarch = (None,None)
 
@@ -69,6 +77,11 @@ class Architecture(AbstractSingleton):
 
     def _initCategories(self):
         pass
+
+    @property
+    def info(self):
+        return self._info
+    
 
     @property
     def ksarch(self):
@@ -121,6 +134,9 @@ class ArchitectureX86(Architecture):
         self._maxInvalid = 6
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_32)
+
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchX86()
 
         self._searcher = Searcherx86()
         self._pprs = [b'[\x58-\x5f]{2}\xc3', # pop reg; pop reg; ret
@@ -197,6 +213,8 @@ class ArchitectureX86_64(ArchitectureX86):
                                                 (b'\x0f\x05\xc3',3)]                            # syscall
 
         self._mode = CS_MODE_64
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchAMD64()
 
         self._addressLength = 8
         self._pprs = [b'[\x58-\x5f]{2}\xc3', # pop reg; pop reg; ret
@@ -240,6 +258,9 @@ class ArchitectureMips(Architecture):
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_32)
 
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchMIPS32()
+
     def _initGadgets(self):
         super(ArchitectureMips, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = []
@@ -258,6 +279,8 @@ class ArchitectureMips64(ArchitectureMips):
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_64)
 
         self._mode = CS_MODE_64
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchMIPS64()
 
         self._addressLength = 8
 
@@ -272,6 +295,8 @@ class ArchitectureArm(Architecture):
         self._searcher = SearcherARM()
         self._name = 'ARM'
 
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchARM()
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_ARM)
 
@@ -290,6 +315,10 @@ class ArchitectureArmThumb(Architecture):
         self._searcher = SearcherARM()
         self._name = 'ARMTHUMB'
         self._maxInvalid = 2
+
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchARM()
+
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM, keystone.KS_MODE_THUMB)
 
@@ -309,6 +338,8 @@ class ArchitectureArm64(Architecture):
         super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
         self._name = 'ARM64'
 
+        if 'archinfo' in globals():
+            self._info = archinfo.ArchAArch64()
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_BIG_ENDIAN)
 

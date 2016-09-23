@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import re
 import hashlib
 import ropper.common.enum as enum
@@ -285,11 +285,40 @@ class Analyser():
         irsb_anal.analyse(irsb)
 
 
+class IRSB_DATA(enum.Enum):
+    _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
+
 class IRSBAnalyser():
 
     def __init__(self):
         self.__cRegs = []
 
     def analyse(self, irsb):
-        irsb.pp()
+        
+        sp_offset = 0
+        for stmt in irsb.statements:
+            name = stmt.__class__.__name__.lower()
+            func = getattr(self, name,self.not_found)
+            
+            func(stmt)
+            
+    def __getReg(self, idx, arch):
+        return arch.register_names[idx]
+
+    def put(self, stmt):
+        to_return = {}
+        stmt.pp()
+        to_return[IRSB_DATA.WRITE_REG] = self.__getReg(stmt.offset, stmt.arch)
+        stmt.data.pp()
+        return to_return
+
+    def wrtmp(self, stmt):
+        stmt.pp()
+        #print(self.__getReg(stmt.data.offset, stmt.arch))
+
+
+    def not_found(self, stmt):
+        pass
+        #print('No func for: %s' % stmt.__class__.__name__.lower())
+
 

@@ -198,6 +198,8 @@ epilog="""example uses:
             '--clear-cache', help='Clears the cache', action='store_true')
         parser.add_argument(
             '--no-load', help='Don\'t load the gadgets automatically when start the console (--console)', action='store_true', default=False)
+        parser.add_argument(
+            '--analyse', help='just used for the implementation of semantic search', metavar='<quality>')
         return parser
 
     def _analyseArguments(self):

@@ -56,7 +56,6 @@ def safe_cmd(func):
         except:
             cp.printError( traceback.format_exc())
             cp.printError('Please report this error on https://github.com/sashs/ropper')
-            cp.printError('Please provide a little description what you have done.')
     return cmd
 
 class CallbackClass(object):
@@ -400,6 +399,9 @@ class Console(cmd.Cmd):
     def __handleOptions(self, options):
         if options.sections:
             self.__printData('sections')
+        elif options.analyse:
+            self.__loadGadgets()
+            self.do_analyse(options.analyse)
         elif options.symbols:
             self.__printData('symbols')
         elif options.segments:

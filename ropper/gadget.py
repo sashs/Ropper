@@ -20,7 +20,7 @@ from __future__ import print_function
 import re
 import hashlib
 import ropper.common.enum as enum
-from ropper.common.utils import toHex
+from ropper.common.utils import toHex, isHex
 from ropper.common.error import RopperError
 from ropper.common.coloredstring import *
 from binascii import hexlify, unhexlify
@@ -284,9 +284,91 @@ class Analyser():
         irsb_anal = IRSBAnalyser()
         irsb_anal.analyse(irsb)
 
+class Analysis():
+
+    def __init__(self):
+        self.__spOffset = 0
+        self.__clobberedRegs = []
+        self.__offsets = {}
+        self.__tmps = {}
+
+    @property
+    def spOffset(self):
+        return self.__spOffset
+
+    @spOffset.setter
+    def spOffset(self, offset):
+        self.__spOffset = offset
+
+    @property
+    def clobberedRegs(self):
+        return self.__clobberedRegs
+
+    @property
+    def offsets(self):
+        return self.__offsets
+
+    @property
+    def tmps(self):
+        return self.__tmps
+
+    def getValueForTmp(self, tmp):
+        while not isinstance(tmp, int) and not tmp is None:
+            tmp = self.tmps.get(tmp)
+
+        return tmp
 
 class IRSB_DATA(enum.Enum):
     _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
+
+
+class Vex():
+
+    @classmethod
+    def get(cls, name):
+        return getattr(cls, name, cls.Dummy)
+
+    @staticmethod
+    def Dummy(dest, data, analysis):
+        pass
+
+class Expressions(Vex):
+
+    @staticmethod
+    def Get(dest, data, analysis):
+        pass
+
+    @staticmethod
+    def Const(dest, data, analysis):
+        analysis.tmps[dest] = int(str(data), 16)
+        return analysis.tmps[dest]
+
+    @staticmethod
+    def RdTmp(dest, data, analysis):
+        analysis.tmps[dest] = str(data)
+        return analysis.tmps[dest]
+
+    @staticmethod
+    def Binop(dest, data, analysis):
+        return Operations.get(data.op)(dest, data, analysis)
+        
+    @staticmethod
+    def Dummy(dest, data, analysis):
+        pass
+
+class Operations(Vex):
+
+    @staticmethod
+    def Iop_Add32(dest, data, analysis):
+        arg1 = Expressions.get(data.args[0].__class__.__name__)(dest, data.args[0], analysis)
+        arg2 = Expressions.get(data.args[1].__class__.__name__)(dest, data.args[1], analysis)
+
+        if not isinstance(arg2, int):
+            arg2 = analysis.getValueForTmp(arg2)
+
+        if arg2 != None:
+            analysis.offsets[dest] = arg2
+
 
 class IRSBAnalyser():
 
@@ -294,31 +376,34 @@ class IRSBAnalyser():
         self.__cRegs = []
 
     def analyse(self, irsb):
-        
+        irsb.pp()
+        anal = Analysis()
         sp_offset = 0
         for stmt in irsb.statements:
             name = stmt.__class__.__name__.lower()
             func = getattr(self, name,self.not_found)
             
-            func(stmt)
+            func(stmt, anal)
+        print(anal.offsets, anal.spOffset)
             
     def __getReg(self, idx, arch):
         return arch.register_names[idx]
 
-    def put(self, stmt):
+    def put(self, stmt, analysis):
         to_return = {}
         stmt.pp()
         to_return[IRSB_DATA.WRITE_REG] = self.__getReg(stmt.offset, stmt.arch)
-        stmt.data.pp()
+
+        if stmt.offset == stmt.arch.sp_offset:
+            analysis.spOffset += analysis.offsets[str(stmt.data)]
         return to_return
 
-    def wrtmp(self, stmt):
-        stmt.pp()
-        #print(self.__getReg(stmt.data.offset, stmt.arch))
+    def wrtmp(self, stmt, analysis):
+        return Expressions.get(stmt.data.__class__.__name__)( 't'+str(stmt.tmp), stmt.data, analysis)
 
-
-    def not_found(self, stmt):
+    def not_found(self, stmt, analysis):
         pass
         #print('No func for: %s' % stmt.__class__.__name__.lower())
+
 
 

@@ -81,6 +81,8 @@ class InstructionAnalysis(object):
 
 class Analysis(object):
 
+    MEM_COUNTER = 0
+
     def __init__(self, arch, irsb):
         self.__instructions = []
         self.__mem = None
@@ -109,9 +111,9 @@ class Analysis(object):
 
     @property
     def clobberedRegs(self):
-        to_return = []
+        to_return = set()
         for ia in self.instructions:
-            to_return.extend(ia.clobberedRegs)
+            to_return.update(ia.clobberedRegs)
         return to_return
 
     def newInstruction(self):
@@ -135,7 +137,8 @@ class Analysis(object):
     @property
     def _memory(self):
         if self.__mem is None:
-            self.__mem = z3.Array('memory' , z3.BitVecSort(self.__arch.bits), z3.BitVecSort(8))
+            self.__mem = z3.Array('memory_%d' % Analysis.MEM_COUNTER , z3.BitVecSort(self.__arch.bits), z3.BitVecSort(8))
+            Analysis.MEM_COUNTER += 1
         return self.__mem
 
     def readMemory(self, addr, size):
@@ -145,7 +148,14 @@ class Analysis(object):
         return to_return
 
     def writeMemory(self, addr, size, data):
-        pass
+        size = size/8
+        old = self._memory
+        for i in range(size):
+            old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
+
+        
+        self.__mem = None
+        return old == self._memory
 
     def writeRegister(self, offset, size, value):
         reg = self.__arch.translate_register_name(offset, size)
@@ -244,6 +254,20 @@ class Operations(Vex):
         return arg1 ^ arg2
 
     @staticmethod
+    def Iop_Mul32(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+
+        return arg1 * arg2
+
+    @staticmethod
+    def Iop_Div32(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+
+        return arg1 / arg2
+
+    @staticmethod
     def Iop_Sub32(dest, data, analysis):
         arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
@@ -276,17 +300,22 @@ class IRSBAnalyser(object):
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
         elif stmt.offset == stmt.arch.ip_offset:
             analysis.newInstruction()
-        dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
 
+        dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
         value = Expressions.use(stmt.data)(dest,stmt.data, analysis)
+        analysis.currentInstruction.clobberedRegs.append(dest)
+
         return analysis.writeRegister(stmt.offset, stmt.data.result_size, value)
 
     def wrtmp(self, stmt, analysis):
-        return z3.BitVec('t'+str(stmt.tmp),stmt.data.result_size) == Expressions.use(stmt.data)( 't'+str(stmt.tmp), stmt.data, analysis)
+        tmp = 't'+str(stmt.tmp)
+        return z3.BitVec(tmp ,stmt.data.result_size) == Expressions.use(stmt.data)( tmp, stmt.data, analysis)
 
     def store(self, stmt, analysis):
-        pass
-        #print(stmt.data.__class__.__)
+        addr = Expressions.use(stmt.addr)(None, stmt.addr, analysis)
+        value = Expressions.use(stmt.data)(str(addr), stmt.data, analysis)
+        
+        return analysis.writeMemory(addr, stmt.data.result_size, value)
 
     def not_found(self, stmt, analysis):
         pass

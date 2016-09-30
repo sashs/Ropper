@@ -982,9 +982,19 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     @safe_cmd
     def do_semantic(self, text):
+        if not text:
+            return
+        constraint = None
+        split = text.split(' ')
+        stableRegs = []
+        for s in split:
+            if s.startswith('!'):
+                stableRegs.append(s[1:])
+            else:
+                constraint = s
         self.__printInfo('Searching for gadgets: ' + text)
         old = None
-        for fc, gadget in self.__rs.semanticSearch(text):
+        for fc, gadget in self.__rs.semanticSearch(constraint, stableRegs=stableRegs):
             if fc != old:
                 old = fc
                 self.__cprinter.println()
@@ -1012,8 +1022,13 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                             continue
                         solver.add(expr)
                     
+                    for constraint in self.currentFile.arch.searcher._createConstraint("ebx=1", g.info):
+                        
+                        solver.add((constraint))
+
                     print(solver.assertions())
                     print(solver.check())
+                    print(g.info.clobberedRegs)
 
         else:
             self.__printInfo('No such gadget')

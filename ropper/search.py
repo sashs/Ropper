@@ -97,10 +97,12 @@ class Searcher(object):
                         solver.add(z3.Not(constraint))
                     
                     if solver.check() == z3.unsat:
-                        for reg in stableRegs:
-                            if reg in anal.clobberedRegs:
-                                continue
-                        yield gadget
+                        clobber_reg = False
+                        for reg in anal.clobberedRegs:
+                            if reg in stableRegs:
+                                clobber_reg = True
+                        if not clobber_reg:
+                            yield gadget
 
 
     def search(self, gadgets, filter, quality = None, pprinter=None):

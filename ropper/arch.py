@@ -19,9 +19,9 @@
 
 from ropper.common.abstract import *
 from ropper.common.error import NotSupportedError
-from ropper.search.search import Searcher
-from ropper.search.search import Searcherx86
-from ropper.search.search import SearcherARM
+from ropper.search import Searcher
+from ropper.search import Searcherx86
+from ropper.search import SearcherARM
 from re import compile
 from capstone import *
 from . import gadget
@@ -179,7 +179,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'call', 'ret', 'jmp']
+        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'call', 'ret', 'jmp', 'les', 'lds', 'jle','jl', 'jb','jbe','jg','jge','ja','jae']
 
     def _initCategories(self):
         self._categories = {

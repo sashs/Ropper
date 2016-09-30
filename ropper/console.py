@@ -22,7 +22,8 @@ from ropper.printer.printer import FileDataPrinter
 from ropper.rop import Ropper
 from ropper.common.error import *
 from ropper.gadget import GadgetType
-from ropper.gadget import Category, Analyser
+from ropper.gadget import Category
+from ropper.semantic import Analyser
 from ropper.common.utils import isHex, getFileNameFromPath
 from ropper.common.coloredstring import *
 from ropper.common.utils import *
@@ -87,6 +88,12 @@ class CallbackClass(object):
         self.__console.cprinter.printProgress('filtering badbytes...', progress)
         if progress == 1.0:
             self.__console.cprinter.finishProgress()
+
+    def __analyseGadgetsProgress__(self, gadget, progress):
+        self.__console.cprinter.printProgress('analyse gadgets...', progress)
+        if progress == 1.0:
+            self.__console.cprinter.finishProgress()
+            
 
     def __ropchainMessages__(self, message):
         if message.startswith('[*]'):
@@ -402,6 +409,9 @@ class Console(cmd.Cmd):
         elif options.analyse:
             self.__loadGadgets()
             self.do_analyse(options.analyse)
+        elif options.ss:
+            self.__loadGadgets()
+            self.do_ss(options.ss)
         elif options.symbols:
             self.__printData('symbols')
         elif options.segments:
@@ -971,14 +981,40 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printHelpText('clearcache','Clears the cache')
 
     @safe_cmd
+    def do_semantic(self, text):
+        self.__printInfo('Searching for gadgets: ' + text)
+        old = None
+        for fc, gadget in self.__rs.semanticSearch(text):
+            if fc != old:
+                old = fc
+                self.__cprinter.println()
+                self.__printInfo('File: %s' % fc)
+
+            self.__printGadget(gadget, self.__options.detailed)
+        self.__cprinter.println()
+
+
+    @safe_cmd
     def do_analyse(self, text):
+        import z3
         if text and isHex(text):
             addr = int(text, 16)
             for g in self.currentFile.gadgets:
                 if g.address == addr:
-                    if Analyser().analyse(g) == False:
-                        self.__printInfo('z3 and pyvex need to be installed')
-                        return
+                    print(g.info.regs)
+                    g.info.irsb.pp()
+                    print(g.info.expressions)
+                   # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
+
+                    solver = z3.Solver()
+                    for expr in g.info.expressions:
+                        if expr == False:
+                            continue
+                        solver.add(expr)
+                    
+                    print(solver.assertions())
+                    print(solver.check())
+
         else:
             self.__printInfo('No such gadget')
 

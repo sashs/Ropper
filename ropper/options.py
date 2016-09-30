@@ -200,6 +200,8 @@ epilog="""example uses:
             '--no-load', help='Don\'t load the gadgets automatically when start the console (--console)', action='store_true', default=False)
         parser.add_argument(
             '--analyse', help='just used for the implementation of semantic search', metavar='<quality>')
+        parser.add_argument(
+            '--semantic', help='semantic search for gadgets', metavar='constraint')
         return parser
 
     def _analyseArguments(self):

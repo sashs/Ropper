@@ -29,6 +29,7 @@ from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
 from codecs import encode, decode
 from hashlib import md5
+from ropper.semantic import Analyser
 import tempfile
 import re
 import os
@@ -560,7 +561,21 @@ class RopperService(object):
 
         return self.__filterBadBytes(to_return)
 
+    def _analyseGadgets(self, gadgets):
+        analyser = Analyser()
+        cb = None
+        lg = len(gadgets)
+        if self.__callbacks and hasattr(self.__callbacks, '__analyseGadgetsProgress__'):
+            cb = self.__callbacks.__analyseGadgetsProgress__
+        for i,g in enumerate(gadgets):
+            g.info = analyser.analyse(g)
+            if cb:
+                cb(g, float(i)/lg)
+        if cb:
+             cb(g, 1.0)
+
     def loadGadgetsFor(self, name=None):
+        
         def load_gadgets(f):
             gtype = None
             cache = False
@@ -577,9 +592,12 @@ class RopperService(object):
             if f.allGadgets == None:
                 cache = True
                 f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
+            
             if cache:
                 self.__saveCache(f)
             f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
+            #self._analyseGadgets(f.gadgets)
+
          
         if name is None:
             for fc in self.__files:
@@ -648,6 +666,21 @@ class RopperService(object):
             for fc in self.__files:
                 s = fc.loader.arch.searcher
                 for gadget in s.search(fc.gadgets, search, quality):
+                    yield(fc.name, gadget)
+
+    def semanticSearch(self, search, stableRegs=[], name=None):
+        if name:
+            fc = self._getFileFor(name)
+            if not fc:
+                raise RopperError('No such file opened: %s' % name)
+            
+            s = fc.loader.arch.searcher
+            for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
+                    yield(fc.name, gadget)
+        else:        
+            for fc in self.__files:
+                s = fc.loader.arch.searcher
+                for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
                     yield(fc.name, gadget)
 
     def searchdict(self, search, quality=None, name=None):

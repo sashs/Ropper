@@ -37,6 +37,7 @@ import cmd
 import re
 import os
 import traceback
+import time
 
 # Python2 compatibility
 try:
@@ -984,6 +985,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_semantic(self, text):
         if not text:
             return
+        self.__rs.analyseGadgets(self.currentFile.gadgets)
         constraint = None
         split = text.split(' ')
         stableRegs = []
@@ -1022,7 +1024,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                             continue
                         solver.add(expr)
                     
-                    for constraint in self.currentFile.arch.searcher._createConstraint("ebx=1", g.info):
+                    for constraint in self.currentFile.arch.searcher._createConstraint("rax=0", g.info):
                         
                         solver.add((constraint))
 
@@ -1033,6 +1035,16 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         else:
             self.__printInfo('No such gadget')
 
+    @safe_cmd
+    def do_time(self, text):
+        print(dir(time))
+        start = time.time()
+        for g in self.currentFile.gadgets:
+            x = g.info
+
+        end = time.time()
+
+        print(end-start)
 
         
 

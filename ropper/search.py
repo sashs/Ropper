@@ -21,6 +21,8 @@ import re
 from ropper.common.error import RopperError
 from ropper.semantic import Analyser
 from ropper.common.utils import isHex
+from ropper.gadget import Category
+import time
 import sys
 try:
     if sys.version_info.major < 3:
@@ -68,42 +70,72 @@ class Searcher(object):
         #print([reg1 == reg2])
         return [reg1 == reg2] 
 
+    def getCategory(self, constraintString):
+        return Category.LOAD_REG
+
+    def extractTargetRegs(self, constraintString):
+        if not constraintString:
+            return []
+
+        if '=' not in constraintString:
+            raise RopperError('Not a valid constraint')
+
+        reg1, reg2 = constraintString.split('=')
+
+        return [reg1]
+
+
     def semanticSearch(self, gadgets, constraintString, maxLen ,stableRegs=[], pprinter=None):
         if 'z3' not in globals():
             raise RopperError('z3py is needed') 
 
-        
         to_return = []
         count = 0
         max_count = len(gadgets)
-        for i in range(1,maxLen):
+        category = self.getCategory(constraintString)
+        count = 0
+        for glen in range(1,maxLen+1):
             for gadget in gadgets:
-                if len(gadget) == i:
-
+                if len(gadget) != glen:
+                    continue
                     
-                    if pprinter:
-                        pprinter.printProgress('searching gadgets...', float(count) / max_count)
-                    anal = gadget.info#analyser.analyse(gadget)
-                    count += 1
-                    if not anal:
+                anal = gadget.info#analyser.analyse(gadget)
+
+                if not anal:
+                    continue
+
+                if category not in anal.categories:
+                    continue
+
+                no_possible_gadget = False
+                for reg in self.extractTargetRegs(constraintString):
+                    if reg not in anal.clobberedRegs:
+                        no_possible_gadget = True
+                if no_possible_gadget:
+                    continue
+
+                clobber_reg = False
+                for reg in anal.clobberedRegs:
+                    if reg in stableRegs:
+                        clobber_reg = True
+                if clobber_reg:
+                    continue
+
+                count += 1
+               # print(gadget.simpleString())
+                solver = z3.Solver()
+                for expr in anal.expressions:
+                    if expr == False:
                         continue
-                    solver = z3.Solver()
-                    for expr in anal.expressions:
-                        if expr == False:
-                            continue
-                        solver.add(expr)
-                    for constraint in self._createConstraint(constraintString, anal):
-                        
-                        solver.add(z3.Not(constraint))
-                    
-                    if solver.check() == z3.unsat:
-                        clobber_reg = False
-                        for reg in anal.clobberedRegs:
-                            if reg in stableRegs:
-                                clobber_reg = True
-                        if not clobber_reg:
-                            yield gadget
+                    solver.add(expr)
 
+                for constraint in self._createConstraint(constraintString, anal):
+                    solver.add(z3.Not(constraint))
+                
+                if solver.check() == z3.unsat:
+                    #print count
+                    yield gadget
+        
 
     def search(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)

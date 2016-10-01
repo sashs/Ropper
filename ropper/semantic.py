@@ -11,6 +11,8 @@ try:
 except:
     pass
 
+class Category(enum.Enum):
+    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG SUB_REG MUL_REG DIV_REG XCHG_REG NONE PUSHAD WRITE_MEM'
 
 class Analyser(object):
 
@@ -45,6 +47,15 @@ class InstructionAnalysis(object):
         self.__offsets = {}
         self.__tmps = {}
         self.__expressions = []
+        self.__categories = []
+
+    @property
+    def categories(self):
+        return self.__categories
+
+    @categories.setter
+    def categories(self, category):
+        self.__categories = categories
         
     @property
     def expressions(self):
@@ -100,6 +111,14 @@ class Analysis(object):
         return self.__arch
 
     @property
+    def categories(self):
+        to_return = set()
+        for ia in self.instructions:
+            if ia.categories:
+                to_return.update(ia.categories)
+        return to_return
+
+    @property
     def instructions(self):
         return self.__instructions
     
@@ -145,6 +164,8 @@ class Analysis(object):
         to_return = z3.Select(self._memory, addr)
         for i in range(1, size/8):
             to_return = z3.Concat(z3.Select(self._memory, addr+i), to_return)
+
+        self.currentInstruction.categories.append(Category.LOAD_MEM)
         return to_return
 
     def writeMemory(self, addr, size, data):
@@ -153,13 +174,13 @@ class Analysis(object):
         for i in range(size):
             old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
 
-        
+        self.currentInstruction.categories.append(Category.WRITE_MEM)
         self.__mem = None
         return old == self._memory
 
     def writeRegister(self, offset, size, value):
         reg = self.__arch.translate_register_name(offset, size)
-        count = self.__regCount.get((reg,size),0)
+        count = self.__regCount.get((reg,size),1)
         self.__regCount[(reg,size)] = count + 1
         reg_list = self.__regs.get((reg,size))
         if not reg_list:
@@ -175,13 +196,10 @@ class Analysis(object):
             name = self.__arch.translate_register_name(offset, size)
         reg_list = self.__regs.get((name,size))
         if not reg_list:
-            reg_list = [z3.BitVec('%s_%d' % (name, self.__regCount.get(name,-1)), size)]
+            reg_list = [z3.BitVec('%s_%d' % (name, self.__regCount.get(name,0)), size)]
             self.__regs[(name,size)] = reg_list
 
         return self.__regs[(name,size)][level]
-
-    def close(self):
-        self.__mem = None
 
 
 class IRSB_DATA(enum.Enum):
@@ -231,6 +249,10 @@ class Expressions(Vex):
     @staticmethod
     def binop(dest, data, analysis):
         return Operations.use(data.op)(dest, data, analysis)
+
+    @staticmethod
+    def unop(dest, data, analysis):
+        return Operations.use(data.op)(dest, data, analysis)
         
     @staticmethod
     def dummy(dest, data, analysis):
@@ -243,6 +265,7 @@ class Operations(Vex):
     def Iop_Add32(dest, data, analysis):
         arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        analysis.currentInstruction.categories.append(Category.ADD_REG)
 
         return arg1 + arg2
 
@@ -250,29 +273,84 @@ class Operations(Vex):
     def Iop_Xor32(dest, data, analysis):
         arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
-
         return arg1 ^ arg2
 
     @staticmethod
     def Iop_Mul32(dest, data, analysis):
         arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
-
+        analysis.currentInstruction.categories.append(Category.MUL_REG)
         return arg1 * arg2
 
     @staticmethod
     def Iop_Div32(dest, data, analysis):
         arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
-
+        analysis.currentInstruction.categories.append(Category.DIV_REG)
         return arg1 / arg2
 
     @staticmethod
     def Iop_Sub32(dest, data, analysis):
         arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
-
+        analysis.currentInstruction.categories.append(Category.SUB_REG)
         return arg1 - arg2
+
+    @staticmethod
+    def Iop_Add64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        analysis.currentInstruction.categories.append(Category.ADD_REG)
+        return arg1 + arg2
+
+    @staticmethod
+    def Iop_Xor64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+
+        return arg1 ^ arg2
+
+    @staticmethod
+    def Iop_Mul64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        analysis.currentInstruction.categories.append(Category.MUL_REG)
+        return arg1 * arg2
+
+    @staticmethod
+    def Iop_Div64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        analysis.currentInstruction.categories.append(Category.DIV_REG)
+        return arg1 / arg2
+
+    @staticmethod
+    def Iop_Sub64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        analysis.currentInstruction.categories.append(Category.SUB_REG)
+        return arg1 - arg2
+
+    @staticmethod
+    def Iop_32Uto64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        #arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        #analysis.currentInstruction.categories.append(Category.SUB_REG)
+        return z3.ZeroExt(32,arg1)
+
+    @staticmethod
+    def Iop_32to64(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        #arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        #analysis.currentInstruction.categories.append(Category.SUB_REG)
+        return z3.ZeroExt(32,arg1)
+
+    @staticmethod
+    def Iop_64Uto32(dest, data, analysis):
+        arg1 = Expressions.use(data.args[0])(dest, data.args[0], analysis)
+        #arg2 = Expressions.use(data.args[1])(dest, data.args[1], analysis)
+        #analysis.currentInstruction.categories.append(Category.SUB_REG)
+        return z3.Extract(31,0,arg1)
 
 
 class IRSBAnalyser(object):
@@ -287,23 +365,23 @@ class IRSBAnalyser(object):
         for stmt in irsb.statements:
             name = stmt.__class__.__name__.lower()
             func = getattr(self, name, self.not_found)
-            ci = anal.currentInstruction
             expr = func(stmt, anal)
             if expr is not None:
+                ci = anal.currentInstruction
                 ci.expressions.append(expr)
             
-        #print('Offset', anal.spOffset)
         return anal
 
     def put(self, stmt, analysis):
-        if stmt.offset == stmt.arch.sp_offset:
-            analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
-        elif stmt.offset == stmt.arch.ip_offset:
-            analysis.newInstruction()
-
         dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
         value = Expressions.use(stmt.data)(dest,stmt.data, analysis)
         analysis.currentInstruction.clobberedRegs.append(dest)
+
+        if stmt.offset not in (stmt.arch.sp_offset, stmt.arch.ip_offset) and not stmt.arch.translate_register_name(stmt.offset).startswith('cc_')and not analysis.currentInstruction.categories:
+            analysis.currentInstruction.categories.append(Category.LOAD_REG)           
+
+        if stmt.offset == stmt.arch.sp_offset:
+            analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
 
         return analysis.writeRegister(stmt.offset, stmt.data.result_size, value)
 
@@ -316,6 +394,11 @@ class IRSBAnalyser(object):
         value = Expressions.use(stmt.data)(str(addr), stmt.data, analysis)
         
         return analysis.writeMemory(addr, stmt.data.result_size, value)
+
+    def imark(self,stmt, analysis):
+        if not analysis.currentInstruction.categories:
+            analysis.currentInstruction.categories.append(Category.NONE)
+        analysis.newInstruction()
 
     def not_found(self, stmt, analysis):
         pass

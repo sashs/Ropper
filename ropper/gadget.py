@@ -24,7 +24,7 @@ from ropper.common.utils import toHex, isHex
 from ropper.common.error import RopperError
 from ropper.common.coloredstring import *
 from binascii import hexlify, unhexlify
-from ropper.semantic import Analyser
+from ropper.semantic import Analyser, Category
 import ropper.arch
 import sys
 
@@ -34,8 +34,6 @@ try:
 except:
     pass
 
-class Category(enum.Enum):
-    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
 
 
 
@@ -200,12 +198,13 @@ class Gadget(object):
         return toReturn
 
     def simpleString(self):
+        analyseColor = Color.GREEN if self.__info else Color.RED
         address = self.__lines[0][0]
         if self.__arch == ropper.arch.ARMTHUMB:
             address += 1
-            toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
+            toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
         else:
-            toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
+            toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor)
         toReturn += self.simpleInstructionString()
         return toReturn
 

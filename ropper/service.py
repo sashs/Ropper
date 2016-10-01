@@ -561,14 +561,14 @@ class RopperService(object):
 
         return self.__filterBadBytes(to_return)
 
-    def _analyseGadgets(self, gadgets):
+    def analyseGadgets(self, gadgets):
         analyser = Analyser()
         cb = None
         lg = len(gadgets)
         if self.__callbacks and hasattr(self.__callbacks, '__analyseGadgetsProgress__'):
             cb = self.__callbacks.__analyseGadgetsProgress__
         for i,g in enumerate(gadgets):
-            g.info = analyser.analyse(g)
+            tmp = g.info
             if cb:
                 cb(g, float(i)/lg)
         if cb:

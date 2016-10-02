@@ -572,7 +572,7 @@ class RopperService(object):
             if cb:
                 cb(g, float(i)/lg)
         if cb:
-             cb(g, 1.0)
+             cb(None, 1.0)
 
     def loadGadgetsFor(self, name=None):
         

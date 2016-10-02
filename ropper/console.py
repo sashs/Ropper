@@ -410,9 +410,9 @@ class Console(cmd.Cmd):
         elif options.analyse:
             self.__loadGadgets()
             self.do_analyse(options.analyse)
-        elif options.ss:
+        elif options.semantic:
             self.__loadGadgets()
-            self.do_ss(options.ss)
+            self.do_semantic(options.semantic)
         elif options.symbols:
             self.__printData('symbols')
         elif options.segments:
@@ -1000,16 +1000,20 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         for c in range(len(constraints)):
             constraints[c] = constraints[c].strip()
 
-        print(constraints)
         self.__printInfo('Searching for gadgets: ' + text)
         old = None
+        found = False
         for fc, gadget in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
             if fc != old:
                 old = fc
                 self.__cprinter.println()
                 self.__printInfo('File: %s' % fc)
-
+            found = True
             self.__printGadget(gadget, self.__options.detailed)
+        
+        if not found:
+            self.__printInfo('No gadgets found. Try to chain gadgets')
+            self.__printInfo('Not implemented yet.')
         self.__cprinter.println()
 
     def help_semantic(self):

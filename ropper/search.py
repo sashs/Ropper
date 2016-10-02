@@ -126,6 +126,9 @@ class Searcher(object):
             to_return.append(reg1)
         return to_return
 
+    def chainGadgets(self, gadgets, constraints, maxLen, stableRegs=[]):
+        pass
+
 
     def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[], pprinter=None):
         if 'z3' not in globals():
@@ -136,6 +139,7 @@ class Searcher(object):
         max_count = len(gadgets)
         category = self.getCategory(constraints)
         count = 0
+        found = False
         for glen in range(1,maxLen+1):
             for gadget in gadgets:
                 if len(gadget) != glen:
@@ -185,9 +189,9 @@ class Searcher(object):
                 
                 if solver.check() == z3.unsat:
                     #print count
+                    found = True
                     yield gadget
-        
-
+    
     def search(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)
         filtered = {}

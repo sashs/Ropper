@@ -198,7 +198,7 @@ class Gadget(object):
         return toReturn
 
     def simpleString(self):
-        analyseColor = Color.GREEN if self.__info else Color.RED
+        analyseColor = Color.CYAN if self.__info else Color.RED
         address = self.__lines[0][0]
         if self.__arch == ropper.arch.ARMTHUMB:
             address += 1

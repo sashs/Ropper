@@ -984,19 +984,26 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_semantic(self, text):
         if not text:
-            return
+            self.help_semantic()
         self.__rs.analyseGadgets(self.currentFile.gadgets)
         constraint = None
-        split = text.split(' ')
+        constraints = text.split(';')
+        
+        split = constraints[-1].split(' ')
         stableRegs = []
         for s in split:
             if s.startswith('!'):
                 stableRegs.append(s[1:])
             else:
-                constraint = s
+                constraint = s.strip()
+        constraints[-1] = constraint
+        for c in range(len(constraints)):
+            constraints[c] = constraints[c].strip()
+
+        print(constraints)
         self.__printInfo('Searching for gadgets: ' + text)
         old = None
-        for fc, gadget in self.__rs.semanticSearch(constraint, stableRegs=stableRegs):
+        for fc, gadget in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
             if fc != old:
                 old = fc
                 self.__cprinter.println()
@@ -1005,6 +1012,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__printGadget(gadget, self.__options.detailed)
         self.__cprinter.println()
 
+    def help_semantic(self):
+        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax=ebx; ecx=1 !edx !esi\n\nValid constraints:\nreg=reg\nreg=number\nreg=[reg]\n[reg]=reg')
 
     @safe_cmd
     def do_analyse(self, text):
@@ -1024,9 +1033,25 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                             continue
                         solver.add(expr)
                     
-                    for constraint in self.currentFile.arch.searcher._createConstraint("rax=0", g.info):
                         
-                        solver.add((constraint))
+                    c = None
+                    c2 = None
+                    for constraint in self.currentFile.arch.searcher._createConstraint(['ebx=[esp]', 'eax=[esp]'], g.info):
+                        if isinstance(constraint, list):
+                            for x in constraint:
+                                if c is not None:
+                                    c = z3.Or(c, x)
+                                else:
+                                    c = x
+                        else:
+                            c = constraint
+                        if c2 is not None:
+                            c2 = z3.And(c2, c)
+                        else:
+                            c2 = c
+
+                    if c2 is not None:
+                        solver.add(z3.Not(c2))
 
                     print(solver.assertions())
                     print(solver.check())
@@ -1034,17 +1059,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
         else:
             self.__printInfo('No such gadget')
-
-    @safe_cmd
-    def do_time(self, text):
-        print(dir(time))
-        start = time.time()
-        for g in self.currentFile.gadgets:
-            x = g.info
-
-        end = time.time()
-
-        print(end-start)
 
         
 

@@ -45,54 +45,96 @@ class Searcher(object):
         filter = filter.replace('%', '[ -~]*')
         return filter
 
-    def _createConstraint(self, constraintString, analysis):
+    def _createConstraint(self, constraints, analysis):
         # TODO complex constraints have to be build by this method
         # The current implementation is just for testing
-        if not constraintString:
+        if not constraints:
             return []
 
-        if '=' not in constraintString:
-            raise RopperError('Not a valid constraint')
-        
-        reg1, reg2 = constraintString.split('=')
-        if isHex(reg2):
-            reg2 = int(reg2, 16)
-        elif reg2.isdigit():
-            reg2 = int(reg2)
+        to_return = []
+        for constraintString in constraints:
+            if '=' not in constraintString:
+                raise RopperError('Not a valid constraint')
+            
+            reg1, reg2 = constraintString.split('=')
+            if isHex(reg2):
+                reg2 = int(reg2, 16)
+            elif reg2.isdigit():
+                reg2 = int(reg2)
 
-        if isinstance(reg2, int):
-            reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
-        else:
-            reg2 = analysis.readRegister(reg2.strip(),analysis.arch.registers[reg2][1]*8,0)
-        reg1 = analysis.readRegister(reg1.strip(),analysis.arch.registers[reg1][1]*8)
-        
-        
-        #print([reg1 == reg2])
-        return [reg1 == reg2] 
+            reg1 = analysis.readRegister(reg1.strip(),analysis.arch.registers[reg1][1]*8)
+            if isinstance(reg2, int):
+                reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
+                to_return.append(reg1 == reg2)
+            elif reg2.startswith('['):
+                reg2 = reg2[1:-1]
+                regs = analysis.regs.get((reg2, analysis.arch.registers[reg2][1]*8))
+                if regs:
+                    c = None
+                    for reg in regs:
+                        if c is not None:
+                            c = z3.Or(c, reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8))
+                        else:
+                            c = reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8)
+                    if c is not None:
 
-    def getCategory(self, constraintString):
-        return Category.LOAD_REG
+                        to_return.append(c)
+                
+            else:
+                reg2 = analysis.readRegister(reg2.strip(),analysis.arch.registers[reg2][1]*8,0)
+                to_return.append(reg1 == reg2)
+            
+            
+            #print([reg1 == reg2])
+            
+        return to_return
 
-    def extractTargetRegs(self, constraintString):
-        if not constraintString:
+    def getCategory(self, constraints):
+        if not constraints:
             return []
 
-        if '=' not in constraintString:
-            raise RopperError('Not a valid constraint')
+        to_return = []
+        for constraintString in constraints:
+            if '=' not in constraintString:
+                raise RopperError('Not a valid constraint')
+            
+            reg1, reg2 = constraintString.split('=')
+            if isHex(reg2):
+                reg2 = int(reg2, 16)
+            elif reg2.isdigit():
+                reg2 = int(reg2)
 
-        reg1, reg2 = constraintString.split('=')
+            if isinstance(reg2, int):
+                return Category.LOAD_REG
+            elif reg2.startswith('['):
+                return Category.LOAD_MEM
+            else:
+                return Category.LOAD_REG
 
-        return [reg1]
+    def extractTargetRegs(self, constraints):
+        if not constraints:
+            return []
+
+        to_return = []
+
+        for constraintString in constraints:
+            if '=' not in constraintString:
+                raise RopperError('Not a valid constraint')
+
+            reg1, reg2 = constraintString.split('=')
+
+            to_return.append(reg1)
+        return to_return
 
 
-    def semanticSearch(self, gadgets, constraintString, maxLen ,stableRegs=[], pprinter=None):
+    def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[], pprinter=None):
         if 'z3' not in globals():
             raise RopperError('z3py is needed') 
 
         to_return = []
         count = 0
         max_count = len(gadgets)
-        category = self.getCategory(constraintString)
+        category = self.getCategory(constraints)
         count = 0
         for glen in range(1,maxLen+1):
             for gadget in gadgets:
@@ -108,7 +150,7 @@ class Searcher(object):
                     continue
 
                 no_possible_gadget = False
-                for reg in self.extractTargetRegs(constraintString):
+                for reg in self.extractTargetRegs(constraints):
                     if reg not in anal.clobberedRegs:
                         no_possible_gadget = True
                 if no_possible_gadget:
@@ -129,8 +171,17 @@ class Searcher(object):
                         continue
                     solver.add(expr)
 
-                for constraint in self._createConstraint(constraintString, anal):
-                    solver.add(z3.Not(constraint))
+                c = None
+                c2 = None
+                for constraint in self._createConstraint(constraints, anal):
+                    
+                    c = constraint
+                    if c2 is not None:
+                        c2 = z3.And(c,c2)
+                    else:
+                        c2 = c
+                if c2 is not None:
+                    solver.add(z3.Not(c2))
                 
                 if solver.check() == z3.unsat:
                     #print count

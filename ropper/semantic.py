@@ -375,10 +375,12 @@ class IRSBAnalyser(object):
     def put(self, stmt, analysis):
         dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
         value = Expressions.use(stmt.data)(dest,stmt.data, analysis)
-        analysis.currentInstruction.clobberedRegs.append(dest)
+        
 
-        if stmt.offset not in (stmt.arch.sp_offset, stmt.arch.ip_offset) and not stmt.arch.translate_register_name(stmt.offset).startswith('cc_')and not analysis.currentInstruction.categories:
-            analysis.currentInstruction.categories.append(Category.LOAD_REG)           
+        if stmt.offset not in (stmt.arch.sp_offset, stmt.arch.ip_offset) and not dest.startswith('cc_'):
+            if not analysis.currentInstruction.categories:
+                analysis.currentInstruction.categories.append(Category.LOAD_REG)   
+            analysis.currentInstruction.clobberedRegs.append(dest)        
 
         if stmt.offset == stmt.arch.sp_offset:
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))

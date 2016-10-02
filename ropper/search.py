@@ -62,10 +62,10 @@ class Searcher(object):
             elif reg2.isdigit():
                 reg2 = int(reg2)
 
-            reg1 = analysis.readRegister(reg1.strip(),analysis.arch.registers[reg1][1]*8)
+            z3_reg1 = analysis.readRegister(reg1.strip(),analysis.arch.registers[reg1][1]*8)
             if isinstance(reg2, int):
                 reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
-                to_return.append(reg1 == reg2)
+                to_return.append(z3_reg1 == reg2)
             elif reg2.startswith('['):
                 reg2 = reg2[1:-1]
                 regs = analysis.regs.get((reg2, analysis.arch.registers[reg2][1]*8))
@@ -73,16 +73,16 @@ class Searcher(object):
                     c = None
                     for reg in regs:
                         if c is not None:
-                            c = z3.Or(c, reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8))
+                            c = z3.Or(c, z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8))
                         else:
-                            c = reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8)
+                            c = z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8)
                     if c is not None:
 
                         to_return.append(c)
                 
             else:
                 reg2 = analysis.readRegister(reg2.strip(),analysis.arch.registers[reg2][1]*8,0)
-                to_return.append(reg1 == reg2)
+                to_return.append(z3_reg1 == reg2)
             
             
             #print([reg1 == reg2])

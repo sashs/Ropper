@@ -46,7 +46,7 @@ If you don't want to install filebytes, filebytes is a submodule of the ropper r
     $ ./Ropper.py
 
 Ropper has a semantic search command, which offers the possiblity to search for gadgets. Due to a dependency, this command only works with python2 on linux, but I am working
-on porting this dependency to python3.
+on porting this dependency to python3. THIS FEATURE IS STILL UNDER DEVELOPEMENT!
 The following optional dependencies are needed to use semantic search:
 
 Install [pyvex](https://github.com/angr/pyvex)

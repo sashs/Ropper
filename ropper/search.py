@@ -73,9 +73,9 @@ class Searcher(object):
                     c = None
                     for reg in regs:
                         if c is not None:
-                            c = z3.Or(c, z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8))
+                            c = z3.Or(c, z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8, analyse=False))
                         else:
-                            c = z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8)
+                            c = z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8, analyse=False)
                     if c is not None:
 
                         to_return.append(c)
@@ -105,11 +105,11 @@ class Searcher(object):
                 reg2 = int(reg2)
 
             if isinstance(reg2, int):
-                return Category.LOAD_REG
+                return Category.WRITE_REG_FROM_REG
             elif reg2.startswith('['):
-                return Category.LOAD_MEM
+                return Category.WRITE_REG_FROM_MEM
             else:
-                return Category.LOAD_REG
+                return Category.WRITE_REG_FROM_REG
 
     def extractTargetRegs(self, constraints):
         if not constraints:

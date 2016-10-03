@@ -1040,7 +1040,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                         
                     c = None
                     c2 = None
-                    for constraint in self.currentFile.arch.searcher._createConstraint(['ebx=[esp]', 'eax=[esp]'], g.info):
+                    for constraint in self.currentFile.arch.searcher._createConstraint(['eax=[esp]'], g.info):
                         if isinstance(constraint, list):
                             for x in constraint:
                                 if c is not None:
@@ -1060,6 +1060,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     print(solver.assertions())
                     print(solver.check())
                     print(g.info.clobberedRegs)
+                    print(g.info.categories)
 
         else:
             self.__printInfo('No such gadget')

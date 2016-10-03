@@ -111,7 +111,7 @@ class Searcher(object):
             else:
                 return Category.WRITE_REG_FROM_REG
 
-    def extractTargetRegs(self, constraints):
+    def extractValues(self, constraints):
         if not constraints:
             return []
 
@@ -122,8 +122,14 @@ class Searcher(object):
                 raise RopperError('Not a valid constraint')
 
             reg1, reg2 = constraintString.split('=')
+            reg1 = reg1.replace('[','')
+            reg1 = reg1.replace(']','')
+            reg2 = reg2.replace('[','')
+            reg2 = reg2.replace(']','')
 
-            to_return.append(reg1)
+            if reg2.isdigit() or isHex(reg2):
+                reg2 = None
+            to_return.append((reg1,reg2))
         return to_return
 
     def chainGadgets(self, gadgets, constraints, maxLen, stableRegs=[]):
@@ -153,9 +159,20 @@ class Searcher(object):
                 if category not in anal.categories:
                     continue
 
+                can_continue = False
+                values =  self.extractValues(constraints)
+                for instruction in anal.instructions:
+                    if category == instruction.state.getCategory():
+                        for reg1, reg2 in values:
+                            if reg1 in instruction.usedRegs and (reg2 in instruction.usedRegs or reg2 == None):
+                                can_continue = True
+
+                if not can_continue:
+                    continue
+
                 no_possible_gadget = False
-                for reg in self.extractTargetRegs(constraints):
-                    if reg not in anal.clobberedRegs:
+                for reg in self.extractValues(constraints):
+                    if reg[0] not in anal.clobberedRegs:
                         no_possible_gadget = True
                 if no_possible_gadget:
                     continue

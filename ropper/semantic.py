@@ -464,6 +464,10 @@ class ZOperations(Vex):
         return z3.Extract(31,0,arg1)
 
     @staticmethod
+    def Iop_64to32(arg1, analysis):
+        return z3.Extract(31,0,arg1)
+
+    @staticmethod
     def Iop_32to8(arg1, analysis):
         return z3.Extract(7,0,arg1)
 
@@ -640,7 +644,6 @@ class ZStatements(Vex):
             analysis.currentInstruction.clobberedRegs.append(dest)
 
         if stmt.offset == stmt.arch.sp_offset:
-            print("rsp offset",analysis.currentInstruction.getValueForTmp(str(stmt.data)),str(stmt.data))
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
             #analysis.currentInstruction.loadedFromSp = False
 

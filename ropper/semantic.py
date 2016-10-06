@@ -48,12 +48,19 @@ class InstructionAnalysis(object):
         self.__offsets = {}
         self.__tmps = {}
         self.__expressions = []
-        self.__sim = Simulator(arch)
+        self.__sim = State(arch, self)
         self.__categories = []
-        self.loadedFromSp = False
+        self.__usedRegs = set()
 
     @property
-    def simulator(self):
+    def usedRegs(self):
+        return self.__usedRegs
+
+    def addRegister(self, reg):
+        self.__usedRegs.update([reg])
+
+    @property
+    def state(self):
         return self.__sim
 
     @property
@@ -91,15 +98,13 @@ class InstructionAnalysis(object):
         return self.__tmps
 
     def getValueForTmp(self, tmp):
-        while not isinstance(tmp, int) and not tmp is None:
+        while not isinstance(tmp, (int, long)) and not tmp is None:
             tmp = self.tmps.get(tmp)
 
         return tmp
 
 
 class Analysis(object):
-
-    
 
     def __init__(self, arch, irsb):
         self.__instructions = []
@@ -122,7 +127,7 @@ class Analysis(object):
     def categories(self):
         to_return = set()
         for ia in self.instructions:
-            to_return.update([ia.simulator.getCategory()])
+            to_return.update([ia.state.getCategory()])
         return to_return
 
     @property
@@ -231,8 +236,6 @@ class ZExpressions(Vex):
 
     @staticmethod
     def get(dest, data, analysis):
-        if data.offset == analysis.arch.sp_offset:
-            analysis.currentInstruction.loadedFromSp = True
         return analysis.readRegister(data.offset, data.result_size)
 
     @staticmethod
@@ -276,17 +279,17 @@ class SExpressions(Vex):
     @staticmethod
     def get(data, analysis):  
         reg = data.arch.translate_register_name(data.offset, data.result_size)   
-        analysis.currentInstruction.simulator.readRegister(reg)       
+        analysis.currentInstruction.state.readRegister(reg)       
         return reg
 
     @staticmethod
     def load( data, analysis):
-        analysis.currentInstruction.simulator.readMemory()
+        analysis.currentInstruction.state.readMemory()
         return 'mem'
 
     @staticmethod
     def store(data, analysis):
-        analysis.currentInstruction.simulator.writeMemory()
+        analysis.currentInstruction.state.writeMemory()
         return analysis.readMemory(addr, data.result_size, False)
 
     @staticmethod
@@ -295,7 +298,7 @@ class SExpressions(Vex):
 
     @staticmethod
     def rdtmp( data, analysis):
-        analysis.currentInstruction.simulator.readTmp('t%d' % data.tmp)
+        analysis.currentInstruction.state.readTmp('t%d' % data.tmp)
         return 't%d' % data.tmp
 
     @staticmethod
@@ -458,6 +461,10 @@ class ZOperations(Vex):
 
     @staticmethod
     def Iop_64Uto32(arg1, analysis):
+        return z3.Extract(31,0,arg1)
+
+    @staticmethod
+    def Iop_64to32(arg1, analysis):
         return z3.Extract(31,0,arg1)
 
     @staticmethod
@@ -672,18 +679,18 @@ class SStatements(Vex):
         value = SExpressions.use(stmt.data)(stmt.data, analysis)
 
         if stmt.offset not in (stmt.arch.sp_offset, stmt.arch.ip_offset) and not dest.startswith('cc_'):
-            analysis.currentInstruction.simulator.writeRegister(dest, value)
+            analysis.currentInstruction.state.writeRegister(dest, value)
             #analysis.currentInstruction.loadedFromSp = False
    
     @staticmethod
     def wrtmp(stmt, analysis):
         tmp = 't'+str(stmt.tmp)
         value = SExpressions.use(stmt.data)(stmt.data, analysis)
-        analysis.currentInstruction.simulator.writeTmp(tmp, value)
+        analysis.currentInstruction.state.writeTmp(tmp, value)
         
     @staticmethod
     def store(stmt, analysis):
-        analysis.currentInstruction.simulator.writeMemory()
+        analysis.currentInstruction.state.writeMemory()
 
     @staticmethod
     def imark(stmt, analysis):
@@ -710,14 +717,16 @@ class IRSBAnalyser(object):
             
         return anal
 
-class Simulator(object):
+class State(object):
 
-    def __init__(self, arch):
+    def __init__(self, arch, instruction):
         self.__tmps = {}
         self.__regs = {}
         self.__writeMem = False
         self.__readMem = False
         self.__arch = arch
+        self.__binop = {}
+        self.__instruction = instruction
 
     def __resolveValue(self, value):
         tmp = value
@@ -735,12 +744,13 @@ class Simulator(object):
         self.__writeMem = True
 
     def readRegister(self, reg):
-        pass
+        self.__instruction.addRegister(reg)
 
     def writeRegister(self, reg, value):
         if isinstance(value, str) and re.match('t%d', value):
             value = self.__resolveValue(value)
         self.__regs[reg] = value
+        self.__instruction.addRegister(reg)
 
     def readTmp(self, tmp):
         pass

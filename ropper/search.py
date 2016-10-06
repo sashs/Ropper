@@ -45,6 +45,12 @@ class Searcher(object):
         filter = filter.replace('%', '[ -~]*')
         return filter
 
+    def __getRealRegName(self, reg, arch):
+        info = arch.registers.get(reg)
+        if not info:
+            return reg
+        return arch.translate_register_name(info[0], info[1]*8)
+
     def _createConstraint(self, constraints, analysis):
         # TODO complex constraints have to be build by this method
         # The current implementation is just for testing
@@ -62,12 +68,14 @@ class Searcher(object):
             elif reg2.isdigit():
                 reg2 = int(reg2)
 
-            z3_reg1 = analysis.readRegister(reg1.strip(),analysis.arch.registers[reg1][1]*8)
+            reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+
+            z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
             if isinstance(reg2, int):
                 reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
                 to_return.append(z3_reg1 == reg2)
             elif reg2.startswith('['):
-                reg2 = reg2[1:-1]
+                reg2 = self.__getRealRegName(reg2[1:-1], analysis.arch)
                 regs = analysis.regs.get((reg2, analysis.arch.registers[reg2][1]*8))
                 if regs:
                     c = None
@@ -81,7 +89,8 @@ class Searcher(object):
                         to_return.append(c)
                 
             else:
-                reg2 = analysis.readRegister(reg2.strip(),analysis.arch.registers[reg2][1]*8,0)
+                reg2 = self.__getRealRegName(reg2.strip(), analysis.arch)
+                reg2 = analysis.readRegister(reg2,analysis.arch.registers[reg2][1]*8,0)
                 to_return.append(z3_reg1 == reg2)
             
             
@@ -111,7 +120,7 @@ class Searcher(object):
             else:
                 return Category.WRITE_REG_FROM_REG
 
-    def extractTargetRegs(self, constraints):
+    def extractValues(self, constraints, analysis):
         if not constraints:
             return []
 
@@ -122,8 +131,16 @@ class Searcher(object):
                 raise RopperError('Not a valid constraint')
 
             reg1, reg2 = constraintString.split('=')
+            reg1 = reg1.replace('[','')
+            reg1 = reg1.replace(']','')
+            reg1 = self.__getRealRegName(reg1, analysis.arch)
+            reg2 = reg2.replace('[','')
+            reg2 = reg2.replace(']','')
 
-            to_return.append(reg1)
+            if reg2.isdigit() or isHex(reg2):
+                reg2 = None
+            reg2 = self.__getRealRegName(reg2, analysis.arch)
+            to_return.append((reg1,reg2))
         return to_return
 
     def chainGadgets(self, gadgets, constraints, maxLen, stableRegs=[]):
@@ -153,9 +170,20 @@ class Searcher(object):
                 if category not in anal.categories:
                     continue
 
+                can_continue = False
+                values =  self.extractValues(constraints, anal)
+                for instruction in anal.instructions:
+                    if category == instruction.state.getCategory():
+                        for reg1, reg2 in values:
+                            if reg1 in instruction.usedRegs and (reg2 in instruction.usedRegs or reg2 == None):
+                                can_continue = True
+
+                if not can_continue:
+                    continue
+
                 no_possible_gadget = False
-                for reg in self.extractTargetRegs(constraints):
-                    if reg not in anal.clobberedRegs:
+                for reg in self.extractValues(constraints, anal):
+                    if reg[0] not in anal.clobberedRegs:
                         no_possible_gadget = True
                 if no_possible_gadget:
                     continue

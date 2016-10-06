@@ -1026,6 +1026,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             addr = int(text, 16)
             for g in self.currentFile.gadgets:
                 if g.address == addr:
+                    print(g)
                     print(g.info.regs)
                     g.info.irsb.pp()
                     print(g.info.expressions)
@@ -1040,19 +1041,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                         
                     c = None
                     c2 = None
-                    for constraint in self.currentFile.arch.searcher._createConstraint(['eax=[esp]'], g.info):
-                        if isinstance(constraint, list):
-                            for x in constraint:
-                                if c is not None:
-                                    c = z3.Or(c, x)
-                                else:
-                                    c = x
-                        else:
-                            c = constraint
-                        if c2 is not None:
-                            c2 = z3.And(c2, c)
-                        else:
-                            c2 = c
+                    
 
                     if c2 is not None:
                         solver.add(z3.Not(c2))
@@ -1061,6 +1050,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     print(solver.check())
                     print(g.info.clobberedRegs)
                     print(g.info.categories)
+                    print(g.simpleString())
 
         else:
             self.__printInfo('No such gadget')

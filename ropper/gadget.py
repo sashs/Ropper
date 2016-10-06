@@ -200,7 +200,8 @@ class Gadget(object):
     def simpleString(self):
         analyseColor = Color.CYAN if self.__info else Color.RED
         address = self.__lines[0][0]
-        if self.__arch == ropper.arch.ARMTHUMB:
+        
+        if isinstance(self.arch, ropper.arch.ArchitectureArmThumb):
             address += 1
             toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
         else:

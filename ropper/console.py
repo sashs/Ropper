@@ -1022,6 +1022,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     @safe_cmd
     def do_analyse(self, text):
         import z3
+        from ropper.slicing import Slicer
+        slicer = Slicer()
         if text and isHex(text):
             addr = int(text, 16)
             for g in self.currentFile.gadgets:
@@ -1030,10 +1032,14 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     print(g.info.regs)
                     g.info.irsb.pp()
                     print(g.info.expressions)
+                    set_reg = self.currentFile.arch.searcher.extractValues(["eax=[esp]"], g.info)[0][0]
                    # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
-
+                    slice = slicer.slicing(g.info.irsb, set_reg)
+                    print(slice.instructions)
                     solver = z3.Solver()
-                    for expr in g.info.expressions:
+                    expr_len = len(g.info.expressions)
+                    for inst in slice.instructions[::-1]:
+                        expr = g.info.expressions[expr_len-inst]
                         if expr == False:
                             continue
                         solver.add(expr)
@@ -1041,15 +1047,19 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                         
                     c = None
                     c2 = None
-                    
-
+                    for constraint in self.currentFile.arch.searcher._createConstraint(["eax=[esp]"], g.info):
+                        
+                        c = constraint
+                        if c2 is not None:
+                            c2 = z3.And(c,c2)
+                        else:
+                            c2 = c
                     if c2 is not None:
                         solver.add(z3.Not(c2))
 
                     print(solver.assertions())
                     print(solver.check())
                     print(g.info.clobberedRegs)
-                    print(g.info.categories)
                     print(g.simpleString())
 
         else:

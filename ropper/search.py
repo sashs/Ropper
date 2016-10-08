@@ -22,6 +22,7 @@ from ropper.common.error import RopperError
 from ropper.semantic import Analyser
 from ropper.common.utils import isHex
 from ropper.gadget import Category
+from ropper.slicing import Slicer
 import time
 import sys
 try:
@@ -71,15 +72,17 @@ class Searcher(object):
             reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
 
             z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
+            z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
             if isinstance(reg2, int):
                 reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
                 to_return.append(z3_reg1 == reg2)
             elif reg2.startswith('['):
                 reg2 = self.__getRealRegName(reg2[1:-1], analysis.arch)
-                regs = analysis.regs.get((reg2, analysis.arch.registers[reg2][1]*8))
+                regs = analysis.regs.get((reg2))
                 if regs:
                     c = None
                     for reg in regs:
+                        reg = z3.Extract(analysis.arch.registers[reg2][1]*8-1, 0, reg)
                         if c is not None:
                             c = z3.Or(c, z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8, analyse=False))
                         else:
@@ -154,9 +157,9 @@ class Searcher(object):
         to_return = []
         count = 0
         max_count = len(gadgets)
-        category = self.getCategory(constraints)
         count = 0
         found = False
+        slicer = Slicer()
         for glen in range(1,maxLen+1):
             for gadget in gadgets:
                 if len(gadget) != glen:
@@ -167,19 +170,8 @@ class Searcher(object):
                 if not anal:
                     continue
 
-                if category not in anal.categories:
-                    continue
-
-                can_continue = False
-                values =  self.extractValues(constraints, anal)
-                for instruction in anal.instructions:
-                    if category == instruction.state.getCategory():
-                        for reg1, reg2 in values:
-                            if reg1 in instruction.usedRegs and (reg2 in instruction.usedRegs or reg2 == None):
-                                can_continue = True
-
-                if not can_continue:
-                    continue
+                constraint_values = self.extractValues(constraints, anal)
+                set_reg = constraint_values[0][0]
 
                 no_possible_gadget = False
                 for reg in self.extractValues(constraints, anal):
@@ -195,13 +187,23 @@ class Searcher(object):
                 if clobber_reg:
                     continue
 
+                slice = slicer.slicing(anal.irsb, set_reg)
+                #print(slice.instructions)
                 count += 1
                # print(gadget.simpleString())
                 solver = z3.Solver()
-                for expr in anal.expressions:
+                #for expr in anal.expressions:
+                 #   if expr == False:
+                  #      continue
+                   # solver.add(expr)
+
+                expr_len = len(anal.expressions)
+                for inst in slice.instructions[::-1]:
+                    expr = anal.expressions[expr_len-inst]
                     if expr == False:
                         continue
                     solver.add(expr)
+                    #print(anal.expressions[expr_len-inst])
 
                 c = None
                 c2 = None

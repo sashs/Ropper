@@ -1012,9 +1012,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             found = True
             self.__printGadget(gadget, self.__options.detailed)
         
-        if not found:
-            self.__printInfo('No gadgets found. Try to chain gadgets')
-            self.__printInfo('Not implemented yet.')
         self.__cprinter.println()
 
     def help_semantic(self):

@@ -76,6 +76,7 @@ class Searcher(object):
             if isinstance(reg2, int):
                 reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
                 to_return.append(z3_reg1 == reg2)
+                #to_return.append(z3_reg1 == z3_reg1_0 + reg2)
             elif reg2.startswith('['):
                 reg2 = self.__getRealRegName(reg2[1:-1], analysis.arch)
                 regs = analysis.regs.get((reg2))
@@ -101,28 +102,6 @@ class Searcher(object):
             
         return to_return
 
-    def getCategory(self, constraints):
-        if not constraints:
-            return []
-
-        to_return = []
-        for constraintString in constraints:
-            if '=' not in constraintString:
-                raise RopperError('Not a valid constraint')
-            
-            reg1, reg2 = constraintString.split('=')
-            if isHex(reg2):
-                reg2 = int(reg2, 16)
-            elif reg2.isdigit():
-                reg2 = int(reg2)
-
-            if isinstance(reg2, int):
-                return Category.WRITE_REG_FROM_REG
-            elif reg2.startswith('['):
-                return Category.WRITE_REG_FROM_MEM
-            else:
-                return Category.WRITE_REG_FROM_REG
-
     def extractValues(self, constraints, analysis):
         if not constraints:
             return []
@@ -145,10 +124,6 @@ class Searcher(object):
             reg2 = self.__getRealRegName(reg2, analysis.arch)
             to_return.append((reg1,reg2))
         return to_return
-
-    def chainGadgets(self, gadgets, constraints, maxLen, stableRegs=[]):
-        pass
-
 
     def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[]):
         if 'z3' not in globals():

@@ -188,15 +188,22 @@ class Analysis(object):
 
     def writeRegister(self, offset, size, value):
         reg = self.__arch.translate_register_name(offset & 0xfffffffe, size)
-        real_size = self.__arch.registers[reg][1]*8 if reg in self.arch.registers else self.arch.bits*2
+
+        real_size = self.__arch.registers.get(reg)
+        if real_size == None:
+            real_size = self.arch.bits*2
+        else:
+            real_size = real_size[1]*8
+
         count = self.__regCount.get((reg),1)
         self.__regCount[(reg)] = count + 1
+
         reg_list = self.__regs.get((reg))
         if not reg_list:
             reg_list = []
             self.__regs[(reg)] = reg_list
         
-        reg_list.append(z3.BitVec('%s_%d_%d' % (reg, size, count), real_size))
+        reg_list.append(z3.BitVec('%s_%d' % (reg, count), real_size))
 
         if size < self.__regs[(reg)][-1].size():
             return z3.Extract(size-1, 0, self.__regs[(reg)][-1]) == value
@@ -209,11 +216,19 @@ class Analysis(object):
 
         if isinstance(name, (int, long)):
             name = self.__arch.translate_register_name(offset & 0xfffffffe, size)
-        real_size = self.__arch.registers[name][1]*8 if name in self.arch.registers else self.arch.bits*2
+
+        real_size = self.__arch.registers.get(name)
+        if real_size == None:
+            real_size = self.arch.bits*2
+        else:
+            real_size = real_size[1]*8
+
         reg_list = self.__regs.get((name))
+
         if not reg_list:
-            reg_list = [z3.BitVec('%s_%d_%d' % (name, size, self.__regCount.get(name,0)), real_size)]
+            reg_list = [z3.BitVec('%s_%d' % (name, self.__regCount.get(name,0)), real_size)]
             self.__regs[(name)] = reg_list
+
         if size < self.__regs[(name)][level].size():
             if offset &1:
                 return z3.Extract(size+8-1, 8, self.__regs[(name)][level])
@@ -229,7 +244,7 @@ class IRSB_DATA(enum.Enum):
     _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
 
 
-class Vex(object):
+class CommandClass(object):
 
     @classmethod
     def use(cls, name):
@@ -242,7 +257,7 @@ class Vex(object):
         pass
 
 
-class ZExpressions(Vex):
+class ZExpressions(CommandClass):
 
     @staticmethod
     def get(dest, data, analysis):
@@ -284,7 +299,7 @@ class ZExpressions(Vex):
         pass
 
 
-class ZOperations(Vex):
+class ZOperations(CommandClass):
 
     @staticmethod
     def Iop_Add32(arg1, arg2, analysis):
@@ -435,7 +450,7 @@ class ZOperations(Vex):
         return z3.Extract(15,0,arg1)
 
 
-class ZStatements(Vex):
+class ZStatements(CommandClass):
 
     @staticmethod
     def put(stmt, analysis):

@@ -16,21 +16,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from ropper.semantic import CommandClass
 
-class Vex(object):
-
-    @classmethod
-    def use(cls, name):
-        if not isinstance(name, str):
-            name = name.__class__.__name__.lower()
-        return getattr(cls, name, cls.dummy)
-
-    @staticmethod
-    def dummy(*args, **kwargs):
-        pass
-
-
-class SExpressions(Vex):
+class SExpressions(CommandClass):
 
     @staticmethod
     def get(data, slice):  
@@ -56,7 +44,7 @@ class SExpressions(Vex):
         SExpressions.use(data.args[0])(data.args[0], slice)
 
 
-class SStatements(Vex):
+class SStatements(CommandClass):
 
     @staticmethod
     def put(stmt, slice, number):
@@ -102,7 +90,6 @@ class Slicer(object):
             
             func = SStatements.use(stmt)
             func(stmt, slice, stmt_number)
-            #if func != Vex.dummy:
             stmt_number += 1
             if not slice.regs:
                 break

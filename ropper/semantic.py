@@ -202,7 +202,7 @@ class Analysis(object):
 
         reg_list = self.__regs.get((reg))
         if not reg_list:
-            reg_list = []
+            reg_list = [z3.BitVec('%s_%d' % (reg, 0), real_size)]
             self.__regs[(reg)] = reg_list
         
         reg_list.append(z3.BitVec('%s_%d' % (reg, count), real_size))

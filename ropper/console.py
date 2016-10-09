@@ -1030,7 +1030,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     print(g.info.regs)
                     g.info.irsb.pp()
                     print(g.info.expressions)
-                    set_reg = self.currentFile.arch.searcher.extractValues(["r3=2"], g.info)[0][0]
+                    set_reg = self.currentFile.arch.searcher.extractValues(["eax=edx"], g.info)[0][0]
                    # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
                     slice = slicer.slicing(g.info.irsb, set_reg)
                     print(slice.instructions)
@@ -1045,7 +1045,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                         
                     c = None
                     c2 = None
-                    for constraint in self.currentFile.arch.searcher._createConstraint(["r3=2"], g.info):
+                    for constraint in self.currentFile.arch.searcher._createConstraint(["eax=edx"], g.info):
                         
                         c = constraint
                         if c2 is not None:

@@ -764,7 +764,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 elif len(splits) == 2:
                     if splits[1] in ['on', 'off']:
                         self.__rs.options[splits[0]] = True if splits[1] == 'on' else False
-                    elif splits[0] == 'inst_count':
+                    elif splits[0] in ('inst_count', 'count_of_findings'):
                         self.__rs.options[splits[0]] = int(splits[1])
                     else:
                         self.__rs.options[splits[0]] = splits[1]
@@ -783,10 +783,11 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     'badbytes':'Gadget addresses are not allowed to contain this bytes',
                     'type':'The file is scanned for this type of gadgets. (rop, jop, sys, all)',
                     'detailed':'If on the gadgets will be printed with more detailed information',
-                    'inst_count':'The max count of instructions in a gadgets'}
+                    'inst_count':'The max count of instructions in a gadgets',
+                    'count_of_findings':'The max count of findings which will be printed with semantic search (0 = undefined, default: 5'}
             for key, value in self.__rs.options.items():
                 if isinstance(value, bool):
-                    data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc[key])))
+                    data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc.get(key,''))))
                 else:
                     data.append((cstr(key), cstr(value), cstr(desc[key])))
 

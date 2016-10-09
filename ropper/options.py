@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2014 Sascha Schirra
+# Copyright 2016 Sascha Schirra
 #
 # This file is part of Ropper.
 #
@@ -202,6 +202,8 @@ epilog="""example uses:
             '--analyse', help='just used for the implementation of semantic search', metavar='<quality>')
         parser.add_argument(
             '--semantic', help='semantic search for gadgets', metavar='constraint')
+        parser.add_argument(
+            '--count-of-findings', help='Max count of gadgets which will be printed with semantic search (0 = undefined, default: 5)', metavar='<count of gadgets>', type=int, default=5)
         return parser
 
     def _analyseArguments(self):
@@ -232,6 +234,7 @@ epilog="""example uses:
         ropper_options['inst_count'] = self.__args.inst_count
         ropper_options['type'] = self.__args.type
         ropper_options['cfg_only'] = self.__args.cfg_only
+        ropper_options['count_of_findings'] = self.__args.count_of_findings
         self.ropper_options = ropper_options
 
 
@@ -300,6 +303,12 @@ epilog="""example uses:
             return (True,True)
         return False
 
+    def _setCountOfFindings(self, value):
+        if value.isdigit():
+            self.count_of_findings = int(value)
+            return (True,True)
+        return False
+
     def _setBadbytes(self, value):
         if len(value) == 0 or isHex('0x'+value):
             self.badbytes = value
@@ -329,4 +338,5 @@ VALID_OPTIONS = {'all' : Options._setAll,
                      'badbytes' : Options._setBadbytes,
                      'detailed' : Options._setDetailed,
                      'type' : Options._setType,
-                     'color' : Options._setColor}
+                     'color' : Options._setColor,
+                     'count_of_findings' : Options._setCountOfFindings}

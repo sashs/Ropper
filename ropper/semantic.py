@@ -1,3 +1,22 @@
+# coding=utf-8
+#
+# Copyright 2016 Sascha Schirra
+#
+# This file is part of Ropper.
+#
+# Ropper is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ropper is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from ropper.common.utils import toHex, isHex
 import ropper.common.enum as enum
 import sys
@@ -168,7 +187,8 @@ class Analysis(object):
         return old == self._memory
 
     def writeRegister(self, offset, size, value):
-        reg = self.__arch.translate_register_name(offset, size)
+        reg = self.__arch.translate_register_name(offset & 0xfffffffe, size)
+        real_size = self.__arch.registers[reg][1]*8 if reg in self.arch.registers else self.arch.bits*2
         count = self.__regCount.get((reg),1)
         self.__regCount[(reg)] = count + 1
         reg_list = self.__regs.get((reg))
@@ -176,19 +196,30 @@ class Analysis(object):
             reg_list = []
             self.__regs[(reg)] = reg_list
         
-        reg_list.append(z3.BitVec('%s_%d_%d' % (reg, size, count), 64))
-        return z3.Extract(size-1, 0, self.__regs[(reg)][-1]) == value
+        reg_list.append(z3.BitVec('%s_%d_%d' % (reg, size, count), real_size))
+
+        if size < self.__regs[(reg)][-1].size():
+            return z3.Extract(size-1, 0, self.__regs[(reg)][-1]) == value
+        else:
+            return self.__regs[(reg)][-1] == value
 
     def readRegister(self, offset, size, level=-1):
         name = offset
-        if isinstance(name, int):
-            name = self.__arch.translate_register_name(offset, size)
+        real_size = 0
+
+        if isinstance(name, (int, long)):
+            name = self.__arch.translate_register_name(offset & 0xfffffffe, size)
+        real_size = self.__arch.registers[name][1]*8 if name in self.arch.registers else self.arch.bits*2
         reg_list = self.__regs.get((name))
         if not reg_list:
-            reg_list = [z3.BitVec('%s_%d_%d' % (name, size, self.__regCount.get(name,0)), 64)]
+            reg_list = [z3.BitVec('%s_%d_%d' % (name, size, self.__regCount.get(name,0)), real_size)]
             self.__regs[(name)] = reg_list
         if size < self.__regs[(name)][level].size():
-            return z3.Extract(size-1, 0, self.__regs[(name)][level])
+            if offset &1:
+                return z3.Extract(size+8-1, 8, self.__regs[(name)][level])
+            else:
+                return z3.Extract(size-1, 0, self.__regs[(name)][level])
+
         else:
             return self.__regs[(name)][level]
 
@@ -231,7 +262,6 @@ class ZExpressions(Vex):
     def const(dest, data, analysis):
         analysis.currentInstruction.tmps[dest] = data.con.value if not math.isnan(data.con.value) else 0
         return z3.BitVecVal(analysis.currentInstruction.tmps[dest], data.con.size)
-        #return analysis.currentInstruction.tmps[dest]
 
     @staticmethod
     def rdtmp(dest, data, analysis):
@@ -418,18 +448,13 @@ class ZStatements(Vex):
 
         if stmt.offset == stmt.arch.sp_offset:
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
-            #analysis.currentInstruction.loadedFromSp = False
 
         return analysis.writeRegister(stmt.offset, stmt.data.result_size, value)
    
     @staticmethod
     def wrtmp(stmt, analysis):
         tmp = 't'+str(stmt.tmp)
-        #stmt.pp()
-        #print(stmt.data.result_size)
         test = ZExpressions.use(stmt.data)( tmp, stmt.data, analysis)
-        #if test != None:
-        #    print(test.size())
         return z3.BitVec(tmp ,stmt.data.result_size) == test
 
     @staticmethod
@@ -453,18 +478,15 @@ class IRSBAnalyser(object):
         self.__cRegs = []
 
     def analyse(self, irsb):
-        #irsb.pp()
         anal = Analysis(irsb.arch, irsb)
         sp_offset = 0
         for stmt in irsb.statements:
             name = stmt.__class__.__name__.lower()
             func = ZStatements.use(stmt)
             expr = func(stmt, anal)
-            #if expr is not None:
             ci = anal.currentInstruction
             ci.expressions.append(expr)
 
-            #SStatements.use(stmt)(stmt, anal)
             
         return anal
 

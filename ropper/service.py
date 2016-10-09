@@ -207,6 +207,12 @@ class Options(object):
         elif cfg_only == None:
             options['cfg_only'] = False
 
+        count_of_findings = options.get('count_of_findings')
+        if count_of_findings != None and not isinstance(count_of_findings, int):
+            raise TypeError('cfg_only has to be an instance of bool')
+        elif count_of_findings == None:
+            options['count_of_findings'] = 5
+
     def items(self):
         for key, value in self.__options_dict.items():
             yield key, value
@@ -669,6 +675,7 @@ class RopperService(object):
                     yield(fc.name, gadget)
 
     def semanticSearch(self, search, stableRegs=[], name=None):
+        count = 0
         if name:
             fc = self._getFileFor(name)
             if not fc:
@@ -676,12 +683,20 @@ class RopperService(object):
             
             s = fc.loader.arch.searcher
             for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
+                if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
                     yield(fc.name, gadget)
+                else:
+                    break
+                count += 1
         else:        
             for fc in self.__files:
                 s = fc.loader.arch.searcher
                 for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
-                    yield(fc.name, gadget)
+                    if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
+                        yield(fc.name, gadget)
+                    else:
+                        break
+                    count += 1
 
     def searchdict(self, search, quality=None, name=None):
         to_return = {}

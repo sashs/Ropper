@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2014 Sascha Schirra
+# Copyright 2016 Sascha Schirra
 #
 # This file is part of Ropper.
 #
@@ -150,7 +150,7 @@ class Searcher(object):
         pass
 
 
-    def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[], pprinter=None):
+    def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[]):
         if 'z3' not in globals():
             raise RopperError('z3py is needed') 
 
@@ -188,14 +188,8 @@ class Searcher(object):
                     continue
 
                 slice = slicer.slicing(anal.irsb, set_reg)
-                #print(slice.instructions)
                 count += 1
-               # print(gadget.simpleString())
                 solver = z3.Solver()
-                #for expr in anal.expressions:
-                 #   if expr == False:
-                  #      continue
-                   # solver.add(expr)
 
                 expr_len = len(anal.expressions)
                 for inst in slice.instructions[::-1]:
@@ -203,7 +197,6 @@ class Searcher(object):
                     if expr == False:
                         continue
                     solver.add(expr)
-                    #print(anal.expressions[expr_len-inst])
 
                 c = None
                 c2 = None
@@ -218,7 +211,6 @@ class Searcher(object):
                     solver.add(z3.Not(c2))
                 
                 if solver.check() == z3.unsat:
-                    #print count
                     found = True
                     yield gadget
     

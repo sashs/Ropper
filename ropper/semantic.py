@@ -123,6 +123,10 @@ class Analysis(object):
         self.irsb = irsb
 
     @property
+    def memCounter(self):
+        return self.__mem_counter
+
+    @property
     def regs(self):
         return self.__regs
 
@@ -185,6 +189,7 @@ class Analysis(object):
         for i in range(size):
             old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
 
+        
         self.__mem = None
         return old == self._memory
 

@@ -33,6 +33,8 @@ except:
 
 class Searcher(object):
 
+    CONSTRAINT_REGEX = '(\[?[a-zA-Z0-9]+\]?)([\+\*\-/])?=(\[?[a-zA-Z0-9]+\]?)$'
+
     def prepareFilter(self, filter):
         filter = filter.replace('\\','\\\\')
         filter = filter.replace('(','\\(')
@@ -52,55 +54,112 @@ class Searcher(object):
             return reg
         return arch.translate_register_name(info[0], info[1]*8)
 
+
+    def _create(self, adjust, left, right, right2=None):
+        if adjust == '+':
+            return left == right + right2
+        if adjust == '-':
+            return left == right - right2
+        if adjust == '*':
+            return left == right * right2
+        if adjust == '/':
+            return left == right / right2
+        else:
+            return left == right
+
     def _createConstraint(self, constraints, analysis):
         # TODO complex constraints have to be build by this method
         # The current implementation is just for testing
         if not constraints:
             return []
 
-        to_return = []
+        constraint_list = []
         for constraintString in constraints:
-            if '=' not in constraintString:
+            m = re.match(Searcher.CONSTRAINT_REGEX, constraintString)
+            if not m:
                 raise RopperError('Not a valid constraint')
-            
-            reg1, reg2 = constraintString.split('=')
+
+            reg1 = m.group(1)
+            reg2 = m.group(3)
+            adjust = m.group(2)
+
             if isHex(reg2):
                 reg2 = int(reg2, 16)
             elif reg2.isdigit():
                 reg2 = int(reg2)
 
-            reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+            if reg1.startswith('['):
+                raise RopperError("not implemented")
+                reg1 = reg1[1:-1]
+                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
+                reg2 = self.__getRealRegName(reg2.strip(), analysis.arch)
+                z3_reg2 = analysis.readRegister(reg2,analysis.arch.registers[reg2][1]*8,0)
+                size = analysis.arch.registers[reg2][1]
+                mem_new = z3.Array('memory_1' , z3.BitVecSort(analysis.arch.bits), z3.BitVecSort(8))
+                mem_old = z3.Array('memory_%d' % 0, z3.BitVecSort(analysis.arch.bits), z3.BitVecSort(8))
+                for i in range(size):
+                    mem_old = z3.Store(mem_old, z3_reg1_0+i, z3.Extract((i+1)*8-1,i*8,z3_reg2))
+    
+                constraint_list.append(mem_old == mem_new)
 
-            z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
-            z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
-            if isinstance(reg2, int):
-                reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
-                to_return.append(z3_reg1 == reg2)
-                #to_return.append(z3_reg1 == z3_reg1_0 + reg2)
+            elif isinstance(reg2, int):
+                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
+                z3_reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
+
+                if adjust:
+                    z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
+                    constraint_list.append(self._create(adjust, z3_reg1, z3_reg1_0, z3_reg2))
+                else:
+                    constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))
+                #constraint_list.append(z3_reg1 == z3_reg1_0 + reg2)
             elif reg2.startswith('['):
+                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
                 reg2 = self.__getRealRegName(reg2[1:-1], analysis.arch)
                 regs = analysis.regs.get((reg2))
                 if regs:
                     c = None
                     for reg in regs:
                         reg = z3.Extract(analysis.arch.registers[reg2][1]*8-1, 0, reg)
-                        if c is not None:
-                            c = z3.Or(c, z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8, analyse=False))
+                        mem = analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8, analyse=False)
+                        cnst = None
+                        if adjust:
+                            z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
+                            cnst = self._create(adjust, z3_reg1, z3_reg1_0, mem)
                         else:
-                            c = z3_reg1 == analysis.readMemory(reg, analysis.arch.registers[reg2][1]*8, analyse=False)
+                            cnst = self._create(adjust, z3_reg1, mem)
+                        if c is not None:
+                            c = z3.Or(c, cnst)
+                        else:
+                            c = cnst
                     if c is not None:
 
-                        to_return.append(c)
-                
+                        constraint_list.append(c)
             else:
+                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
                 reg2 = self.__getRealRegName(reg2.strip(), analysis.arch)
-                reg2 = analysis.readRegister(reg2,analysis.arch.registers[reg2][1]*8,0)
-                to_return.append(z3_reg1 == reg2)
-            
-            
+                z3_reg2 = analysis.readRegister(reg2,analysis.arch.registers[reg2][1]*8,0)
+                if adjust:
+                    z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
+                    constraint_list.append(self._create(adjust, z3_reg1, z3_reg1_0, z3_reg2))
+                else:
+                    constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))
             #print([reg1 == reg2])
-            
-        return to_return
+
+        to_return = None
+        for constraint in constraint_list:
+            if to_return is not None:
+                to_return = z3.And(constraint,c2)
+            else:
+                to_return = constraint
+
+        if to_return is None:
+            return None
+
+        return z3.Not(to_return)
 
     def extractValues(self, constraints, analysis):
         if not constraints:
@@ -109,10 +168,12 @@ class Searcher(object):
         to_return = []
 
         for constraintString in constraints:
-            if '=' not in constraintString:
+            m = re.match(Searcher.CONSTRAINT_REGEX, constraintString)
+            if not m:
                 raise RopperError('Not a valid constraint')
 
-            reg1, reg2 = constraintString.split('=')
+            reg1 = m.group(1)
+            reg2 = m.group(3) 
             reg1 = reg1.replace('[','')
             reg1 = reg1.replace(']','')
             reg1 = self.__getRealRegName(reg1, analysis.arch)
@@ -173,17 +234,9 @@ class Searcher(object):
                         continue
                     solver.add(expr)
 
-                c = None
-                c2 = None
-                for constraint in self._createConstraint(constraints, anal):
-                    
-                    c = constraint
-                    if c2 is not None:
-                        c2 = z3.And(c,c2)
-                    else:
-                        c2 = c
-                if c2 is not None:
-                    solver.add(z3.Not(c2))
+                constraint = self._createConstraint(constraints, anal)
+                if constraint is not None:
+                    solver.add(constraint)
                 
                 if solver.check() == z3.unsat:
                     found = True

@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ropper.common.utils import toHex, isHex
+import ropper.arch
 import ropper.common.enum as enum
 import sys
 import math
@@ -47,7 +48,8 @@ class Analyser(object):
             return False
         #print(gadget)
         try:
-            irsb = pyvex.IRSB(str(gadget.bytes), gadget.address, gadget.arch.info, num_bytes=len(gadget.bytes), traceflags=256)
+            address = gadget.address + 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else gadget.address
+            irsb = pyvex.IRSB(str(gadget.bytes), address, gadget.arch.info, num_bytes=len(gadget.bytes))
             irsb_anal = IRSBAnalyser()
             anal = irsb_anal.analyse(irsb)
             #print(anal.spOffset)

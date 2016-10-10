@@ -228,15 +228,23 @@ class Searcher(object):
                 solver = z3.Solver()
 
                 expr_len = len(anal.expressions)
+                expr = None
+                tmp = None
                 for inst in slice.instructions[::-1]:
-                    expr = anal.expressions[expr_len-inst]
-                    if expr == False:
+                    tmp = anal.expressions[expr_len-inst]
+                    if tmp == False:
                         continue
-                    solver.add(expr)
+                    if expr is None:
+                        expr = tmp
+                    else:
+                        expr = z3.And(expr, tmp)
+                    
 
                 constraint = self._createConstraint(constraints, anal)
                 if constraint is not None:
-                    solver.add(constraint)
+                    expr = z3.And(expr, constraint)
+
+                solver.add(expr)
                 
                 if solver.check() == z3.unsat:
                     found = True

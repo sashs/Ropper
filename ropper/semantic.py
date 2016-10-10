@@ -471,7 +471,7 @@ class ZStatements(CommandClass):
         dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
         value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
-        if stmt.offset != stmt.arch.ip_offset and not dest.startswith('cc_'):
+        if not dest.startswith('cc_'):
              
             analysis.currentInstruction.clobberedRegs.append(dest)
 

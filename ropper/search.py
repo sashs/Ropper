@@ -209,11 +209,11 @@ class Searcher(object):
                 constraint_values = self.extractValues(constraints, anal)
                 set_reg = constraint_values[0][0]
 
-                no_possible_gadget = False
+                no_candidate = False
                 for reg in self.extractValues(constraints, anal):
-                    if reg[0] not in anal.clobberedRegs:
-                        no_possible_gadget = True
-                if no_possible_gadget:
+                    if reg[0] not in anal.clobberedRegs or (reg[1] is not None and reg[1] not in anal.usedRegs):
+                        no_candidate = True
+                if no_candidate:
                     continue
 
                 clobber_reg = False
@@ -241,6 +241,7 @@ class Searcher(object):
                 if solver.check() == z3.unsat:
                     found = True
                     yield gadget
+        print(count)
     
     def search(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)

@@ -179,7 +179,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'call', 'ret', 'jmp', 'les', 'lds', 'jle','jl', 'jb','jbe','jg','jge','ja','jae', 'jne', 'je']
+        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'call', 'ret', 'jmp', 'les', 'lds', 'jle','jl', 'jb','jbe','jg','jge','ja','jae', 'jne', 'je', 'js']
 
     def _initCategories(self):
         self._categories = {
@@ -226,6 +226,10 @@ class ArchitectureX86_64(ArchitectureX86):
         self._pprs.append(b'\x48\x83\xc4\x08\x41?[\x58-\x5f]\xc3')
         self._pprs.append(b'(\x41?[\x58-\x5f]){2}\xc3')
         self._pprs.append(b'\x48\x83\xc4\x10\xc3')
+
+    def _initBadInstructions(self):
+        super(ArchitectureX86_64, self)._initBadInstructions()
+        self._badInstructions.append('jrcxz')
 
     def _initCategories(self):
         self._categories = {

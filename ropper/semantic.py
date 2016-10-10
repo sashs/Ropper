@@ -84,9 +84,7 @@ class InstructionAnalysis(object):
 
     @property
     def spOffset(self):
-        if self.__spOffset:
-            return self.__spOffset
-        return 0
+        return self.__spOffset
 
     @spOffset.setter
     def spOffset(self, offset):
@@ -105,7 +103,7 @@ class InstructionAnalysis(object):
         return self.__tmps
 
     def getValueForTmp(self, tmp):
-        while not isinstance(tmp, (int, long)) and not tmp is None:
+        while not isinstance(tmp, (int, long)) and tmp is not None:
             tmp = self.tmps.get(tmp)
 
         return tmp
@@ -151,6 +149,13 @@ class Analysis(object):
             to_return.update(ia.clobberedRegs)
         return to_return
 
+    @property
+    def usedRegs(self):
+        to_return = set()
+        for ia in self.instructions:
+            to_return.update(ia.usedRegs)
+        return to_return
+
     def newInstruction(self):
         self.__instructions.append(InstructionAnalysis(self.arch))
         return self.__instructions[-1]
@@ -159,6 +164,8 @@ class Analysis(object):
     def spOffset(self):
         offset = 0
         for inst in self.instructions:
+            if inst.spOffset is None:
+                return None
             offset += inst.spOffset
         return offset
 
@@ -223,7 +230,7 @@ class Analysis(object):
 
         if isinstance(name, (int, long)):
             name = self.__arch.translate_register_name(offset & 0xfffffffe, size)
-
+        self.currentInstruction.usedRegs.update([name])
         real_size = self.__arch.registers.get(name)
         if real_size == None:
             real_size = self.arch.bits*2

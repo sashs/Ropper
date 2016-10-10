@@ -208,7 +208,7 @@ class Gadget(object):
             toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor)
         toReturn += self.simpleInstructionString()
         if self.__info:
-            toReturn += '\nClobbered Register = %s; StackPointer-Offset = %d\n' % (", ".join(list(self.info.clobberedRegs)),self.info.spOffset)
+            toReturn += '\nClobbered Register = %s; StackPointer-Offset = %s\n' % (", ".join(list(self.info.clobberedRegs)),self.info.spOffset if self.info.spOffset is not None else 'Undef')
         return toReturn
 
     @property

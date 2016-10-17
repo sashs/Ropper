@@ -682,18 +682,18 @@ class RopperService(object):
                 raise RopperError('No such file opened: %s' % name)
             
             s = fc.loader.arch.searcher
-            for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
+            for gadget, c in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
                 if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
-                    yield(fc.name, gadget)
+                    yield(fc.name, gadget, c)
                 else:
                     break
                 count += 1
         else:        
             for fc in self.__files:
                 s = fc.loader.arch.searcher
-                for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
+                for gadget,c in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
                     if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
-                        yield(fc.name, gadget)
+                        yield(fc.name, gadget,c)
                     else:
                         break
                     count += 1

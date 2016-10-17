@@ -1004,14 +1004,22 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__printInfo('Searching for gadgets: ' + text)
         old = None
         found = False
-        for fc, gadget in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
+        analysedCount = None
+        count = 0
+        for fc, gadget, analysedCount in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
             if fc != old:
                 old = fc
                 self.__cprinter.println()
                 self.__printInfo('File: %s' % fc)
             found = True
             self.__printGadget(gadget, self.__options.detailed)
+            count += 1
         
+        if analysedCount:
+            self.__cprinter.printInfo('%d gadgets analysed with solver' % analysedCount)
+
+        self.__cprinter.printInfo('%d gadgets found' % count)
+
         self.__cprinter.println()
 
     def help_semantic(self):
@@ -1030,7 +1038,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     print(g.info.regs)
                     g.info.irsb.pp()
                     print(g.info.expressions)
-                    set_reg = self.currentFile.arch.searcher.extractValues(["[esp]=edx"], g.info)[0][0]
+                    set_reg = self.currentFile.arch.searcher.extractValues(["rsp=rbx"], g.info)[0][0]
                    # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
                     slice = slicer.slicing(g.info.irsb, set_reg)
                     print(slice.instructions)
@@ -1045,7 +1053,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                         
                     c = None
                     c2 = None
-                    constraint = self.currentFile.arch.searcher._createConstraint(["[esp]=edx"], g.info)
+                    constraint = self.currentFile.arch.searcher._createConstraint(["rsp=rbx"], g.info)
                     print(constraint)
                     if constraint is not None:
                         solver.add(constraint)

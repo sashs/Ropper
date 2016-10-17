@@ -248,8 +248,7 @@ class Searcher(object):
                 
                 if solver.check() == z3.unsat:
                     found = True
-                    yield gadget
-        print(count)
+                    yield (gadget,count)
     
     def search(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)

@@ -257,7 +257,6 @@ class Analysis(object):
 class IRSB_DATA(enum.Enum):
     _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
 
-
 class CommandClass(object):
 
     @classmethod
@@ -471,8 +470,7 @@ class ZStatements(CommandClass):
         dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
         value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
-        if not dest.startswith('cc_'):
-             
+        if not dest.startswith('cc_'): 
             analysis.currentInstruction.clobberedRegs.append(dest)
 
         if stmt.offset == stmt.arch.sp_offset:

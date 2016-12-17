@@ -1023,48 +1023,48 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__cprinter.println()
 
     def help_semantic(self):
-        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax=ebx; ecx=1 !edx !esi\n\nValid constraints:\nreg=reg\nreg=number\nreg=[reg]\n[reg]=reg')
+        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax=ebx; ecx=1 !edx !esi\n\nValid constraints:\nreg=reg\nreg=number\nreg=[reg]\nreg<+|-|*|/>=<reg|number>')
 
-    @safe_cmd
-    def do_analyse(self, text):
-        import z3
-        from ropper.slicing import Slicer
-        slicer = Slicer()
-        if text and isHex(text):
-            addr = int(text, 16)
-            for g in self.currentFile.gadgets:
-                if g.address == addr:
-                    print(bytes(g.bytes).encode('hex'))
-                    print(g.info.regs)
-                    g.info.irsb.pp()
-                    print(g.info.expressions)
-                    set_reg = self.currentFile.arch.searcher.extractValues(["rsp=rbx"], g.info)[0][0]
-                   # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
-                    slice = slicer.slicing(g.info.irsb, set_reg)
-                    print(slice.instructions)
-                    solver = z3.Solver()
-                    expr_len = len(g.info.expressions)
-                    for inst in slice.instructions[::-1]:
-                        expr = g.info.expressions[expr_len-inst]
-                        if expr == False:
-                            continue
-                        solver.add(expr)
+    # @safe_cmd
+    # def do_analyse(self, text):
+    #     import z3
+    #     from ropper.slicing import Slicer
+    #     slicer = Slicer()
+    #     if text and isHex(text):
+    #         addr = int(text, 16)
+    #         for g in self.currentFile.gadgets:
+    #             if g.address == addr:
+    #                 print(bytes(g.bytes).encode('hex'))
+    #                 print(g.info.regs)
+    #                 g.info.irsb.pp()
+    #                 print(g.info.expressions)
+    #                 set_reg = self.currentFile.arch.searcher.extractValues(["rsp=rbx"], g.info)[0][0]
+    #                # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
+    #                 slice = slicer.slicing(g.info.irsb, set_reg)
+    #                 print(slice.instructions)
+    #                 solver = z3.Solver()
+    #                 expr_len = len(g.info.expressions)
+    #                 for inst in slice.instructions[::-1]:
+    #                     expr = g.info.expressions[expr_len-inst]
+    #                     if expr == False:
+    #                         continue
+    #                     solver.add(expr)
                     
                         
-                    c = None
-                    c2 = None
-                    constraint = self.currentFile.arch.searcher._createConstraint(["rsp=rbx"], g.info)
-                    print(constraint)
-                    if constraint is not None:
-                        solver.add(constraint)
+    #                 c = None
+    #                 c2 = None
+    #                 constraint = self.currentFile.arch.searcher._createConstraint(["rsp=rbx"], g.info)
+    #                 print(constraint)
+    #                 if constraint is not None:
+    #                     solver.add(constraint)
 
-                    print(solver.assertions())
-                    print(solver.check())
-                    print(g.info.clobberedRegs)
-                    print(g.simpleString())
+    #                 print(solver.assertions())
+    #                 print(solver.check())
+    #                 print(g.info.clobberedRegs)
+    #                 print(g.simpleString())
 
-        else:
-            self.__printInfo('No such gadget')
+    #     else:
+    #         self.__printInfo('No such gadget')
 
         
 

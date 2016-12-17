@@ -243,7 +243,8 @@ class Options(object):
 
 class RopperService(object):
 
-    CACHE_FOLDER = 'ropper_cache'
+    ROPPER_FOLDER = os.path.expanduser('~') + os.path.sep + ".ropper/"
+    CACHE_FOLDER = os.path.expanduser('~') + os.path.sep + ".ropper/cache/"
     CACHE_FILE_COUNT = 16
 
     def __init__(self, options={}, callbacks=None):
@@ -311,9 +312,9 @@ class RopperService(object):
 
     def __saveCache(self, file):
         try:
-            temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
+            temp = RopperService.CACHE_FOLDER
             if not os.path.exists(temp):
-                os.mkdir(temp)
+                os.makedirs(temp)
 
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
             count = RopperService.CACHE_FILE_COUNT
@@ -362,7 +363,7 @@ class RopperService(object):
         processes = []
         single = False
         try:
-            temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
+            temp = RopperService.CACHE_FOLDER
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
 
             if not os.path.exists(cache_file):

@@ -34,7 +34,7 @@ setup(
     author_email="sashs@scoding.de",
     install_requires=install_requires,
     url="http://scoding.de/ropper/",
-    scripts=['script/ropper'],
+    scripts=['script/ropper', 'script/ropper2'],
     classifiers=[
         'Topic :: Security',
         'Environment :: Console',

@@ -22,7 +22,7 @@ Optional (not needed to run ropper just to look for gadgets):
 
 Install [Keystone](http://www.keystone-engine.org):
 
-    You will find the command here, as soon as keystone is released.
+    $ pip install keystone-engine
 
 Install and execute Ropper
 

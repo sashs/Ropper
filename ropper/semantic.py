@@ -108,7 +108,6 @@ class InstructionAnalysis(object):
 
         return tmp
 
-
 class Analysis(object):
 
     def __init__(self, arch, irsb):
@@ -116,9 +115,13 @@ class Analysis(object):
         self.__mem = None
         self.__arch = arch
         self.__regs = {}
+        self.mems = []
         self.__regCount = {}
         self.__mem_counter = 0
         self.irsb = irsb
+
+    def __repr__(self):
+        return 'None'
 
     @property
     def memCounter(self):
@@ -179,14 +182,19 @@ class Analysis(object):
     @property
     def _memory(self):
         if self.__mem is None:
-            self.__mem = z3.Array('memory_%d' % self.__mem_counter , z3.BitVecSort(self.__arch.bits), z3.BitVecSort(8))
+            #self.__mem = z3.Array('memory_%d' % self.__mem_counter , z3.BitVecSort(self.__arch.bits), z3.BitVecSort(8))
+            self.__mem = 'memory%d_%d_%d' % (self.__mem_counter, self.__arch.bits, 8)
+            self.mems.append(self.__mem)
             self.__mem_counter += 1
         return self.__mem
 
     def readMemory(self, addr, size, analyse=True):
-        to_return = z3.Select(self._memory, addr)
+        #to_return = z3.Select(self._memory, addr)
+        to_return = 'self.%s[%s]' % (self._memory, addr)
         for i in range(1, size/8):
-            to_return = z3.Concat(z3.Select(self._memory, addr+i), to_return)
+            #to_return = z3.Concat(z3.Select(self._memory, addr+i), to_return)
+            value = 'self.%s[%s]' % (self._memory, '%s + %d' % (addr, i))
+            to_return = 'Concat(%s, %s)' % (value, to_return)
 
         return to_return
 
@@ -194,11 +202,13 @@ class Analysis(object):
         size = size/8
         old = self._memory
         for i in range(size):
-            old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
-
+            #old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
+            
+            value = 'Extract(%d, %d, %s)' % ((i+1)*8-1, i*8, data)
+            old = 'Store(%s, %s + %d, %s)' % (old, addr, i, value)
         
         self.__mem = None
-        return old == self._memory
+        return 'self.%s == self.%s' % (old, self._memory)
 
     def writeRegister(self, offset, size, value):
         reg = self.__arch.translate_register_name(offset & 0xfffffffe, size)
@@ -214,15 +224,15 @@ class Analysis(object):
 
         reg_list = self.__regs.get((reg))
         if not reg_list:
-            reg_list = [z3.BitVec('%s_%d' % (reg, 0), real_size)]
+            reg_list = ['%s_%d_%d' % (reg, 0, real_size)]
             self.__regs[(reg)] = reg_list
         
-        reg_list.append(z3.BitVec('%s_%d' % (reg, count), real_size))
+        reg_list.append('%s_%d_%d' % (reg, count, real_size))
 
-        if size < self.__regs[(reg)][-1].size():
-            return z3.Extract(size-1, 0, self.__regs[(reg)][-1]) == value
+        if size < real_size:
+            return 'Extract(%d, 0, self.%s) == %s' %(size-1,self.__regs[(reg)][-1],value)
         else:
-            return self.__regs[(reg)][-1] == value
+            return 'self.%s == %s' % (self.__regs[(reg)][-1], value)
 
     def readRegister(self, offset, size, level=-1):
         name = offset
@@ -240,22 +250,32 @@ class Analysis(object):
         reg_list = self.__regs.get((name))
 
         if not reg_list:
-            reg_list = [z3.BitVec('%s_%d' % (name, self.__regCount.get(name,0)), real_size)]
+            reg_list = ['%s_%d_%d' % (name, self.__regCount.get(name,0), real_size)]
             self.__regs[(name)] = reg_list
 
-        if size < self.__regs[(name)][level].size():
+        if size < real_size:
             if offset &1:
-                return z3.Extract(size+8-1, 8, self.__regs[(name)][level])
+                return 'Extract(%d, 8, self.%s)' % (size+8-1, self.__regs[(name)][level])
             else:
-                return z3.Extract(size-1, 0, self.__regs[(name)][level])
+                return 'Extract(%d, 0, self.%s)' % (size-1, self.__regs[(name)][level])
 
         else:
-            return self.__regs[(name)][level]
+            return 'self.%s' % self.__regs[(name)][level]
 
+class AnalysisResult(object):
 
+    def __init__(self, arch, regs, usedRegs, clobberedRegs, mems, expressions, spOffset):
+        self.arch = arch
+        self.regs = regs
+        self.usedRegs = usedRegs
+        self.clobberedRegs = clobberedRegs
+        self.mems = mems
+        self.expressions = expressions
+        self.spOffset = spOffset
 
 class IRSB_DATA(enum.Enum):
     _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
+
 
 class CommandClass(object):
 
@@ -274,38 +294,41 @@ class ZExpressions(CommandClass):
 
     @staticmethod
     def get(dest, data, analysis):
-        return analysis.readRegister(data.offset, data.result_size)
+        return (analysis.readRegister(data.offset, data.result_size),(analysis.arch.translate_register_name(data.offset & 0xfffffffe, data.result_size),))
 
     @staticmethod
     def load(dest, data, analysis):
-        addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)
-        return analysis.readMemory(addr, data.result_size)
+        addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
+        return (analysis.readMemory(addr, data.result_size),(addr.replace('self.',''),))
 
     @staticmethod
     def store(dest, data, analysis):
-        addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)
-        return analysis.readMemory(addr, data.result_size, False)
+        addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
+        return (analysis.readMemory(addr, data.result_size, False),(addr.replace('self.',''),))
 
     @staticmethod
     def const(dest, data, analysis):
         analysis.currentInstruction.tmps[dest] = data.con.value if not math.isnan(data.con.value) else 0
-        return z3.BitVecVal(analysis.currentInstruction.tmps[dest], data.con.size)
+        return ('BitVecVal(%d, %d)' % (analysis.currentInstruction.tmps[dest], data.con.size), (data.con.value,))
 
     @staticmethod
     def rdtmp(dest, data, analysis):
-        analysis.currentInstruction.tmps[dest] = str(data)
-        return z3.BitVec(str(data), data.result_size)
+        tmp = '%s_%d' % (str(data), data.result_size)
+        analysis.currentInstruction.tmps[dest] = tmp
+        analysis.regs[tmp] = [tmp]
+        return ('self.%s' % (tmp), (tmp,))
 
     @staticmethod
     def binop(dest, data, analysis):
         arg1 = ZExpressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = ZExpressions.use(data.args[1])(dest, data.args[1], analysis)
-        return ZOperations.use(data.op)(arg1, arg2, analysis)
+
+        return (ZOperations.use(data.op)(arg1[0], arg2[0], analysis), (arg1[0].replace('self.',''), arg2[0].replace('self.','')))
 
     @staticmethod
     def unop(dest, data, analysis):
         arg1 = ZExpressions.use(data.args[0])(dest, data.args[0], analysis)
-        return ZOperations.use(data.op)(arg1, analysis)
+        return (ZOperations.use(data.op)(arg1[0], analysis), arg1[1])
         
     @staticmethod
     def dummy(dest, data, analysis):
@@ -316,151 +339,168 @@ class ZOperations(CommandClass):
 
     @staticmethod
     def Iop_Add32(arg1, arg2, analysis):
-        return arg1 + arg2
+        return '%s + %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Add16(arg1, arg2, analysis):
-        return arg1 + arg2
+        return '%s + %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Add8(arg1, arg2, analysis):
-        return arg1 + arg2
+        return '%s + %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Xor32(arg1, arg2, analysis):
-        return arg1 ^ arg2
+        return '%s ^ %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Xor16(arg1, arg2, analysis):
-        return arg1 ^ arg2
+        return '%s ^ %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Xor8(arg1, arg2, analysis):
-        return arg1 ^ arg2
+        return '%s ^ %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Mul32(arg1, arg2, analysis):
-        return arg1 * arg2
+        return '%s * %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Mul16(arg1, arg2, analysis):
-        return arg1 * arg2
+        return '%s * %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Mul8(arg1, arg2, analysis):
-        return arg1 * arg2
+        return '%s * %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Div32(arg1, arg2, analysis):
-        return arg1 / arg2
+        return '%s / %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Div16(arg1, arg2, analysis):
-        return arg1 / arg2
+        return '%s / %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Div8(arg1, arg2, analysis):
-        return arg1 / arg2
+        return '%s / %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Sub32(arg1, arg2, analysis):
-        return arg1 - arg2
+        return '%s - %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Sub16(arg1, arg2, analysis):
-        return arg1 - arg2
+        return '%s - %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Sub8(arg1, arg2, analysis):
-        return arg1 - arg2
+        return '%s - %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Add64(arg1, arg2, analysis):
-        return arg1 + arg2
+        return '%s + %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Xor64(arg1, arg2, analysis):
-        return arg1 ^ arg2
+        return '%s ^ %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_And64(arg1, arg2, analysis):
-        return arg1 & arg2
+        return '%s & %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_And32(arg1, arg2, analysis):
-        return arg1 & arg2
+        return '%s & %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_And16(arg1, arg2, analysis):
-        return arg1 & arg2
+        return '%s & %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_And8(arg1, arg2, analysis):
-        return arg1 & arg2
+        return '%s & %s' % (arg1, arg2)
+
+    @staticmethod
+    def Iop_Or64(arg1, arg2, analysis):
+        return '%s | %s' % (arg1, arg2)
+
+    @staticmethod
+    def Iop_Or32(arg1, arg2, analysis):
+        return '%s | %s' % (arg1, arg2)
+
+    @staticmethod
+    def Iop_Or16(arg1, arg2, analysis):
+        return '%s | %s' % (arg1, arg2)
+
+    @staticmethod
+    def Iop_Or8(arg1, arg2, analysis):
+        return '%s | %s' % (arg1, arg2)
+
 
     @staticmethod
     def Iop_Mul64(arg1, arg2, analysis):
-        return arg1 * arg2
+        return '%s * %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Div64(arg1, arg2, analysis):
-        return arg1 / arg2
+        return '%s / %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_Sub64(arg1, arg2, analysis):
-        return arg1 - arg2
+        return '%s - %s' % (arg1, arg2)
 
     @staticmethod
     def Iop_32Uto64(arg1, analysis):
-        return z3.ZeroExt(32,arg1)
+        return 'ZeroExt(32,%s)' % arg1
 
     @staticmethod
     def Iop_32to64(arg1, analysis):
-        return z3.SignExt(32,arg1)
+        return 'SignExt(32,%s)' % arg1
 
     @staticmethod
     def Iop_8to32(arg1, analysis):
-        return z3.SignExt(24,arg1)
+        return 'SignExt(24,%s)' % arg1
 
     @staticmethod
     def Iop_16to32(arg1, analysis):
-        return z3.SignExt(16,arg1)
+        return 'SignExt(16,%s)' % arg1
 
     @staticmethod
     def Iop_8to32(arg1, analysis):
-        return z3.ZeroExt(24,arg1)
+        return 'ZeroExt(24,%s)' % arg1
 
     @staticmethod
     def Iop_8Uto32(arg1, analysis):
-        return z3.ZeroExt(24,arg1)
+        return 'ZeroExt(24,%s)' % arg1
 
     @staticmethod
     def Iop_16Uto32(arg1, analysis):
-        return z3.ZeroExt(16,arg1)
+        return 'ZeroExt(16,%s)' % arg1
 
     @staticmethod
     def Iop_64Uto32(arg1, analysis):
-        return z3.Extract(31,0,arg1)
+        return 'Extract(31,0,%s)' % arg1
 
     @staticmethod
     def Iop_64to32(arg1, analysis):
-        return z3.Extract(31,0,arg1)
+        return 'Extract(31,0,%s)' % arg1
 
     @staticmethod
     def Iop_32to8(arg1, analysis):
-        return z3.Extract(7,0,arg1)
+        return 'Extract(7,0,%s)' % arg1
 
     @staticmethod
     def Iop_32Uto8(arg1, analysis):
-        return z3.Extract(7,0,arg1)
+        return 'Extract(7,0,%s)' % arg1
 
     @staticmethod
     def Iop_32to16(arg1, analysis):
-        return z3.Extract(15,0,arg1)
+        return 'Extract(15,0,%s)' % arg1
 
     @staticmethod
     def Iop_32Uto16(arg1, analysis):
-        return z3.Extract(15,0,arg1)
+        return 'Extract(15,0,%s)' % arg1
 
 
 class ZStatements(CommandClass):
@@ -470,26 +510,32 @@ class ZStatements(CommandClass):
         dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
         value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
-        if not dest.startswith('cc_'): 
+        if not dest.startswith('cc_'):
+             
             analysis.currentInstruction.clobberedRegs.append(dest)
 
         if stmt.offset == stmt.arch.sp_offset:
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
 
-        return analysis.writeRegister(stmt.offset, stmt.data.result_size, value)
+        return (analysis.writeRegister(stmt.offset, stmt.data.result_size, value[0]),dest, value[1])
    
     @staticmethod
     def wrtmp(stmt, analysis):
         tmp = 't'+str(stmt.tmp)
-        test = ZExpressions.use(stmt.data)( tmp, stmt.data, analysis)
-        return z3.BitVec(tmp ,stmt.data.result_size) == test
+        value = ZExpressions.use(stmt.data)( tmp, stmt.data, analysis)
+        tmp = '%s_%s' % (tmp, stmt.data.result_size)
+        analysis.regs[tmp] = [tmp]
+        if value is None or value[0] is None:
+            return False
+      
+        return ('self.%s == %s' % (tmp, value[0]), tmp, value[1])
 
     @staticmethod
     def store(stmt, analysis):
-        addr = ZExpressions.use(stmt.addr)(None, stmt.addr, analysis)
+        addr = ZExpressions.use(stmt.addr)(None, stmt.addr, analysis)[0]
         value = ZExpressions.use(stmt.data)(str(addr), stmt.data, analysis)
         
-        return analysis.writeMemory(addr, stmt.data.result_size, value)
+        return (analysis.writeMemory(addr, stmt.data.result_size, value[0]),addr[0],value[1])
 
     @staticmethod
     def imark(stmt, analysis):
@@ -515,5 +561,29 @@ class IRSBAnalyser(object):
             ci.expressions.append(expr)
 
             
-        return anal
+        return anal#AnalysisResult(anal.arch, anal.regs, anal.usedRegs, anal.clobberedRegs, anal.mems, anal.expressions, anal.spOffset)
 
+
+class Slice(object):
+
+    def __init__(self, regs):
+        self.instructions = []
+        self.expressions = []
+        self.regs = []
+        self.regs.extend(regs) 
+
+
+class Slicer(object):
+
+    def slice(self, irsb, reg):
+        slice = Slice(reg)
+        
+        for expr in irsb[::-1]:
+            if expr and expr[1] in slice.regs:
+                if expr[2][0] and type(expr[2][0]) is str and not expr[2][0].isdigit():
+                    slice.regs.append(expr[2][0])
+                if len(expr[2]) == 2 and type(expr[2][1]) is str and not expr[2][1].isdigit():
+                    slice.regs.append(expr[2][1])
+                slice.expressions.append(expr[0])
+
+        return slice

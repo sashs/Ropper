@@ -19,15 +19,15 @@
 import re
 
 from ropper.common.error import RopperError
-from ropper.semantic import Analyser
+from ropper.semantic import Analyser, Slicer
 from ropper.common.utils import isHex
 from ropper.gadget import Category
-from ropper.slicing import Slicer
 import time
 import sys
 try:
     if sys.version_info.major < 3:
         import z3
+        from ropper.z3helper import ExpressionBuilder
 except:
     pass
 
@@ -56,16 +56,10 @@ class Searcher(object):
 
 
     def _create(self, adjust, left, right, right2=None):
-        if adjust == '+':
-            return left == right + right2
-        if adjust == '-':
-            return left == right - right2
-        if adjust == '*':
-            return left == right * right2
-        if adjust == '/':
-            return left == right / right2
+        if adjust is not None:
+            return '%s == %s %s %s' % (left, right, adjust, right2)
         else:
-            return left == right
+            return '%s == %s' % (left, right)
 
     def _createConstraint(self, constraints, analysis):
         # TODO complex constraints have to be build by this method
@@ -152,14 +146,14 @@ class Searcher(object):
         to_return = None
         for constraint in constraint_list:
             if to_return is not None:
-                to_return = z3.And(constraint,c2)
+                to_return = 'z3.And(%s, %s)' % (constraint,to_return)
             else:
                 to_return = constraint
 
         if to_return is None:
             return None
 
-        return z3.Not(to_return)
+        return to_return
 
     def extractValues(self, constraints, analysis):
         if not constraints:
@@ -195,24 +189,38 @@ class Searcher(object):
         max_count = len(gadgets)
         count = 0
         found = False
+        found_gadgets = []
         slicer = Slicer()
+
         for glen in range(1,maxLen+1):
             for gadget in gadgets:
                 if len(gadget) != glen:
                     continue
-                    
+                
                 anal = gadget.info#analyser.analyse(gadget)
 
                 if not anal:
                     continue
 
-                constraint_values = self.extractValues(constraints, anal)
-                set_reg = constraint_values[0][0]
+                no_candidate = False
+                for fg in found_gadgets:
+                    #print(fg)
+                    #print(gadget)
+                    #print('fg',bytes(fg.bytes).encode('hex'), len(bytes(fg.bytes)))
+                    #print('new',bytes(gadget.bytes)[0-len(fg.bytes):].encode('hex'), len(bytes(gadget.bytes)[0-len(fg.bytes):]), len(bytes(gadget.bytes)))
+                    if bytes(gadget.bytes).endswith(bytes(fg.bytes)):
+                    #    print('continue')
+                        no_candidate = True
+                        break
+
+                if no_candidate:
+                    continue
 
                 no_candidate = False
                 for reg in self.extractValues(constraints, anal):
                     if reg[0] not in anal.clobberedRegs or (reg[1] is not None and reg[1] not in anal.usedRegs):
                         no_candidate = True
+
                 if no_candidate:
                     continue
 
@@ -223,31 +231,46 @@ class Searcher(object):
                 if clobber_reg:
                     continue
 
-                slice = slicer.slicing(anal.irsb, set_reg)
+                constraint_values = self.extractValues(constraints, anal)
+                set_reg = constraint_values[0][0]
+                slice_instructions = []
+                
+                slice = slicer.slice(anal.expressions, [set_reg for set_reg, get_reg in constraint_values ])
+                
                 count += 1
                 solver = z3.Solver()
 
                 expr_len = len(anal.expressions)
                 expr = None
                 tmp = None
-                for inst in slice.instructions[::-1]:
-                    tmp = anal.expressions[expr_len-inst]
+                
+                for inst in slice.expressions:
+                    
+                    tmp = inst
+                   
                     if tmp == False:
                         continue
+                    
                     if expr is None:
                         expr = tmp
                     else:
-                        expr = z3.And(expr, tmp)
+    
+                        expr = 'And(%s, %s)' % (expr, tmp)
+                
+                try:
                     
+                    expr = ExpressionBuilder().build(anal.regs, anal.mems, expr, self._createConstraint(constraints, anal))
+                except:
+                    print expr
+                    print constraints
+                    return
 
-                constraint = self._createConstraint(constraints, anal)
-                if constraint is not None:
-                    expr = z3.And(expr, constraint)
-
+                
                 solver.add(expr)
                 
                 if solver.check() == z3.unsat:
                     found = True
+                    found_gadgets.append(gadget)
                     yield (gadget,count)
     
     def search(self, gadgets, filter, quality = None, pprinter=None):

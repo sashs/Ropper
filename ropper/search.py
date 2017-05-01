@@ -17,19 +17,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import re
-
+try: 
+    import z3
+except:
+    pass
 from ropper.common.error import RopperError
-from ropper.semantic import Analyser, Slicer
 from ropper.common.utils import isHex
 from ropper.gadget import Category
 import time
 import sys
-try:
-    if sys.version_info.major < 3:
-        import z3
-        from ropper.z3helper import ExpressionBuilder
-except:
-    pass
+
 
 class Searcher(object):
 
@@ -181,9 +178,14 @@ class Searcher(object):
         return to_return
 
     def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[]):
-        if 'z3' not in globals():
-            raise RopperError('z3py is needed') 
+        if sys.version_info.major > 2:
+            raise RopperError('Semantic Search is only available for python2.')
 
+        if 'z3' not in globals():
+            raise RopperError('z3 has to be installed in order to use semantic search')
+
+        from ropper.semantic import ExpressionBuilder, Analyser, Slicer
+        
         to_return = []
         count = 0
         max_count = len(gadgets)
@@ -256,14 +258,9 @@ class Searcher(object):
                     else:
     
                         expr = 'And(%s, %s)' % (expr, tmp)
+                 
+                expr = ExpressionBuilder().build(anal.regs, anal.mems, expr, self._createConstraint(constraints, anal))
                 
-                try:
-                    
-                    expr = ExpressionBuilder().build(anal.regs, anal.mems, expr, self._createConstraint(constraints, anal))
-                except:
-                    print expr
-                    print constraints
-                    return
 
                 
                 solver.add(expr)

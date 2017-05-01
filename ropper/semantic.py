@@ -16,21 +16,25 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import sys
+from ropper.common.error import RopperError
+try:
+    if sys.version_info.major < 3:
+        import z3
+        from z3 import *
+        import pyvex
+        import archinfo
+except ImportError as e:
+    raise RopperError(e)
 
 from ropper.common.utils import toHex, isHex
 import ropper.arch
 import ropper.common.enum as enum
-import sys
+
 import math
 import re
 
-try:
-    if sys.version_info.major < 3:
-        import z3
-        import pyvex
-        import archinfo
-except:
-    pass
+
 
 class Category(enum.Enum):
     _enum_ = 'NONE WRITE_MEM_FROM_MEM WRITE_REG_FROM_MEM WRITE_REG_FROM_REG WRITE_MEM_FROM_REG NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG SUB_REG MUL_REG DIV_REG XCHG_REG PUSHAD WRITE_MEM'
@@ -587,3 +591,29 @@ class Slicer(object):
                 slice.expressions.append(expr[0])
 
         return slice
+
+
+class ExpressionBuilder(object):
+
+    def __init__(self):
+        self.__z3objects = {}
+
+    def __getattr__(self, name):
+        if name in self.__z3objects:
+            return self.__z3objects[name]
+        return super(ExpressionBuilder, self).__getattribute__(name)
+
+    def _createRegs(self, regsDict):
+        for regs in regsDict.values():
+            for reg in regs:
+                self.__z3objects[reg] = z3.BitVec(reg, int(reg.split('_')[-1],10))
+
+    def _createMem(self, mems):
+        for mem in mems:
+            sizes = mem.split('_')
+            self.__z3objects[mem] = z3.Array(mem, z3.BitVecSort(int(sizes[-2],10)), z3.BitVecSort(int(sizes[-1],10)))
+
+    def build(self, regs, mems, expression, constraint):
+        self._createRegs(regs)
+        self._createMem(mems)
+        return z3.And(eval(expression), z3.Not(eval(constraint)))

@@ -298,17 +298,17 @@ class ZExpressions(CommandClass):
 
     @staticmethod
     def get(dest, data, analysis):
-        return (analysis.readRegister(data.offset, data.result_size),(analysis.arch.translate_register_name(data.offset & 0xfffffffe, data.result_size),))
+        return (analysis.readRegister(data.offset, data.result_size(analysis.irsb.tyenv)),(analysis.arch.translate_register_name(data.offset & 0xfffffffe, data.result_size(analysis.irsb.tyenv)),))
 
     @staticmethod
     def load(dest, data, analysis):
         addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
-        return (analysis.readMemory(addr, data.result_size),(addr.replace('self.',''),))
+        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv)),(addr.replace('self.',''),))
 
     @staticmethod
     def store(dest, data, analysis):
         addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
-        return (analysis.readMemory(addr, data.result_size, False),(addr.replace('self.',''),))
+        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv), False),(addr.replace('self.',''),))
 
     @staticmethod
     def const(dest, data, analysis):
@@ -317,7 +317,7 @@ class ZExpressions(CommandClass):
 
     @staticmethod
     def rdtmp(dest, data, analysis):
-        tmp = '%s_%d' % (str(data), data.result_size)
+        tmp = '%s_%d' % (str(data), data.result_size(analysis.irsb.tyenv))
         analysis.currentInstruction.tmps[dest] = tmp
         analysis.regs[tmp] = [tmp]
         return ('self.%s' % (tmp), (tmp,))
@@ -511,23 +511,23 @@ class ZStatements(CommandClass):
 
     @staticmethod
     def put(stmt, analysis):
-        dest = stmt.arch.translate_register_name(stmt.offset, stmt.data.result_size)
+        dest = analysis.arch.translate_register_name(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv))
         value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
         if not dest.startswith('cc_'):
              
             analysis.currentInstruction.clobberedRegs.append(dest)
 
-        if stmt.offset == stmt.arch.sp_offset:
+        if stmt.offset == analysis.arch.sp_offset:
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
 
-        return (analysis.writeRegister(stmt.offset, stmt.data.result_size, value[0]),dest, value[1])
+        return (analysis.writeRegister(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv), value[0]),dest, value[1])
    
     @staticmethod
     def wrtmp(stmt, analysis):
         tmp = 't'+str(stmt.tmp)
         value = ZExpressions.use(stmt.data)( tmp, stmt.data, analysis)
-        tmp = '%s_%s' % (tmp, stmt.data.result_size)
+        tmp = '%s_%s' % (tmp, stmt.data.result_size(analysis.irsb.tyenv))
         analysis.regs[tmp] = [tmp]
         if value is None or value[0] is None:
             return False
@@ -539,7 +539,7 @@ class ZStatements(CommandClass):
         addr = ZExpressions.use(stmt.addr)(None, stmt.addr, analysis)[0]
         value = ZExpressions.use(stmt.data)(str(addr), stmt.data, analysis)
         
-        return (analysis.writeMemory(addr, stmt.data.result_size, value[0]),addr[0],value[1])
+        return (analysis.writeMemory(addr, stmt.data.result_size(analysis.irsb.tyenv), value[0]),addr[0],value[1])
 
     @staticmethod
     def imark(stmt, analysis):

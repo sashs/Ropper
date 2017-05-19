@@ -374,11 +374,12 @@ class ArchitecturePPC(Architecture):
         self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
         self._endings[gadget.GadgetType.JOP] = []
 
+
 class ArchitecturePPC64(ArchitecturePPC):
 
     def __init__(self):
 
-        Architecture.__init__(self, CS_ARCH_PPC , CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
+        Architecture.__init__(self, CS_ARCH_PPC, CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
         self._name = 'PPC64'
 
         if 'keystone' in globals():

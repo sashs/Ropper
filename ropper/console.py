@@ -409,7 +409,7 @@ class Console(cmd.Cmd):
             self.__printData('sections')
         elif options.analyse:
             self.__loadGadgets()
-            self.do_analyse(options.analyse)
+            #self.do_analyse(options.analyse)
         elif options.semantic:
             self.__loadGadgets()
             self.do_semantic(options.semantic)
@@ -986,7 +986,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_semantic(self, text):
         if not text:
             self.help_semantic()
-        self.__rs.analyseGadgets(self.currentFile.gadgets)
+        if not self.currentFile.analysed:
+            self.__rs.analyseGadgets(self.currentFile)
         constraint = None
         constraints = text.split(';')
         

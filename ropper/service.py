@@ -29,7 +29,7 @@ from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
 from codecs import encode, decode
 from hashlib import md5
-from ropper.semantic import Analyser
+from ropper.semantic import Analyser, SemanticInformation
 import tempfile
 import re
 import os
@@ -102,7 +102,6 @@ def cfgFilterGadgets(binary, gadgets, callback=None):
     
     def intern(gadgets, callback=None,current=0, length=0):
         result = []
-        
         added = False
         for gadget in gadgets:
             loadConfig = binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
@@ -338,12 +337,14 @@ class RopperService(object):
             with open(cache_file,'wb') as f:
                 f.write(encode(repr(file.allGadgets).encode('ascii'),'zip'))
         except BaseException as e:
+            print(e)
             for i in range(1, RopperService.CACHE_FILE_COUNT+1):
                 if os.path.exists(cache_file+'_%d' % i):
                     os.remove(cache_file+'_%d' % i)
 
 
     def __loadCachePerProcess(self, fqueue, gqueue):
+        nan=0
         while True:
             cacheFileName = fqueue.get()
             if cacheFileName is None:
@@ -360,6 +361,7 @@ class RopperService(object):
 
     def __loadCache(self, file):
         mp = False
+        nan= 0
         processes = []
         single = False
         try:
@@ -474,7 +476,7 @@ class RopperService(object):
         return None
 
     def clearCache(self):
-        temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
+        temp = RopperService.CACHE_FOLDER
         if os.path.exists(temp):
             import shutil
             shutil.rmtree(temp)
@@ -568,18 +570,21 @@ class RopperService(object):
 
         return self.__filterBadBytes(to_return)
 
-    def analyseGadgets(self, gadgets):
+    def analyseGadgets(self, fileObject):
+        gadgets = fileObject.gadgets
         analyser = Analyser()
         cb = None
         lg = len(gadgets)
         if self.__callbacks and hasattr(self.__callbacks, '__analyseGadgetsProgress__'):
             cb = self.__callbacks.__analyseGadgetsProgress__
         for i,g in enumerate(gadgets):
-            tmp = g.info
+            g.info = analyser.analyse(g)
             if cb:
                 cb(g, float(i)/lg)
         if cb:
              cb(None, 1.0)
+        self.__saveCache(fileObject)
+        fileObject.analysed = True
 
     def loadGadgetsFor(self, name=None):
         
@@ -603,6 +608,7 @@ class RopperService(object):
             if cache:
                 self.__saveCache(f)
             f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
+            f.analysed = f.gadgets[0].info is not None if len(f.gadgets) > 0 else False
             #self._analyseGadgets(f.gadgets)
 
          
@@ -689,6 +695,7 @@ class RopperService(object):
                 else:
                     break
                 count += 1
+            self.__saveCache(fc)
         else:        
             for fc in self.__files:
                 s = fc.loader.arch.searcher
@@ -698,6 +705,7 @@ class RopperService(object):
                     else:
                         break
                     count += 1
+                self.__saveCache(fc)
 
     def searchdict(self, search, quality=None, name=None):
         to_return = {}

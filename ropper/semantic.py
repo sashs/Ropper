@@ -25,7 +25,7 @@ try:
         import pyvex
         import archinfo
 except ImportError as e:
-    raise RopperError(e)
+    pass
 
 from ropper.common.utils import toHex, isHex
 import ropper.arch
@@ -34,10 +34,22 @@ import ropper.common.enum as enum
 import math
 import re
 
+def create_register_expression(register_accessor, size, high=False):
+    register_size = int(register_accessor.split('_')[2])
+    if size < register_size:
+        if high:
+            return 'Extract(%d, 8, self.%s)' % (size+8-1, register_accessor)
+        else:
+            return 'Extract(%d, 0, self.%s)' % (size-1, register_accessor)
+    else:
+        return 'self.%s' % register_accessor
+
+def create_number_expression(number, size):
+    return "BitVecVal(%d, %d)" % (number, size)
+
 
 class Category(enum.Enum):
     _enum_ = 'NONE WRITE_MEM_FROM_MEM WRITE_REG_FROM_MEM WRITE_REG_FROM_REG WRITE_MEM_FROM_REG NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG SUB_REG MUL_REG DIV_REG XCHG_REG PUSHAD WRITE_MEM'
-
 
 class Analyser(object):
 
@@ -50,16 +62,13 @@ class Analyser(object):
     def analyse(self, gadget):
         if not self.__work:
             return False
-        # print(gadget)
+        #print(gadget)
         try:
-            address = gadget.address + \
-                1 if isinstance(
-                    gadget.arch, ropper.arch.ArchitectureArmThumb) else gadget.address
-            irsb = pyvex.IRSB(str(gadget.bytes), address,
-                              gadget.arch.info, num_bytes=len(gadget.bytes))
+            address = gadget.address + 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else gadget.address
+            irsb = pyvex.IRSB(str(gadget.bytes), address, gadget.arch.info, num_bytes=len(gadget.bytes))
             irsb_anal = IRSBAnalyser()
             anal = irsb_anal.analyse(irsb)
-            # print(anal.spOffset)
+            #print(anal.spOffset)
             return anal
 
         except pyvex.PyVEXError:
@@ -84,7 +93,7 @@ class InstructionAnalysis(object):
 
     def addRegister(self, reg):
         self.__usedRegs.update([reg])
-
+        
     @property
     def expressions(self):
         return self.__expressions
@@ -115,14 +124,13 @@ class InstructionAnalysis(object):
 
         return tmp
 
-
 class Analysis(object):
 
     def __init__(self, arch, irsb):
         self.__instructions = []
         self.__mem = None
         self.__arch = arch
-        self.__registers = {}
+        self.__registerAccessors = {}
         self.mems = []
         self.__regCount = {}
         self.__mem_counter = 0
@@ -137,7 +145,7 @@ class Analysis(object):
 
     @property
     def regs(self):
-        return self.__registers
+        return self.__registerAccessors
 
     @property
     def arch(self):
@@ -146,7 +154,7 @@ class Analysis(object):
     @property
     def instructions(self):
         return self.__instructions
-
+    
     @property
     def currentInstruction(self):
         if not len(self.instructions):
@@ -191,8 +199,7 @@ class Analysis(object):
     def _memory(self):
         if self.__mem is None:
             #self.__mem = z3.Array('memory_%d' % self.__mem_counter , z3.BitVecSort(self.__arch.bits), z3.BitVecSort(8))
-            self.__mem = 'memory%d_%d_%d' % (
-                self.__mem_counter, self.__arch.bits, 8)
+            self.__mem = 'memory%d_%d_%d' % (self.__mem_counter, self.__arch.bits, 8)
             self.mems.append(self.__mem)
             self.__mem_counter += 1
         return self.__mem
@@ -200,7 +207,7 @@ class Analysis(object):
     def readMemory(self, addr, size, analyse=True):
         #to_return = z3.Select(self._memory, addr)
         to_return = 'self.%s[%s]' % (self._memory, addr)
-        for i in range(1, size / 8):
+        for i in range(1, size/8):
             #to_return = z3.Concat(z3.Select(self._memory, addr+i), to_return)
             value = 'self.%s[%s]' % (self._memory, '%s + %d' % (addr, i))
             to_return = 'Concat(%s, %s)' % (value, to_return)
@@ -208,84 +215,85 @@ class Analysis(object):
         return to_return
 
     def writeMemory(self, addr, size, data):
-        size = size / 8
+        size = size/8
         old = self._memory
         for i in range(size):
-            # old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
-
-            value = 'Extract(%d, %d, %s)' % ((i + 1) * 8 - 1, i * 8, data)
+            #old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
+            
+            value = 'Extract(%d, %d, %s)' % ((i+1)*8-1, i*8, data)
             old = 'Store(%s, %s + %d, %s)' % (old, addr, i, value)
-
+        
         self.__mem = None
         return 'self.%s == self.%s' % (old, self._memory)
 
     def writeRegister(self, offset, size, value):
         reg = self.__arch.translate_register_name(offset & 0xfffffffe, size)
 
-        register_size = self.__arch.registers.get(reg)
-        if register_size is None:
-            register_size = self.arch.bits * 2
+        real_size = self.__arch.registers.get(reg)
+        if real_size == None:
+            real_size = self.arch.bits*2
         else:
-            register_size = register_size[1] * 8
+            real_size = real_size[1]*8
 
-        count = self.__regCount.get((reg), 1)
+        count = self.__regCount.get((reg),1)
         self.__regCount[(reg)] = count + 1
 
-        reg_list = self.__registers.get((reg))
+        reg_list = self.__registerAccessors.get((reg))
         if not reg_list:
-            reg_list = ['%s_%d_%d' % (reg, 0, register_size)]
-            self.__registers[(reg)] = reg_list
+            reg_list = ['%s_%d_%d' % (reg, 0, real_size)]
+            self.__registerAccessors[(reg)] = reg_list
+        
+        reg_list.append('%s_%d_%d' % (reg, count, real_size))
 
-        reg_list.append('%s_%d_%d' % (reg, count, register_size))
-
-        if size < register_size:
-            return 'Extract(%d, 0, self.%s) == %s' % (size - 1, self.__registers[(reg)][-1], value)
+        if size < real_size:
+            return 'Extract(%d, 0, self.%s) == %s' %(size-1,self.__registerAccessors[(reg)][-1],value)
         else:
-            return 'self.%s == %s' % (self.__registers[(reg)][-1], value)
+            return 'self.%s == %s' % (self.__registerAccessors[(reg)][-1], value)
 
-    def readRegister(self, offset, size, level=-1):
+    def __getRegisterAccessor(self, register, size):
+        register_list = self.__registerAccessors.get((register))
+
+        if not register_list:
+            register_list = ['%s_%d_%d' % (register, self.__regCount.get(register, 0), size)]
+            self.__registerAccessors[register] = register_list
+
+        return self.__registerAccessors[register][-1]
+
+    def readRegister(self, offset, size):
         name = offset
         register_size = 0
-        if isinstance(name, (int, long)):
-            name = self.__arch.translate_register_name(
-                offset & 0xfffffffe, size)
 
+        if isinstance(name, (int, long)):
+            name = self.__arch.translate_register_name(offset & 0xfffffffe, size)
         self.currentInstruction.usedRegs.update([name])
         register_size = self.__arch.registers.get(name)
-
-        if register_size is None:
-            register_size = self.arch.bits * 2
+        if register_size == None:
+            register_size = self.arch.bits*2
         else:
-            register_size = register_size[1] * 8
+            register_size = register_size[1]*8
 
-        reg_list = self.__registers.get((name))
+        reg_acc = self.__getRegisterAccessor(name, register_size)
 
-        if not reg_list:
-            reg_list = ['%s_%d_%d' %
-                        (name, self.__regCount.get(name, 0), register_size)]
-            self.__registers[(name)] = reg_list
+        return create_register_expression(reg_acc, size, bool(offset & 1) if type(offset) is not str else False)
 
-        if size < register_size:
-            if offset & 1:
-                return 'Extract(%d, 8, self.%s)' % (size + 8 - 1, self.__registers[(name)][level])
-            else:
-                return 'Extract(%d, 0, self.%s)' % (size - 1, self.__registers[(name)][level])
+class SemanticInformation(object):
 
-        else:
-            return 'self.%s' % self.__registers[(name)][level]
-
-
-class AnalysisResult(object):
-
-    def __init__(self, arch, regs, usedRegs, clobberedRegs, mems, expressions, spOffset):
-        self.arch = arch
+    def __init__(self, regs, usedRegs, clobberedRegs, mems, expressions, spOffset, checked_constraints=None):
+        
         self.regs = regs
         self.usedRegs = usedRegs
-        self.clobberedRegs = clobberedRegs
+        self.clobberedRegisters = clobberedRegs
         self.mems = mems
         self.expressions = expressions
         self.spOffset = spOffset
+        self._checkedConstraints = {} if checked_constraints is None else checked_constraints
 
+    @property    
+    def checkedConstraints(self):
+        return self._checkedConstraints
+
+    def __repr__(self):
+        return 'SemanticInformation(%s, %s, %s, %s, %s, %s, %s)' % (repr(self.regs), repr(self.usedRegs), repr(self.clobberedRegisters), repr(self.mems), repr(self.expressions), repr(self.spOffset), repr(self.checkedConstraints))
 
 class IRSB_DATA(enum.Enum):
     _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
@@ -308,22 +316,21 @@ class ZExpressions(CommandClass):
 
     @staticmethod
     def get(dest, data, analysis):
-        return (analysis.readRegister(data.offset, data.result_size(analysis.irsb.tyenv)), (analysis.arch.translate_register_name(data.offset & 0xfffffffe, data.result_size(analysis.irsb.tyenv)),))
+        return (analysis.readRegister(data.offset, data.result_size(analysis.irsb.tyenv)),(analysis.arch.translate_register_name(data.offset & 0xfffffffe, data.result_size(analysis.irsb.tyenv)),))
 
     @staticmethod
     def load(dest, data, analysis):
         addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
-        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv)), (addr.replace('self.', ''),))
+        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv)),(addr.replace('self.',''),))
 
     @staticmethod
     def store(dest, data, analysis):
         addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
-        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv), False), (addr.replace('self.', ''),))
+        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv), False),(addr.replace('self.',''),))
 
     @staticmethod
     def const(dest, data, analysis):
-        analysis.currentInstruction.tmps[
-            dest] = data.con.value if not math.isnan(data.con.value) else 0
+        analysis.currentInstruction.tmps[dest] = data.con.value if not math.isnan(data.con.value) else 0
         return ('BitVecVal(%d, %d)' % (analysis.currentInstruction.tmps[dest], data.con.size), (data.con.value,))
 
     @staticmethod
@@ -338,13 +345,29 @@ class ZExpressions(CommandClass):
         arg1 = ZExpressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = ZExpressions.use(data.args[1])(dest, data.args[1], analysis)
 
-        return (ZOperations.use(data.op)(arg1[0], arg2[0], analysis), (arg1[0].replace('self.', ''), arg2[0].replace('self.', '')))
+        return (ZOperations.use(data.op)(arg1[0], arg2[0], analysis), (arg1[0].replace('self.',''), arg2[0].replace('self.','')))
 
     @staticmethod
     def unop(dest, data, analysis):
         arg1 = ZExpressions.use(data.args[0])(dest, data.args[0], analysis)
         return (ZOperations.use(data.op)(arg1[0], analysis), arg1[1])
+    
+    @staticmethod
+    def triop(dest, data, analysis):
+        # TODO used for floating point operations, should be implemented in a future version
+        return None
 
+    @staticmethod
+    def qop(dest, data, analysis):
+        # TODO should be implemented in a future version
+        return None
+
+    @staticmethod
+    def ccall(dest, data, analysis):
+        # TODO should be implemented in a future version
+        #analysis.printable=True
+        return None
+      
     @staticmethod
     def dummy(dest, data, analysis):
         pass
@@ -452,6 +475,7 @@ class ZOperations(CommandClass):
     def Iop_Or8(arg1, arg2, analysis):
         return '%s | %s' % (arg1, arg2)
 
+
     @staticmethod
     def Iop_Mul64(arg1, arg2, analysis):
         return '%s * %s' % (arg1, arg2)
@@ -521,37 +545,35 @@ class ZStatements(CommandClass):
 
     @staticmethod
     def put(stmt, analysis):
-        dest = analysis.arch.translate_register_name(
-            stmt.offset, stmt.data.result_size(analysis.irsb.tyenv))
-        value = ZExpressions.use(stmt.data)(dest, stmt.data, analysis)
+        dest = analysis.arch.translate_register_name(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv))
+        value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
         if not dest.startswith('cc_'):
-
+             
             analysis.currentInstruction.clobberedRegs.append(dest)
 
         if stmt.offset == analysis.arch.sp_offset:
-            analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(
-                str(stmt.data))
+            analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
 
-        return (analysis.writeRegister(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv), value[0]), dest, value[1])
-
+        return (analysis.writeRegister(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv), value[0]),dest, value[1])
+   
     @staticmethod
     def wrtmp(stmt, analysis):
-        tmp = 't' + str(stmt.tmp)
-        value = ZExpressions.use(stmt.data)(tmp, stmt.data, analysis)
+        tmp = 't'+str(stmt.tmp)
+        value = ZExpressions.use(stmt.data)( tmp, stmt.data, analysis)
         tmp = '%s_%s' % (tmp, stmt.data.result_size(analysis.irsb.tyenv))
         analysis.regs[tmp] = [tmp]
         if value is None or value[0] is None:
             return False
-
+      
         return ('self.%s == %s' % (tmp, value[0]), tmp, value[1])
 
     @staticmethod
     def store(stmt, analysis):
         addr = ZExpressions.use(stmt.addr)(None, stmt.addr, analysis)[0]
         value = ZExpressions.use(stmt.data)(str(addr), stmt.data, analysis)
-
-        return (analysis.writeMemory(addr, stmt.data.result_size(analysis.irsb.tyenv), value[0]), addr[0], value[1])
+        
+        return (analysis.writeMemory(addr, stmt.data.result_size(analysis.irsb.tyenv), value[0]),addr[0],value[1])
 
     @staticmethod
     def imark(stmt, analysis):
@@ -560,7 +582,6 @@ class ZStatements(CommandClass):
     @staticmethod
     def dummy(stmt, analysis):
         pass
-
 
 class IRSBAnalyser(object):
 
@@ -573,12 +594,14 @@ class IRSBAnalyser(object):
         for stmt in irsb.statements:
             name = stmt.__class__.__name__.lower()
             func = ZStatements.use(stmt)
+            anal.printable = False
             expr = func(stmt, anal)
+            if anal.printable:
+                print stmt
             ci = anal.currentInstruction
             ci.expressions.append(expr)
 
-        # AnalysisResult(anal.arch, anal.regs, anal.usedRegs, anal.clobberedRegs, anal.mems, anal.expressions, anal.spOffset)
-        return anal
+        return SemanticInformation(anal.regs, anal.usedRegs, anal.clobberedRegs, anal.mems, anal.expressions, anal.spOffset)
 
 
 class Slice(object):
@@ -587,14 +610,14 @@ class Slice(object):
         self.instructions = []
         self.expressions = []
         self.regs = []
-        self.regs.extend(regs)
+        self.regs.extend(regs) 
 
 
 class Slicer(object):
 
     def slice(self, irsb, reg):
         slice = Slice(reg)
-
+        
         for expr in irsb[::-1]:
             if expr and expr[1] in slice.regs:
                 if expr[2][0] and type(expr[2][0]) is str and not expr[2][0].isdigit():
@@ -619,14 +642,12 @@ class ExpressionBuilder(object):
     def _createRegs(self, regsDict):
         for regs in regsDict.values():
             for reg in regs:
-                self.__z3objects[reg] = z3.BitVec(
-                    reg, int(reg.split('_')[-1], 10))
+                self.__z3objects[reg] = z3.BitVec(reg, int(reg.split('_')[-1],10))
 
     def _createMem(self, mems):
         for mem in mems:
             sizes = mem.split('_')
-            self.__z3objects[mem] = z3.Array(mem, z3.BitVecSort(
-                int(sizes[-2], 10)), z3.BitVecSort(int(sizes[-1], 10)))
+            self.__z3objects[mem] = z3.Array(mem, z3.BitVecSort(int(sizes[-2],10)), z3.BitVecSort(int(sizes[-1],10)))
 
     def build(self, regs, mems, expression, constraint):
         self._createRegs(regs)

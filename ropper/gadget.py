@@ -47,27 +47,25 @@ class Gadget(object):
     IMAGE_BASES = {}
     ANALYSER = Analyser()
 
-    def __init__(self, fileName, section, arch, lines=None, bytes=None, init=False):
+    def __init__(self, fileName, section, arch, lines=None, bytes=None, semantic_information=None):
         #super(Gadget, self).__init__()
         if isinstance(arch, str):
             arch = ropper.arch.getArchitecture(arch)
         self.__arch = arch
-        self.__lines = None
+        self.__lines = lines
         self.__gadget = None
         self.__category = None
         self._fileName = fileName
         self._section = section
-        self.__bytes = None
-        self.__info = None
-        self.__analysed = False
-        if init:
-            self.__initialize(lines, bytes)
+        self.__bytes = bytes
+        self.__info = semantic_information
+        self.__analysed = semantic_information is not None
+        #if init:
+        #    self.__initialize(lines, bytes)
 
     @property
     def info(self):
-        if not self.__analysed:
-            self.__info = Gadget.ANALYSER.analyse(self)
-            self.__analysed = True
+        
         return self.__info
 
     @info.setter
@@ -159,7 +157,6 @@ class Gadget(object):
         if bytes:
             self.bytes += bytes
 
-
     def match(self, filter):
         if not filter or len(filter) == 0:
             return True
@@ -167,7 +164,6 @@ class Gadget(object):
             return bool(re.match(filter, self._gadget.replace('.w','')))
         else:
             return bool(re.match(filter, self._gadget))
-
 
     def addressesContainsBytes(self, badbytes):
         line =  self._lines[0]
@@ -178,13 +174,11 @@ class Gadget(object):
                 b = ord(b)
 
             # TODO: This should be changed. Only 4 bytes are checked
-            for i in range(4):
+            for i in range(self.arch.addressLength):
                 if (address & 0xff) == b:
 
                     return True
                 address >>= 8
-
-
 
     def simpleInstructionString(self):
         toReturn = ''
@@ -208,7 +202,7 @@ class Gadget(object):
             toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor)
         toReturn += self.simpleInstructionString()
         if self.__info:
-            toReturn += '\nClobbered Register = %s; StackPointer-Offset = %s\n' % (", ".join(list(self.info.clobberedRegs)),self.info.spOffset if self.info.spOffset is not None else 'Undef')
+            toReturn += '\nClobbered Register = %s; StackPointer-Offset = %s\n' % (", ".join(list(self.info.clobberedRegisters)),self.info.spOffset if self.info.spOffset is not None else 'Undef')
         return toReturn
 
     @property
@@ -266,5 +260,5 @@ class Gadget(object):
         return toReturn
 
     def __repr__(self):
-        return 'Gadget(%s,%s,%s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(True))
+        return 'Gadget(%s, %s, %s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(self.info))
 

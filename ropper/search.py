@@ -17,13 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import re
-try: 
+try:
     import z3
 except:
     pass
 from ropper.common.error import RopperError
 from ropper.common.utils import isHex
 from ropper.gadget import Category
+from ropper.semantic import ExpressionBuilder, Analyser, Slicer, create_register_expression, create_number_expression
 import time
 import sys
 
@@ -45,7 +46,7 @@ class Searcher(object):
         filter = filter.replace('%', '[ -~]*')
         return filter
 
-    def __getRealRegName(self, reg, arch):
+    def __getRegisterName(self, reg, arch):
         info = arch.registers.get(reg)
         if not info:
             return reg
@@ -58,7 +59,7 @@ class Searcher(object):
         else:
             return '%s == %s' % (left, right)
 
-    def _createConstraint(self, constraints, analysis):
+    def _createConstraint(self, constraints, analysis, archinfo):
         # TODO complex constraints have to be build by this method
         # The current implementation is just for testing
         if not constraints:
@@ -79,12 +80,12 @@ class Searcher(object):
             elif reg2.isdigit():
                 reg2 = int(reg2)
 
-            if reg1.startswith('['):
+            '''if reg1.startswith('['):
                 raise RopperError("not implemented")
                 reg1 = reg1[1:-1]
-                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                reg1 = self.__getRegisterName(reg1.strip(), analysis.arch)
                 z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
-                reg2 = self.__getRealRegName(reg2.strip(), analysis.arch)
+                reg2 = self.__getRegisterName(reg2.strip(), analysis.arch)
                 z3_reg2 = analysis.readRegister(reg2,analysis.arch.registers[reg2][1]*8,0)
                 size = analysis.arch.registers[reg2][1]
                 mem_new = z3.Array('memory_1' , z3.BitVecSort(analysis.arch.bits), z3.BitVecSort(8))
@@ -95,7 +96,7 @@ class Searcher(object):
                 constraint_list.append(mem_old == mem_new)
 
             elif isinstance(reg2, int):
-                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                reg1 = self.__getRegisterName(reg1.strip(), analysis.arch)
                 z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
                 z3_reg2 = z3.BitVecVal(reg2, analysis.arch.registers[reg1][1]*8)
 
@@ -106,9 +107,9 @@ class Searcher(object):
                     constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))
                 #constraint_list.append(z3_reg1 == z3_reg1_0 + reg2)
             elif reg2.startswith('['):
-                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
+                reg1 = self.__getRegisterName(reg1.strip(), analysis.arch)
                 z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
-                reg2 = self.__getRealRegName(reg2[1:-1], analysis.arch)
+                reg2 = self.__getRegisterName(reg2[1:-1], analysis.arch)
                 regs = analysis.regs.get((reg2))
                 if regs:
                     c = None
@@ -129,15 +130,36 @@ class Searcher(object):
 
                         constraint_list.append(c)
             else:
-                reg1 = self.__getRealRegName(reg1.strip(), analysis.arch)
-                z3_reg1 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8)
-                reg2 = self.__getRealRegName(reg2.strip(), analysis.arch)
-                z3_reg2 = analysis.readRegister(reg2,analysis.arch.registers[reg2][1]*8,0)
+                reg1 = self.__getRegisterName(reg1.strip(), analysis.arch)
+                reg_acc = analysis.regs[reg1][-1]
+                
+                z3_reg1 = create_register_expression(reg_acc, int(reg_acc.split('_')[2]))
+                reg2 = self.__getRegisterName(reg2.strip(), analysis.arch)
+                reg_acc2 = analysis.regs[reg2][0]
+                z3_reg2 = create_register_expression(reg_acc2, int(reg_acc2.split('_')[2]))
                 if adjust:
-                    z3_reg1_0 = analysis.readRegister(reg1,analysis.arch.registers[reg1][1]*8,0)
+                    reg_acc = analysis.regs[reg1][0]
+                    z3_reg1_0 = create_register_expression(reg_acc, int(reg_acc.split('_')[2]))
                     constraint_list.append(self._create(adjust, z3_reg1, z3_reg1_0, z3_reg2))
                 else:
-                    constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))
+                    constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))'''
+
+            reg1 = self.__getRegisterName(reg1.strip(), archinfo)
+            reg_acc = analysis.regs[reg1][-1]
+            z3_reg1 = create_register_expression(reg_acc, int(reg_acc.split('_')[2]))
+            if isinstance(reg2, int):
+                z3_reg2 = create_number_expression(reg2, int(z3_reg1.split('_')[2]))
+            else:
+                reg2 = self.__getRegisterName(reg2.strip(), archinfo)
+                reg_acc2 = analysis.regs[reg2][0]
+                z3_reg2 = create_register_expression(reg_acc2, int(reg_acc2.split('_')[2]))
+
+            if adjust:
+                z3_reg1_0 = create_register_expression(reg_acc, int(reg_acc.split('_')[2]))
+                constraint_list.append(self._create(adjust, z3_reg1, z3_reg1_0, z3_reg2))
+            else:
+                constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))
+
             #print([reg1 == reg2])
 
         to_return = None
@@ -152,7 +174,7 @@ class Searcher(object):
 
         return to_return
 
-    def extractValues(self, constraints, analysis):
+    def extractValues(self, constraints, analysis, archinfo):
         if not constraints:
             return []
 
@@ -167,15 +189,35 @@ class Searcher(object):
             reg2 = m.group(3) 
             reg1 = reg1.replace('[','')
             reg1 = reg1.replace(']','')
-            reg1 = self.__getRealRegName(reg1, analysis.arch)
+            reg1 = self.__getRegisterName(reg1, archinfo)
             reg2 = reg2.replace('[','')
             reg2 = reg2.replace(']','')
 
             if reg2.isdigit() or isHex(reg2):
                 reg2 = None
-            reg2 = self.__getRealRegName(reg2, analysis.arch)
+            reg2 = self.__getRegisterName(reg2, archinfo)
             to_return.append((reg1,reg2))
         return to_return
+
+    def __isSimilarGadget(self, gadget, found_gadgets):
+        for fg in found_gadgets:
+            if bytes(gadget.bytes).endswith(bytes(fg.bytes)):
+                return True
+        return False
+
+    def __areRegistersNotUsed(self, constraint_values, semantic_info):
+        
+        for reg in constraint_values:
+            if reg[0] not in semantic_info.clobberedRegisters or (reg[1] is not None and reg[1] not in semantic_info.usedRegs):
+                return True
+        return False
+
+    def __areStableRegistersClobbered(self, stable_registers, clobbered_registers):
+        clobber_reg = False
+        for reg in clobbered_registers:
+            if reg in stable_registers:
+                return True
+        return False
 
     def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[]):
         if sys.version_info.major > 2:
@@ -184,8 +226,6 @@ class Searcher(object):
         if 'z3' not in globals():
             raise RopperError('z3 has to be installed in order to use semantic search')
 
-        from ropper.semantic import ExpressionBuilder, Analyser, Slicer
-        
         to_return = []
         count = 0
         max_count = len(gadgets)
@@ -193,82 +233,59 @@ class Searcher(object):
         found = False
         found_gadgets = []
         slicer = Slicer()
-
-        for glen in range(1,maxLen+1):
+        constraint_key = " ".join(list(set(constraints)))
+        for glen in range(1, maxLen+1):
             for gadget in gadgets:
                 if len(gadget) != glen:
                     continue
-                
-                anal = gadget.info#analyser.analyse(gadget)
-
+                anal = gadget.info
                 if not anal:
                     continue
 
-                no_candidate = False
-                for fg in found_gadgets:
-                    #print(fg)
-                    #print(gadget)
-                    #print('fg',bytes(fg.bytes).encode('hex'), len(bytes(fg.bytes)))
-                    #print('new',bytes(gadget.bytes)[0-len(fg.bytes):].encode('hex'), len(bytes(gadget.bytes)[0-len(fg.bytes):]), len(bytes(gadget.bytes)))
-                    if bytes(gadget.bytes).endswith(bytes(fg.bytes)):
-                    #    print('continue')
-                        no_candidate = True
-                        break
+                constraint_values = self.extractValues(constraints, anal, gadget.arch.info)
 
-                if no_candidate:
+                if self.__isSimilarGadget(gadget, found_gadgets) \
+                or self.__areRegistersNotUsed(constraint_values, anal) \
+                or self.__areStableRegistersClobbered(stableRegs, anal.clobberedRegisters):
                     continue
 
-                no_candidate = False
-                for reg in self.extractValues(constraints, anal):
-                    if reg[0] not in anal.clobberedRegs or (reg[1] is not None and reg[1] not in anal.usedRegs):
-                        no_candidate = True
+                constraint_string = self._createConstraint(constraints, anal, gadget.arch.info)
+                if constraint_key not in anal.checkedConstraints:
+                    set_reg = constraint_values[0][0]
+                    slice_instructions = []
+                    slice = slicer.slice(anal.expressions, [set_reg for set_reg, get_reg in constraint_values])
+                    count += 1
+                    solver = z3.Solver()
 
-                if no_candidate:
-                    continue
+                    expr_len = len(anal.expressions)
+                    expr = None
+                    tmp = None
 
-                clobber_reg = False
-                for reg in anal.clobberedRegs:
-                    if reg in stableRegs:
-                        clobber_reg = True
-                if clobber_reg:
-                    continue
+                    for inst in slice.expressions:
+                        tmp = inst
+                        if tmp == False:
+                            continue
+                        if expr is None:
+                            expr = tmp
+                        else:
+                            expr = 'And(%s, %s)' % (expr, tmp)
 
-                constraint_values = self.extractValues(constraints, anal)
-                set_reg = constraint_values[0][0]
-                slice_instructions = []
-                
-                slice = slicer.slice(anal.expressions, [set_reg for set_reg, get_reg in constraint_values ])
-                
-                count += 1
-                solver = z3.Solver()
-
-                expr_len = len(anal.expressions)
-                expr = None
-                tmp = None
-                
-                for inst in slice.expressions:
-                    
-                    tmp = inst
-                   
-                    if tmp == False:
-                        continue
-                    
-                    if expr is None:
-                        expr = tmp
+                    expr = ExpressionBuilder().build(anal.regs, anal.mems, expr, constraint_string)
+                    solver.add(expr)
+                    if solver.check() == z3.unsat:
+                        found = True
+                        found_gadgets.append(gadget)
+                        anal.checkedConstraints[constraint_key] = True
+                        yield (gadget, count)
                     else:
-    
-                        expr = 'And(%s, %s)' % (expr, tmp)
-                 
-                expr = ExpressionBuilder().build(anal.regs, anal.mems, expr, self._createConstraint(constraints, anal))
-                
-
-                
-                solver.add(expr)
-                
-                if solver.check() == z3.unsat:
-                    found = True
+                        anal.checkedConstraints[constraint_key] = False
+                elif anal.checkedConstraints[constraint_key]:
+                    count += 1
                     found_gadgets.append(gadget)
-                    yield (gadget,count)
+                    yield (gadget, count)
+                else:
+                    count += 1
+                
     
     def search(self, gadgets, filter, quality = None, pprinter=None):
         filter = self.prepareFilter(filter)

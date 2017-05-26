@@ -28,24 +28,13 @@ except ImportError as e:
     pass
 
 from ropper.common.utils import toHex, isHex
+from ropper.z3helper import create_number_expression, create_register_expression
 import ropper.arch
 import ropper.common.enum as enum
 
 import math
 import re
 
-def create_register_expression(register_accessor, size, high=False):
-    register_size = int(register_accessor.split('_')[2])
-    if size < register_size:
-        if high:
-            return 'Extract(%d, 8, self.%s)' % (size+8-1, register_accessor)
-        else:
-            return 'Extract(%d, 0, self.%s)' % (size-1, register_accessor)
-    else:
-        return 'self.%s' % register_accessor
-
-def create_number_expression(number, size):
-    return "BitVecVal(%d, %d)" % (number, size)
 
 
 class Category(enum.Enum):

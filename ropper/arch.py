@@ -119,6 +119,14 @@ class Architecture(AbstractSingleton):
     def maxInvalid(self):
         return self._maxInvalid
 
+    def getRegisterName(self, reg):
+        if self.info is None:
+            return reg
+        info = self.info.registers.get(reg)
+        if not info:
+            return reg
+        return self.info.translate_register_name(info[0], info[1]*8)
+
     def __str__(self):
         return self._name
 

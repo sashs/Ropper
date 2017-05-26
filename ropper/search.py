@@ -31,7 +31,7 @@ import sys
 
 class Searcher(object):
 
-    CONSTRAINT_REGEX = '(\[?[a-zA-Z0-9]+\]?)([\+\*\-/])?=(\[?[a-zA-Z0-9]+\]?)$'
+    CONSTRAINT_REGEX = '(\[?[a-zA-Z0-9]+\]?)([\+\*\-=/])?=(\[?[a-zA-Z0-9]+\]?)$'
 
     def prepareFilter(self, filter):
         filter = filter.replace('\\','\\\\')
@@ -46,20 +46,13 @@ class Searcher(object):
         filter = filter.replace('%', '[ -~]*')
         return filter
 
-    def __getRegisterName(self, reg, arch):
-        info = arch.registers.get(reg)
-        if not info:
-            return reg
-        return arch.translate_register_name(info[0], info[1]*8)
-
-
     def _create(self, adjust, left, right, right2=None):
         if adjust is not None:
             return '%s == %s %s %s' % (left, right, adjust, right2)
         else:
             return '%s == %s' % (left, right)
 
-    def _createConstraint(self, constraints, analysis, archinfo):
+    def _createConstraint(self, constraints, analysis, arch):
         # TODO complex constraints have to be build by this method
         # The current implementation is just for testing
         if not constraints:
@@ -144,13 +137,13 @@ class Searcher(object):
                 else:
                     constraint_list.append(self._create(adjust, z3_reg1, z3_reg2))'''
 
-            reg1 = self.__getRegisterName(reg1.strip(), archinfo)
+            reg1 = arch.getRegisterName(reg1.strip())
             reg_acc = analysis.regs[reg1][-1]
             z3_reg1 = create_register_expression(reg_acc, int(reg_acc.split('_')[2]))
             if isinstance(reg2, int):
                 z3_reg2 = create_number_expression(reg2, int(z3_reg1.split('_')[2]))
             else:
-                reg2 = self.__getRegisterName(reg2.strip(), archinfo)
+                reg2 = arch.getRegisterName(reg2.strip())
                 reg_acc2 = analysis.regs[reg2][0]
                 z3_reg2 = create_register_expression(reg_acc2, int(reg_acc2.split('_')[2]))
 
@@ -174,7 +167,7 @@ class Searcher(object):
 
         return to_return
 
-    def extractValues(self, constraints, analysis, archinfo):
+    def extractValues(self, constraints, analysis, arch):
         if not constraints:
             return []
 
@@ -189,13 +182,13 @@ class Searcher(object):
             reg2 = m.group(3) 
             reg1 = reg1.replace('[','')
             reg1 = reg1.replace(']','')
-            reg1 = self.__getRegisterName(reg1, archinfo)
+            reg1 = arch.getRegisterName(reg1)
             reg2 = reg2.replace('[','')
             reg2 = reg2.replace(']','')
 
             if reg2.isdigit() or isHex(reg2):
                 reg2 = None
-            reg2 = self.__getRegisterName(reg2, archinfo)
+            reg2 = arch.getRegisterName(reg2)
             to_return.append((reg1,reg2))
         return to_return
 
@@ -234,30 +227,31 @@ class Searcher(object):
         found_gadgets = []
         slicer = Slicer()
         constraint_key = " ".join(list(set(constraints)))
+        import z3helper
         for glen in range(1, maxLen+1):
             for gadget in gadgets:
                 if len(gadget) != glen:
                     continue
-                anal = gadget.info
-                if not anal:
+                semantic_info = gadget.info
+                if not semantic_info:
                     continue
-
-                constraint_values = self.extractValues(constraints, anal, gadget.arch.info)
+                
+                constraint_values = self.extractValues(constraints, semantic_info, gadget.arch)
 
                 if self.__isSimilarGadget(gadget, found_gadgets) \
-                or self.__areRegistersNotUsed(constraint_values, anal) \
-                or self.__areStableRegistersClobbered(stableRegs, anal.clobberedRegisters):
+                or self.__areRegistersNotUsed(constraint_values, semantic_info) \
+                or self.__areStableRegistersClobbered(stableRegs, semantic_info.clobberedRegisters):
                     continue
-
-                constraint_string = self._createConstraint(constraints, anal, gadget.arch.info)
-                if constraint_key not in anal.checkedConstraints:
+                cc = z3helper.ConstraintCompiler(gadget.arch, semantic_info)
+                constraint_string = cc.compile(';'.join(constraints))
+                if constraint_key not in semantic_info.checkedConstraints:
                     set_reg = constraint_values[0][0]
                     slice_instructions = []
-                    slice = slicer.slice(anal.expressions, [set_reg for set_reg, get_reg in constraint_values])
+                    slice = slicer.slice(semantic_info.expressions, [set_reg for set_reg, get_reg in constraint_values])
                     count += 1
                     solver = z3.Solver()
 
-                    expr_len = len(anal.expressions)
+                    expr_len = len(semantic_info.expressions)
                     expr = None
                     tmp = None
 
@@ -270,16 +264,16 @@ class Searcher(object):
                         else:
                             expr = 'And(%s, %s)' % (expr, tmp)
 
-                    expr = ExpressionBuilder().build(anal.regs, anal.mems, expr, constraint_string)
+                    expr = ExpressionBuilder().build(semantic_info.regs, semantic_info.mems, expr, constraint_string)
                     solver.add(expr)
                     if solver.check() == z3.unsat:
                         found = True
                         found_gadgets.append(gadget)
-                        anal.checkedConstraints[constraint_key] = True
+                        semantic_info.checkedConstraints[constraint_key] = True
                         yield (gadget, count)
                     else:
-                        anal.checkedConstraints[constraint_key] = False
-                elif anal.checkedConstraints[constraint_key]:
+                        semantic_info.checkedConstraints[constraint_key] = False
+                elif semantic_info.checkedConstraints[constraint_key]:
                     count += 1
                     found_gadgets.append(gadget)
                     yield (gadget, count)

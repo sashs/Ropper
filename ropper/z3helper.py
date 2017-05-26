@@ -39,12 +39,35 @@ class ConstraintCompiler(object):
     POP_REGEX = '((pop) +([a-zA-Z0-9]+))'
     CONSTRAINT_REGEX = '(' + ASSIGNMENT_REGEX + '|' + POP_REGEX + ')'
 
-    def parse(self, constraints):
+    def __init__(self, architecture, semantic_info):
+        self.__architecture = architecture
+        self.__semantic_info = semantic_info
+
+    def compile(self, constraints):
         """
-        parse a line of semantic expressions
+        compile a line of semantic expressions
         """
-        tokens = self._tokenize(constraints)
-        print(tokens)
+        tokens = self._tokenize(constraints)[::-1]
+        to_return = None
+        constraint = None
+        while True:
+            if not tokens:
+                break
+
+            token = tokens.pop()
+            if token in self.__architecture.info.registers:
+                constraint = self._assignment(token, tokens)
+            elif token == 'pop':
+                constraint = self._popReg(token, tokens)
+            elif token == ';':
+                if to_return is None:
+                    to_return = constraint
+                else:
+                    to_return = 'And(%s, %s)' % (to_return, constraint)
+            else:
+                raise ConstraintError('Invalid token: %s' % token)
+
+        return to_return
 
     def _tokenize(self, constraints):
         """
@@ -73,9 +96,59 @@ class ConstraintCompiler(object):
             tokens.append(';')
         return tokens
 
+    def _assignment(self, register, tokens):
+        register = self.__architecture.getRegisterName(register)
+        reg1_last = self.__semantic_info.regs[register][-1]
+        reg1_init = self.__semantic_info.regs[register][0]
+        op = tokens.pop()
+        if not re.match(ConstraintCompiler.ADJUST_REGEX, op):
+            raise ConstraintError('Invalid syntax: %s' % op)
+        value = tokens.pop()
+        if value == '[':
+            value = self._readMemory(tokens.pop())
+            tokens.pop()
+        elif re.match(ConstraintCompiler.NUMBER_REGEX, value):
+            value = create_number_expression(int(value), int(reg1_last.split('_')[-1]))
+        elif value in self.__architecture.info.registers:
+            value = self.__architecture.getRegisterName(value)
+            value = self.__semantic_info.regs[value][0]
+            value = create_register_expression(value, int(value.split('_')[-1]))
+        else:
+            print(re.match(ConstraintCompiler.NUMBER_REGEX, value))
+            raise ConstraintError('Invalid Assignment: %s%s%s' % (register, op, value))
+        reg1_last = create_register_expression(reg1_last, int(reg1_last.split('_')[-1]))
+        reg1_init = create_register_expression(reg1_init, int(reg1_init.split('_')[-1]))
+        return self._create(reg1_last, reg1_init, value, op[0])
+
+    def _create(self, left_last, left_init, right, adjust):
+        if adjust != '=':
+            return '%s == %s %s %s' % (left_last, left_init, adjust, right)
+        else:
+            return '%s == %s' % (left_last, right)
+
+    def _readMemory(self, register):
+        pass
+
+    def _popReg(self, pop, tokens):
+        reg = tokens.pop()
+        
 
 class ConstraintError(RopperError):
     """
     ConstraintError
     """
     pass
+
+
+def create_register_expression(register_accessor, size, high=False):
+    register_size = int(register_accessor.split('_')[2])
+    if size < register_size:
+        if high:
+            return 'Extract(%d, 8, self.%s)' % (size+8-1, register_accessor)
+        else:
+            return 'Extract(%d, 0, self.%s)' % (size-1, register_accessor)
+    else:
+        return 'self.%s' % register_accessor
+
+def create_number_expression(number, size):
+    return "BitVecVal(%d, %d)" % (number, size)

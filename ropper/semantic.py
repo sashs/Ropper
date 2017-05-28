@@ -28,7 +28,7 @@ except ImportError as e:
     pass
 
 from ropper.common.utils import toHex, isHex
-from ropper.z3helper import create_number_expression, create_register_expression
+from ropper.z3helper import create_number_expression, create_register_expression, create_read_memory_expression
 import ropper.arch
 import ropper.common.enum as enum
 
@@ -60,8 +60,9 @@ class Analyser(object):
             #print(anal.spOffset)
             return anal
 
-        except pyvex.PyVEXError:
-            pass
+        except pyvex.PyVEXError as e:
+            print(gadget)
+            print(e)
 
 
 class InstructionAnalysis(object):
@@ -194,14 +195,7 @@ class Analysis(object):
         return self.__mem
 
     def readMemory(self, addr, size, analyse=True):
-        #to_return = z3.Select(self._memory, addr)
-        to_return = 'self.%s[%s]' % (self._memory, addr)
-        for i in range(1, size/8):
-            #to_return = z3.Concat(z3.Select(self._memory, addr+i), to_return)
-            value = 'self.%s[%s]' % (self._memory, '%s + %d' % (addr, i))
-            to_return = 'Concat(%s, %s)' % (value, to_return)
-
-        return to_return
+        return create_read_memory_expression(self._memory, addr, size)
 
     def writeMemory(self, addr, size, data):
         size = size/8
@@ -243,8 +237,9 @@ class Analysis(object):
         register_list = self.__registerAccessors.get((register))
 
         if not register_list:
-            register_list = ['%s_%d_%d' % (register, self.__regCount.get(register, 0), size)]
+            register_list = []
             self.__registerAccessors[register] = register_list
+        register_list.append('%s_%d_%d' % (register, self.__regCount.get(register, 0), size))
 
         return self.__registerAccessors[register][-1]
 

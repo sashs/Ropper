@@ -105,7 +105,11 @@ class ConstraintCompiler(object):
             raise ConstraintError('Invalid syntax: %s' % op)
         value = tokens.pop()
         if value == '[':
-            value = self._readMemory(tokens.pop())
+            register = tokens.pop()
+            register_name = self.__architecture.getRegisterName(register)
+            if not register_name:
+                raise ConstraintError('Invalid register: %s' & register)
+            value = self._readMemory(register_name)
             tokens.pop()
         elif re.match(ConstraintCompiler.NUMBER_REGEX, value):
             value = create_number_expression(int(value), int(reg1_last.split('_')[-1]))
@@ -127,11 +131,20 @@ class ConstraintCompiler(object):
             return '%s == %s' % (left_last, right)
 
     def _readMemory(self, register):
-        pass
+        register_init = self.__semantic_info.regs[register][0]
+        if self.__semantic_info.mems:
+            memory = self.__semantic_info.mems[-1]
+        else:
+            memory = 'memory%d_%d_%d' % (0, self.__architecture.info.bits, 8)
+            self.__semantic_info.mems.append(memory)
+        size = int(register_init.split('_')[-1])
+        register_expr = create_register_expression(register_init, size)
+        mem_expr = create_read_memory_expression(memory, register_expr, size)
+        return mem_expr
 
     def _popReg(self, pop, tokens):
         reg = tokens.pop()
-        
+
 
 class ConstraintError(RopperError):
     """
@@ -152,3 +165,11 @@ def create_register_expression(register_accessor, size, high=False):
 
 def create_number_expression(number, size):
     return "BitVecVal(%d, %d)" % (number, size)
+
+def create_read_memory_expression(memory, addr, size):
+    to_return = 'self.%s[%s]' % (memory, addr)
+    for i in range(1, size/8):
+        value = 'self.%s[%s]' % (memory, '%s + %d' % (addr, i))
+        to_return = 'Concat(%s, %s)' % (value, to_return)
+
+    return to_return

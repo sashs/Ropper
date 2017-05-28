@@ -1024,7 +1024,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__cprinter.println()
 
     def help_semantic(self):
-        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax=ebx; ecx=1 !edx !esi\n\nValid constraints:\nreg=reg\nreg=number\nreg=[reg]\nreg<+|-|*|/>=<reg|number>')
+        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax==ebx; ecx==1 !edx !esi\n\nValid constraints:\nreg==reg\nreg==number\nreg==[reg]\nreg<+|-|*|/>=<reg|number|[reg]>')
 
     # @safe_cmd
     # def do_analyse(self, text):

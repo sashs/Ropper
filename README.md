@@ -60,6 +60,22 @@ Install [z3py](https://github.com/Z3Prover/z3)
     $ make
     $ sudo make install
 
+Currently Possible Constraints
+------------------------------
+    reg == reg     -  assign register to another
+    reg == number  -  assign number to register
+    reg == [reg]   -  assign memory to register
+    reg += number/reg/[reg]
+    reg -= number/reg/[reg]
+    reg *= number/reg/[reg]
+    reg /= number/reg/[reg]
+    
+Constraint Example
+------------------
+
+    eax==1 !ebx    - set eax to 1 and look for gadgets which does not clobber ebx
+
+
 Usage
 -----
 
@@ -365,16 +381,6 @@ print bytes(gadgets[0].bytes).encode('hex')
 # remove all gadgets containing bad bytes in address
 rs.options.badbytes = '000a0d'  # gadgets are filtered automatically
 ```
-
-Planned features for future versions
-------------------------------------
-
-- Edit header fields;
-- Print more informations;
-
-For any other ideas please contact me
-
-
 
 Project page
 ------------------------------------

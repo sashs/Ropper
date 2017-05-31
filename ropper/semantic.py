@@ -53,16 +53,15 @@ class Analyser(object):
             return False
         #print(gadget)
         try:
-            address = gadget.address + 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else gadget.address
-            irsb = pyvex.IRSB(str(gadget.bytes), address, gadget.arch.info, num_bytes=len(gadget.bytes))
+            thumb = 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else 0
+            irsb = pyvex.IRSB(str(gadget.bytes), gadget.address+thumb, gadget.arch.info, bytes_offset=thumb, num_bytes=len(gadget.bytes))
             irsb_anal = IRSBAnalyser()
             anal = irsb_anal.analyse(irsb)
             #print(anal.spOffset)
             return anal
 
         except pyvex.PyVEXError as e:
-            print(gadget)
-            print(e)
+            pass
 
 
 class InstructionAnalysis(object):

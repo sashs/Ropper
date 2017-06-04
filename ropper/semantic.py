@@ -70,7 +70,7 @@ class InstructionAnalysis(object):
 
     def __init__(self, arch):
         self.__spOffset = 0
-        self.__clobberedRegs = []
+        self.__clobberedRegs = {}
         self.__offsets = {}
         self.__tmps = {}
         self.__expressions = []
@@ -124,6 +124,7 @@ class Analysis(object):
         self.__regCount = {}
         self.__mem_counter = 0
         self.irsb = irsb
+        self.register_assignments = {}
 
     def __repr__(self):
         return 'None'
@@ -152,7 +153,7 @@ class Analysis(object):
 
     @property
     def clobberedRegs(self):
-        to_return = set()
+        to_return = dict()
         for ia in self.instructions:
             to_return.update(ia.clobberedRegs)
         return to_return
@@ -224,6 +225,8 @@ class Analysis(object):
         if not reg_list:
             reg_list = []
             self.__registerAccessors[(reg)] = reg_list
+
+        self.register_assignments[reg] = value
         
         reg_list.append('%s_%d_%d' % (reg, count, real_size))
 
@@ -532,10 +535,16 @@ class ZStatements(CommandClass):
         value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
         if not dest.startswith('cc_'):
-            analysis.currentInstruction.clobberedRegs.append(dest)
+            analysis.currentInstruction.clobberedRegs[dest] = None
 
         if stmt.offset == analysis.arch.sp_offset:
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
+        
+        if value is not None:
+            analysis.register_assignments[dest] = value[1][0] if len(value[1]) == 1 else value[0]
+        else:
+            analysis.register_assignments[dest] = None
+            
 
         return (analysis.writeRegister(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv), value[0]),dest, value[1])
    
@@ -545,6 +554,10 @@ class ZStatements(CommandClass):
         value = ZExpressions.use(stmt.data)( tmp, stmt.data, analysis)
         tmp = '%s_%s' % (tmp, stmt.data.result_size(analysis.irsb.tyenv))
         analysis.regs[tmp] = [tmp]
+        if value is not None:
+            analysis.register_assignments[tmp] = value[1][0] if len(value[1]) == 1 else value[0]
+        else:
+            analysis.register_assignments[tmp] = None
         if value is None or value[0] is None:
             return False
       
@@ -570,6 +583,24 @@ class IRSBAnalyser(object):
     def __init__(self):
         self.__cRegs = []
 
+    def __resolveAssignments(self, analysis):
+        to_return = {}
+        for orig in analysis.clobberedRegs.keys():
+            reg = orig
+            while True:
+                tmp = analysis.register_assignments.get(reg)
+                if tmp is None:
+                    to_return[orig] = None
+                    break
+                elif analysis.arch.registers.get(tmp) is not None:
+                    to_return[orig] = tmp
+                    break
+                
+                reg = tmp
+
+        return to_return
+            
+
     def analyse(self, irsb):
         anal = Analysis(irsb.arch, irsb)
         sp_offset = 0
@@ -583,7 +614,9 @@ class IRSBAnalyser(object):
             ci = anal.currentInstruction
             ci.expressions.append(expr)
 
-        return SemanticInformation(anal.regs, anal.usedRegs, anal.clobberedRegs, anal.mems, anal.expressions, anal.spOffset)
+        clobbered_regs = self.__resolveAssignments(anal)
+
+        return SemanticInformation(anal.regs, anal.usedRegs, clobbered_regs, anal.mems, anal.expressions, anal.spOffset)
 
 
 class Slice(object):

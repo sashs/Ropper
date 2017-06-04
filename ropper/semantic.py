@@ -206,7 +206,7 @@ class Analysis(object):
             old = 'Store(%s, %s + %d, %s)' % (old, addr, i, value)
         
         self.__mem = None
-        return 'self.%s == self.%s' % (old, self._memory)
+        return '%s == %s' % (old, self._memory)
 
     def writeRegister(self, offset, size, value):
         reg = self.__arch.translate_register_name(offset & 0xfffffffe, size)
@@ -217,30 +217,30 @@ class Analysis(object):
         else:
             real_size = real_size[1]*8
 
-        count = self.__regCount.get((reg),1)
+        count = self.__regCount.get((reg),0)
         self.__regCount[(reg)] = count + 1
 
         reg_list = self.__registerAccessors.get((reg))
         if not reg_list:
-            reg_list = ['%s_%d_%d' % (reg, 0, real_size)]
+            reg_list = []
             self.__registerAccessors[(reg)] = reg_list
         
         reg_list.append('%s_%d_%d' % (reg, count, real_size))
 
         if size < real_size:
-            return 'Extract(%d, 0, self.%s) == %s' %(size-1,self.__registerAccessors[(reg)][-1],value)
+            return 'Extract(%d, 0, %s) == %s' %(size-1,self.__registerAccessors[(reg)][-1],value)
         else:
-            return 'self.%s == %s' % (self.__registerAccessors[(reg)][-1], value)
+            return '%s == %s' % (self.__registerAccessors[(reg)][-1], value)
 
     def __getRegisterAccessor(self, register, size):
         register_list = self.__registerAccessors.get((register))
 
         if not register_list:
-            register_list = []
+            register_list = ['%s_%d_%d' % (register, self.__regCount.get(register, 0), size)]
+            self.__regCount[register] = 1
             self.__registerAccessors[register] = register_list
-        register_list.append('%s_%d_%d' % (register, self.__regCount.get(register, 0), size))
 
-        return self.__registerAccessors[register][-1]
+        return register_list[-1]
 
     def readRegister(self, offset, size):
         name = offset
@@ -304,12 +304,12 @@ class ZExpressions(CommandClass):
     @staticmethod
     def load(dest, data, analysis):
         addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
-        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv)),(addr.replace('self.',''),))
+        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv)),(addr,))
 
     @staticmethod
     def store(dest, data, analysis):
         addr = ZExpressions.use(data.addr)(dest, data.addr, analysis)[0]
-        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv), False),(addr.replace('self.',''),))
+        return (analysis.readMemory(addr, data.result_size(analysis.irsb.tyenv), False),(addr,))
 
     @staticmethod
     def const(dest, data, analysis):
@@ -321,14 +321,14 @@ class ZExpressions(CommandClass):
         tmp = '%s_%d' % (str(data), data.result_size(analysis.irsb.tyenv))
         analysis.currentInstruction.tmps[dest] = tmp
         analysis.regs[tmp] = [tmp]
-        return ('self.%s' % (tmp), (tmp,))
+        return ('%s' % (tmp), (tmp,))
 
     @staticmethod
     def binop(dest, data, analysis):
         arg1 = ZExpressions.use(data.args[0])(dest, data.args[0], analysis)
         arg2 = ZExpressions.use(data.args[1])(dest, data.args[1], analysis)
 
-        return (ZOperations.use(data.op)(arg1[0], arg2[0], analysis), (arg1[0].replace('self.',''), arg2[0].replace('self.','')))
+        return (ZOperations.use(data.op)(arg1[0], arg2[0], analysis), (arg1[0], arg2[0]))
 
     @staticmethod
     def unop(dest, data, analysis):
@@ -532,7 +532,6 @@ class ZStatements(CommandClass):
         value = ZExpressions.use(stmt.data)(dest,stmt.data, analysis)
 
         if not dest.startswith('cc_'):
-             
             analysis.currentInstruction.clobberedRegs.append(dest)
 
         if stmt.offset == analysis.arch.sp_offset:
@@ -549,7 +548,7 @@ class ZStatements(CommandClass):
         if value is None or value[0] is None:
             return False
       
-        return ('self.%s == %s' % (tmp, value[0]), tmp, value[1])
+        return ('%s == %s' % (tmp, value[0]), tmp, value[1])
 
     @staticmethod
     def store(stmt, analysis):
@@ -622,17 +621,20 @@ class ExpressionBuilder(object):
             return self.__z3objects[name]
         return super(ExpressionBuilder, self).__getattribute__(name)
 
-    def _createRegs(self, regsDict):
+    def _createRegs(self, objects, regsDict):
         for regs in regsDict.values():
             for reg in regs:
-                self.__z3objects[reg] = z3.BitVec(reg, int(reg.split('_')[-1],10))
+                objects[reg] = z3.BitVec(reg, int(reg.split('_')[-1],10))
 
-    def _createMem(self, mems):
+    def _createMem(self, objects, mems):
         for mem in mems:
             sizes = mem.split('_')
-            self.__z3objects[mem] = z3.Array(mem, z3.BitVecSort(int(sizes[-2],10)), z3.BitVecSort(int(sizes[-1],10)))
+            objects[mem] = z3.Array(mem, z3.BitVecSort(int(sizes[-2],10)), z3.BitVecSort(int(sizes[-1],10)))
 
-    def build(self, regs, mems, expression, constraint):
-        self._createRegs(regs)
-        self._createMem(mems)
-        return z3.And(eval(expression), z3.Not(eval(constraint)))
+    def build(self, regs, mems, expression, constraint=None):
+        z3objects = {}
+        self._createRegs(z3objects, regs)
+        self._createMem(z3objects, mems)
+        if constraint is None:
+            return eval(expression, globals(), z3objects)
+        return z3.And(eval(expression, globals(), z3objects), z3.Not(eval(constraint, globals(), z3objects)))

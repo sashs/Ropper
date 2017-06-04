@@ -157,19 +157,19 @@ def create_register_expression(register_accessor, size, high=False):
     register_size = int(register_accessor.split('_')[2])
     if size < register_size:
         if high:
-            return 'Extract(%d, 8, self.%s)' % (size+8-1, register_accessor)
+            return 'Extract(%d, 8, %s)' % (size+8-1, register_accessor)
         else:
-            return 'Extract(%d, 0, self.%s)' % (size-1, register_accessor)
+            return 'Extract(%d, 0, %s)' % (size-1, register_accessor)
     else:
-        return 'self.%s' % register_accessor
+        return '%s' % register_accessor
 
 def create_number_expression(number, size):
     return "BitVecVal(%d, %d)" % (number, size)
 
 def create_read_memory_expression(memory, addr, size):
-    to_return = 'self.%s[%s]' % (memory, addr)
+    to_return = '%s[%s]' % (memory, addr)
     for i in range(1, size/8):
-        value = 'self.%s[%s]' % (memory, '%s + %d' % (addr, i))
+        value = '%s[%s]' % (memory, '%s + %d' % (addr, i))
         to_return = 'Concat(%s, %s)' % (value, to_return)
 
     return to_return

@@ -1007,7 +1007,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         found = False
         analysedCount = None
         count = 0
-        for fc, gadget, analysedCount in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
+        for fc, gadget in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
             if fc != old:
                 old = fc
                 self.__cprinter.println()
@@ -1015,9 +1015,6 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             found = True
             self.__printGadget(gadget, self.__options.detailed)
             count += 1
-        
-        if analysedCount:
-            self.__cprinter.printInfo('%d gadgets analysed with solver' % analysedCount)
 
         self.__cprinter.printInfo('%d gadgets found' % count)
 

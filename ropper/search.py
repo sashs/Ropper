@@ -155,13 +155,13 @@ class Searcher(object):
                         found = True
                         found_gadgets.append(gadget)
                         semantic_info.checkedConstraints[constraint_key] = True
-                        yield (gadget, count)
+                        yield gadget
                     else:
                         semantic_info.checkedConstraints[constraint_key] = False
                 elif semantic_info.checkedConstraints[constraint_key]:
                     count += 1
                     found_gadgets.append(gadget)
-                    yield (gadget, count)
+                    yield gadget
                 else:
                     count += 1
                 

@@ -121,13 +121,14 @@ class Searcher(object):
                 if not semantic_info:
                     continue
                 
-                constraint_values = self.extractValues(constraints, semantic_info, gadget.arch)
-
+                #constraint_values = self.extractValues(constraints, semantic_info, gadget.arch)
+                cc = z3helper.ConstraintCompiler(gadget.arch, semantic_info)
+                constraint_values = cc.getSymbols(constraints)      
+                          
                 if self.__isSimilarGadget(gadget, found_gadgets) \
                 or self.__areRegistersNotUsed(constraint_values, semantic_info) \
                 or self.__areStableRegistersClobbered(stableRegs, semantic_info.clobberedRegisters):
                     continue
-                cc = z3helper.ConstraintCompiler(gadget.arch, semantic_info)
                 constraint_string = cc.compile(';'.join(constraints))
                 if constraint_key not in semantic_info.checkedConstraints:
                     set_reg = constraint_values[0][0]

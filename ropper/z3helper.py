@@ -33,15 +33,33 @@ class ConstraintCompiler(object):
     """
 
     NUMBER_REGEX = '(-?[0-9]+)'
-    REG_REGEX = '([a-zA-Z0-9]+)'
+    REG_REGEX = '(?P<{}>[a-zA-Z0-9]+)'
     ADJUST_REGEX = '([\\+\-\*/=]=)'
-    ASSIGNMENT_REGEX = '('+REG_REGEX + ' *' + ADJUST_REGEX + ' *('+NUMBER_REGEX+'|'+REG_REGEX+'|(\[)'+REG_REGEX+'(\])))'
-    POP_REGEX = '((pop) +([a-zA-Z0-9]+))'
+    ASSIGNMENT_REGEX = '('+REG_REGEX.format('reg_dst_1') + ' *' + ADJUST_REGEX + ' *('+NUMBER_REGEX+'|'+REG_REGEX.format('reg_src_1')+'|(\[)'+REG_REGEX.format('reg_src_2')+'(\])))'
+    POP_REGEX = '((pop) +'+REG_REGEX.format('reg_dst_2')+')'
     CONSTRAINT_REGEX = '(' + ASSIGNMENT_REGEX + '|' + POP_REGEX + ')'
 
     def __init__(self, architecture, semantic_info):
         self.__architecture = architecture
         self.__semantic_info = semantic_info
+
+    def getSymbols(self, constraints):
+        symbols = []
+        print (constraints)
+        for constraint in constraints:
+            match = re.match(ConstraintCompiler.CONSTRAINT_REGEX, constraint)
+            if match is None:
+                raise Exception('Invalid syntax: %s' % constraint)
+            reg_dst = match.group('reg_dst_1')
+            if reg_dst is not None:
+                reg_src = match.group('reg_src_1')
+                reg_src = match.group('reg_src_2') if reg_src is None else reg_src
+                symbols.append((reg_dst, reg_src))
+            else:
+                symbols.append((match.group('reg_dst_2'), None))
+
+        return symbols
+
 
     def compile(self, constraints):
         """
@@ -105,7 +123,9 @@ class ConstraintCompiler(object):
             raise ConstraintError('Invalid syntax: %s' % op)
         value = tokens.pop()
         if value == '[':
+            r1 = register
             register = tokens.pop()
+            
             register_name = self.__architecture.getRegisterName(register)
             if not register_name:
                 raise ConstraintError('Invalid register: %s' & register)
@@ -113,6 +133,7 @@ class ConstraintCompiler(object):
             tokens.pop()
         elif re.match(ConstraintCompiler.NUMBER_REGEX, value):
             value = create_number_expression(int(value), int(reg1_last.split('_')[-1]))
+            
         elif value in self.__architecture.info.registers:
             value = self.__architecture.getRegisterName(value)
             value = self.__semantic_info.regs[value][0]
@@ -143,7 +164,18 @@ class ConstraintCompiler(object):
         return mem_expr
 
     def _popReg(self, pop, tokens):
-        reg = tokens.pop()
+        reg_name = tokens.pop()
+        self.symbols.append((reg_name,None))
+        reg = self.__semantic_info.regs[reg_name][-1]
+        if self.__semantic_info.mems:
+            memory = self.__semantic_info.mems[0]
+        else:
+            memory = 'memory%d_%d_%d' % (0, self.__architecture.info.bits, 8)
+            self.__semantic_info.mems.append(memory)
+        size = int(reg.split('_')[-1])
+        register_expr = create_register_expression(reg, size)
+        mem_expr = create_read_memory_expression(memory, register_expr, size)
+        return mem_expr
 
 
 class ConstraintError(RopperError):

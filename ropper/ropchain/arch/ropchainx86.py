@@ -125,7 +125,7 @@ class RopChainX86(RopChain):
             fail_max = []
             chain_tmp = None
             for chain,fail in failed_chains.items():
-                if not fail_tmp or len(fail) > len(fail_max):
+                if len(fail) > len(fail_max):
                     fail_max = fail
                     chain_tmp = chain
 
@@ -166,8 +166,10 @@ class RopChainX86(RopChain):
         return regs
 
 
-    def _printRopInstruction(self, gadget, padding=True):
+    def _printRopInstruction(self, gadget, padding=True, number=None):
         toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],4), gadget.simpleString()))
+        if number is not None:
+            toReturn +=self._printPaddingInstruction(number)        
         if padding:
             regs = self._paddingNeededFor(gadget)
             for i in range(len(regs)):
@@ -207,7 +209,6 @@ class RopChainX86(RopChain):
         while quali < RopChainX86System.MAX_QUALI:
             for binary in self._binaries:
                 for gadget in self._gadgets[binary]:
-
                     if gadget.category[0] == category and gadget.category[1] == quali:
                         if badSrc and gadget.category[2]['src'] in badSrc:
                             continue
@@ -547,10 +548,9 @@ class RopChainX86(RopChain):
                 popReg =self._find(Category.LOAD_REG, reg=reg, badDst=badRegs,dontModify=dontModify)
                 if not popReg:
                     raise RopChainError('Cannot build number gadget!')
-                toReturn = self._printRopInstruction(popReg)
-                toReturn += self._printPaddingInstruction(toHex(number,4))
+                toReturn = self._printRopInstruction(popReg, padding=True, number=toHex(number,4))
                 return (toReturn , popReg.category[2]['dst'])
-        except RopChainError:
+        except RopChainError as e:
             return self._createNumberXchg(number, reg, badRegs, dontModify)
 
     def _createAddress(self, address, reg=None, badRegs=None, dontModify=None):
@@ -621,6 +621,7 @@ class RopChainX86System(RopChainX86):
 
     def create(self, options={}):
         cmd = options.get('cmd')
+        address = options.get('address')
         if not cmd:
             cmd = '/bin/sh'
         if len(cmd.split(' ')) > 1:
@@ -628,30 +629,54 @@ class RopChainX86System(RopChainX86):
 
         self._printMessage('ROPchain Generator for syscall execve:\n')
         self._printMessage('\nwrite command into data section\neax 0xb\nebx address to cmd\necx address to null\nedx address to null\n')
-
-        section = self._binaries[0].getSection('.data')
-        length = math.ceil(float(len(cmd))/4) * 4
         chain = self._printHeader()
-        chain_tmp = '\n'
-        chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
-        badregs = []
-
-        while True:
-
-            ret = self._createNumber(0x0, badRegs=badregs)
-            chain_tmp += ret[0]
-            try:
-                chain_tmp += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
-                break
-            except BaseException as e:
-                #raise e
-                badregs.append(ret[1])
-
         gadgets = []
-        gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
-        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
-        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
-        gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
+        can_create_command = False
+        chain_tmp = '\n'
+        if address is None:
+            section = self._binaries[0].getSection('.data')
+            length = math.ceil(float(len(cmd))/4) * 4
+            
+            try:
+                chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
+                can_create_command = True
+                
+            except RopChainError as e:
+                self._printMessage('Cannot create gadget: %s' % e.message)
+                self._printMessage('Use 0x41414141 as command address. Please replace that value.')
+                address = 0x41414141
+            if can_create_command:
+                
+                badregs = []
+                while True:
+
+                    ret = self._createNumber(0x0, badRegs=badregs)
+                    chain_tmp += ret[0]
+                    try:
+                        chain_tmp += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
+                        break
+                    except BaseException as e:
+                        #raise e
+                        badregs.append(ret[1])
+
+                gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
+                gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
+                gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
+                gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
+        if address is not None and not can_create_command:
+            if type(address) is str:
+                address = int(address, 16)
+            nulladdress = options.get('nulladdress')
+            if nulladdress is None:
+                self._printMessage('No address to a null bytes was given, 0x42424242 is used instead.')
+                self._printMessage('Please replace that value.')
+                nulladdress = 0x42424242
+            elif type(nulladdress) is str:
+                nulladdress = int(nulladdress,16)
+            gadgets.append((self._createNumber, [address],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
+            gadgets.append((self._createNumber, [nulladdress],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
+            gadgets.append((self._createNumber, [nulladdress],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
+            gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
 
         self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)

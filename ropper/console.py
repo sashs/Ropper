@@ -56,8 +56,8 @@ def safe_cmd(func):
         except KeyboardInterrupt:
             cp.println()
         except:
+            cp.printError('Please report this error on https://github.com/sashs/ropper')            
             cp.printError( traceback.format_exc())
-            cp.printError('Please report this error on https://github.com/sashs/ropper')
     return cmd
 
 class CallbackClass(object):

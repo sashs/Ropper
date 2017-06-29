@@ -610,7 +610,7 @@ class IRSBAnalyser(object):
             anal.printable = False
             expr = func(stmt, anal)
             if anal.printable:
-                print stmt
+                print(stmt)
             ci = anal.currentInstruction
             ci.expressions.append(expr)
 

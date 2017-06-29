@@ -642,7 +642,7 @@ class RopChainX86System(RopChainX86):
                 can_create_command = True
                 
             except RopChainError as e:
-                self._printMessage('Cannot create gadget: %s' % e.message)
+                self._printMessage('Cannot create gadget: writewhatwhere')
                 self._printMessage('Use 0x41414141 as command address. Please replace that value.')
                 address = 0x41414141
             if can_create_command:
@@ -700,6 +700,8 @@ class RopChainX86System(RopChainX86):
                     chain_tmp += self._createOpcode('65ff1510000000')
                     self._printMessage('call gs:[0x10] found')
                 except RopChainError:
+                    chain_tmp += '# INSERT SYSCALL GADGET HERE\n'
+
                     self._printMessage('No call gs:[0x10] opcode found')
 
 

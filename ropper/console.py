@@ -446,7 +446,7 @@ class Console(cmd.Cmd):
         elif options.unset:
             self.__set(options.unset, False)
         elif options.info:
-            self.__printData('informations')
+            self.__printData('information')
         elif options.ppr:
             self.__searchPopPopRet()
         elif options.jmp:

@@ -41,6 +41,7 @@ def start(args):
         app_options = Options(args)
         Console(app_options).start()
     except RopperError as e:
-        print(e)
+        print('Please report this error on https://github.com/sashs/ropper')
+        print('Stacktrace:')
         print(traceback.format_exc())
 

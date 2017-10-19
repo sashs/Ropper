@@ -31,7 +31,7 @@ from ropper.gadget import Gadget, GadgetType
 from ropper.service import RopperService, filterBadBytes
 from ropper.service import deleteDuplicates, cfgFilterGadgets
 from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
-
+import traceback
 app_options = None
 VERSION=[2,0,0]
 
@@ -42,4 +42,5 @@ def start(args):
         Console(app_options).start()
     except RopperError as e:
         print(e)
+        print(traceback.format_exc())
 

@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from ropper.common.abstract import *
+from ropper.common.enum import Enum
 from ropper.common.error import NotSupportedError
 from ropper.search import Searcher
 from ropper.search import Searcherx86
@@ -38,10 +39,12 @@ try:
 except:
     pass
 
+class Endianess(Enum):
+    _enum_ = 'LITTLE BIG'
 
 class Architecture(AbstractSingleton):
 
-    def __init__(self, arch, mode, addressLength, align):
+    def __init__(self, arch, mode, addressLength, align, endianess=Endianess.LITTLE):
         super(Architecture, self).__init__()
         self._name = 'raw'
         self._arch = arch
@@ -58,11 +61,15 @@ class Architecture(AbstractSingleton):
         self._categories = {}
         self._maxInvalid = 1
 
+        self._endianess = endianess
+
         self._searcher = Searcher()
 
         self._initGadgets()
         self._initBadInstructions()
         self._initCategories()
+        
+        self._initEndianess(endianess)
 
         self._endings[gadget.GadgetType.ALL] = self._endings[
             gadget.GadgetType.ROP] + self._endings[gadget.GadgetType.JOP] + self._endings[gadget.GadgetType.SYS]
@@ -77,6 +84,14 @@ class Architecture(AbstractSingleton):
 
     def _initCategories(self):
         pass
+
+    def _initEndianess(self, endianess):
+        if endianess == Endianess.BIG:
+            for key in self.endings:
+                tmp = []
+                for pattern, size in self.endings[key]:
+                    tmp.append((pattern[::-1], size))
+                self.endings[key] = tmp 
 
     @property
     def info(self):
@@ -118,6 +133,10 @@ class Architecture(AbstractSingleton):
     @property
     def maxInvalid(self):
         return self._maxInvalid
+
+    @property
+    def endianess(self):
+        return self._endianess
 
     def getRegisterName(self, reg):
         if self.info is None:
@@ -263,12 +282,12 @@ class ArchitectureX86_64(ArchitectureX86):
 
 class ArchitectureMips(Architecture):
 
-    def __init__(self):
-        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4)
+    def __init__(self, endianess=Endianess.LITTLE):
+        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4, endianess)
         self._name = 'MIPS'
 
         if 'keystone' in globals():
-            self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_32)
+            self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_MIPS32)
 
         if 'archinfo' in globals():
             self._info = archinfo.ArchMIPS32()
@@ -281,16 +300,23 @@ class ArchitectureMips(Architecture):
                                                 (b'\x08\x00\xe0\x03', 4)] # jr ra
 
 
-class ArchitectureMips64(ArchitectureMips):
+class ArchitectureMipsBE(ArchitectureMips):
 
     def __init__(self):
-        super(ArchitectureMips64, self).__init__()
+        super(ArchitectureMipsBE, self).__init__(Endianess.BIG)
+        self._name = 'MIPSBE'
+        self._mode |= CS_MODE_BIG_ENDIAN
+
+class ArchitectureMips64(ArchitectureMips):
+
+    def __init__(self, endianess=Endianess.LITTLE):
+        super(ArchitectureMips64, self).__init__(endianess)
         self._name = 'MIPS64'
 
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_64)
 
-        self._mode = CS_MODE_64
+        self._mode = CS_MODE_MIPS64
         if 'archinfo' in globals():
             self._info = archinfo.ArchMIPS64()
 
@@ -300,10 +326,17 @@ class ArchitectureMips64(ArchitectureMips):
         super(ArchitectureMips64, self)._initGadgets()
 
 
-class ArchitectureArm(Architecture):
+class ArchitectureMips64BE(ArchitectureMips64):
 
     def __init__(self):
-        super(ArchitectureArm,self).__init__(CS_ARCH_ARM, CS_MODE_ARM, 4, 4)
+        super(ArchitectureMips64BE, self).__init__(Endianess.BIG)
+        self._name = 'MIPS64BE'
+        self._mode |= CS_MODE_BIG_ENDIAN
+
+class ArchitectureArm(Architecture):
+
+    def __init__(self, endianess=Endianess.LITTLE):
+        super(ArchitectureArm,self).__init__(CS_ARCH_ARM, CS_MODE_ARM, 4, 4, endianess)
         self._searcher = SearcherARM()
         self._name = 'ARM'
 
@@ -319,6 +352,22 @@ class ArchitectureArm(Architecture):
                                                 (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
 
                                                 (b'\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
+
+
+class ArchitectureArmBE(ArchitectureArm):
+    
+    def __init__(self):
+        super(ArchitectureArmBE, self).__init__(Endianess.BIG)
+        self._name = 'ARMBE'
+        self._mode |= CS_MODE_BIG_ENDIAN
+
+    def _initEndianess(self, endianess):
+        super(ArchitectureArmBE, self)._initEndianess(endianess)    
+        self._endings[gadget.GadgetType.ROP] = [(b'\xe8\xbd\x80[\x01-\xff]', 4)] # pop {[reg]*,pc}
+        self._endings[gadget.GadgetType.JOP] = [(b'\xe1\x2f\xff[\x10-\x1e]', 4), # bx <reg>
+                                                (b'\xe1\x2f\xff[\x30-\x3e]', 4), # blx <reg>
+
+                                                (b'\xe8\xdb\x80\x01', 4)] # ldm sp! ,{pc}
 
 class ArchitectureArmThumb(Architecture):
 
@@ -398,8 +447,11 @@ class ArchitecturePPC64(ArchitecturePPC):
 x86 = ArchitectureX86()
 x86_64 = ArchitectureX86_64()
 MIPS = ArchitectureMips()
+MIPSBE = ArchitectureMipsBE()
 MIPS64 = ArchitectureMips64()
+MIPS64BE = ArchitectureMips64BE()
 ARM = ArchitectureArm()
+ARMBE = ArchitectureArmBE()
 ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
 PPC = ArchitecturePPC()

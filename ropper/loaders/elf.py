@@ -20,6 +20,7 @@
 from ctypes import *
 from ropper.loaders.loader import *
 from ropper.common.error import LoaderError
+from ropper.arch import Endianess
 import filebytes.elf as elf
 import os
 
@@ -43,8 +44,12 @@ class ELF(Loader):
 
 
     def _loadDefaultArch(self):
-        try:
-            return getArch( (elf.EM[self._binary.elfHeader.header.e_machine], elf.ELFCLASS[self._binary.elfHeader.header.e_ident[elf.EI.CLASS]]),self._binary.elfHeader.header.e_entry)
+        try:      
+            machine = elf.EM[self._binary.elfHeader.header.e_machine]
+            cls = elf.ELFCLASS[self._binary.elfHeader.header.e_ident[elf.EI.CLASS]]
+            end = self._binary._bytes[elf.EI.DATA]
+
+            return getArch( (machine,cls, end ),self._binary.elfHeader.header.e_entry)
         except:
             return None
 
@@ -118,13 +123,16 @@ def getArch(*params):
     return arch
 
 
-ARCH = {(elf.EM.INTEL_386 , elf.ELFCLASS.BITS_32): x86,
-        (elf.EM.INTEL_80860, elf.ELFCLASS.BITS_32): x86,
-        (elf.EM.IA_64, elf.ELFCLASS.BITS_64): x86_64,
-        (elf.EM.X86_64, elf.ELFCLASS.BITS_64): x86_64,
-        (elf.EM.MIPS, elf.ELFCLASS.BITS_32): MIPS,
-        (elf.EM.MIPS, elf.ELFCLASS.BITS_64): MIPS64,
-        (elf.EM.ARM, elf.ELFCLASS.BITS_32) : ARM,
-        (elf.EM.ARM64, elf.ELFCLASS.BITS_64) : ARM64,
-        (elf.EM.PPC, elf.ELFCLASS.BITS_32) : PPC,
-        (elf.EM.PPC, elf.ELFCLASS.BITS_64) : PPC64}
+ARCH = {(elf.EM.INTEL_386 , elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB): x86,
+        (elf.EM.INTEL_80860, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB): x86,
+        (elf.EM.IA_64, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB): x86_64,
+        (elf.EM.X86_64, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB): x86_64,
+        (elf.EM.MIPS, elf.ELFCLASS.BITS_32, elf.ELFDATA.MSB): MIPSBE,
+        (elf.EM.MIPS, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB): MIPS,
+        (elf.EM.MIPS, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB): MIPS64BE,
+        (elf.EM.MIPS, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB): MIPS64,
+        (elf.EM.ARM, elf.ELFCLASS.BITS_32, elf.ELFDATA.MSB) : ARMBE,
+        (elf.EM.ARM, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB) : ARM,
+        (elf.EM.ARM64, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB) : ARM64,
+        (elf.EM.PPC, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB) : PPC,
+        (elf.EM.PPC, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB) : PPC64}

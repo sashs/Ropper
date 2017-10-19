@@ -189,20 +189,17 @@ class Console(cmd.Cmd):
             self.prompt = cstr('(ropper)> ', Color.RED)
 
     def __loadFile(self, file):
-        try:
             
-            self.__rs.addFile(file, raw=self.__options.raw,
-                              arch=self.__options.arch)
-            self.__options.arch = None
-            
-            self.__currentFileName = file
-            self.__updatePrompt()
-            if self.__options.I is not None:
-                self.__rs.setImageBaseFor(file, self.__options.I)
-            if not self.__options.no_load and self.__options.console:
-                self.__loadGadgets()
-        except BaseException as e:
-            raise RopperError(e)
+        self.__rs.addFile(file, raw=self.__options.raw,
+                          arch=self.__options.arch)
+        self.__options.arch = None
+        
+        self.__currentFileName = file
+        self.__updatePrompt()
+        if self.__options.I is not None:
+            self.__rs.setImageBaseFor(file, self.__options.I)
+        if not self.__options.no_load and self.__options.console:
+            self.__loadGadgets()
         
         #self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 

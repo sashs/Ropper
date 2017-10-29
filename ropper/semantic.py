@@ -609,8 +609,8 @@ class IRSBAnalyser(object):
             func = ZStatements.use(stmt)
             anal.printable = False
             expr = func(stmt, anal)
-            if anal.printable:
-                print(stmt)
+           # if anal.printable:
+            #    print(stmt)
             ci = anal.currentInstruction
             ci.expressions.append(expr)
 

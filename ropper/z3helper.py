@@ -45,7 +45,6 @@ class ConstraintCompiler(object):
 
     def getSymbols(self, constraints):
         symbols = []
-        print (constraints)
         for constraint in constraints:
             match = re.match(ConstraintCompiler.CONSTRAINT_REGEX, constraint)
             if match is None:

@@ -19,6 +19,8 @@
 import re
 try:
     import z3
+    import archinfo
+    import pyvex
 except:
     pass
 from ropper.common.error import RopperError
@@ -104,6 +106,10 @@ class Searcher(object):
         if 'z3' not in globals():
             raise RopperError('z3 has to be installed in order to use semantic search')
 
+        if 'archinfo' not in globals():
+            raise RopperError('archinfo has to be installed in order to use semantic search')
+        if 'pyvex' not in globals():
+            raise RopperError('pyvex has to be installed in order to use semantic search')
         to_return = []
         count = 0
         max_count = len(gadgets)

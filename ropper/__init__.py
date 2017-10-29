@@ -30,10 +30,10 @@ from ropper.loaders.loader import Loader, Type
 from ropper.gadget import Gadget, GadgetType
 from ropper.service import RopperService, filterBadBytes
 from ropper.service import deleteDuplicates, cfgFilterGadgets
-from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64
-
+from ropper.arch import ARM,ARM64, ARMTHUMB,  x86, x86_64, PPC, PPC64, MIPS, MIPS64, MIPSBE, MIPS64BE, ARMBE
+import traceback
 app_options = None
-VERSION=[1,10,10]
+VERSION=[1,11,0]
 
 def start(args):
     try:
@@ -41,5 +41,7 @@ def start(args):
         app_options = Options(args)
         Console(app_options).start()
     except RopperError as e:
-        print(e)
+        print('Please report this error on https://github.com/sashs/ropper')
+        print('Stacktrace:')
+        print(traceback.format_exc())
 

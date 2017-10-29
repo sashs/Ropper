@@ -87,7 +87,7 @@ class RopChainX86_64(RopChain):
         max_perm = math.factorial(len(gadgets))
         for x in itertools.permutations(gadgets):
             counter += 1
-            self._printMessage('\r[*] Try permuation %d / %d' % (counter, max_perm))
+            self._printMessage('[*] Try permuation %d / %d' % (counter, max_perm))
             found = False
             for y in failed:
 
@@ -590,7 +590,7 @@ class RopChainX86_64(RopChain):
         if len(gadgets) > 0:
             return gadgets[0]
         else:
-            raise RopChainError('Cannot create gadget for opcode: %x' % opcode)
+            raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
 
     def create(self):
         pass
@@ -610,6 +610,7 @@ class RopChainSystemX86_64(RopChainX86_64):
 
     def create(self, options):
         cmd = options.get('cmd')
+        address = options.get('address')
         if not cmd:
             cmd = '/bin/sh'
         if len(cmd.split(' ')) > 1:
@@ -617,33 +618,56 @@ class RopChainSystemX86_64(RopChainX86_64):
 
         self._printMessage('ROPchain Generator for syscall execve:\n')
         self._printMessage('\nwrite command into data section\nrax 0xb\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
-
-        section = self._binaries[0].getSection('.data')
-
-        length = math.ceil(float(len(cmd))/8) * 8
         chain = self._printHeader()
-        chain_tmp = '\n'
-        chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
-
-        badregs = []
-        tmpx = ''
-        while True:
-
-            ret = self._createNumber(0x0, badRegs=badregs)
-            tmpx = ret[0]
-            try:
-                tmpx += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
-                break
-            except BaseException as e:
-                #raise e
-                badregs.append(ret[1])
-
-        chain_tmp += tmpx
         gadgets = []
-        gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'rdi'},['rdi','edi', 'di']))
-        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rsi'},['rsi','esi', 'si']))
-        gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
-        gadgets.append((self._createNumber, [59],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
+        can_create_command = False
+        chain_tmp = '\n'
+        if address is None:
+            section = self._binaries[0].getSection('.data')
+
+            length = math.ceil(float(len(cmd))/8) * 8
+            try:
+                chain_tmp += self._createCommand(cmd,section.offset)[0]
+                can_create_command = True
+
+            except RopChainError as e:
+                self._printMessage('Cannot create gadget: writewhatwhere')
+                self._printMessage('Use 0x4141414141414141 as command address. Please replace that value.')
+                address = 0x4141414141414141
+            if can_create_command:
+                badregs = []
+                tmpx = ''
+                while True:
+
+                    ret = self._createNumber(0x0, badRegs=badregs)
+                    tmpx = ret[0]
+                    try:
+                        tmpx += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
+                        break
+                    except BaseException as e:
+                        #raise e
+                        badregs.append(ret[1])
+
+                chain_tmp += tmpx
+                gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'rdi'},['rdi','edi', 'di']))
+                gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rsi'},['rsi','esi', 'si']))
+                gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
+                gadgets.append((self._createNumber, [59],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
+        if address is not None and not can_create_command:
+            if type(address) is str:
+                address = int(address, 16)
+            nulladdress = options.get('nulladdress')
+            if nulladdress is None:
+                self._printMessage('No address to a null bytes was given, 0x4242424242424242 is used instead.')
+                self._printMessage('Please replace that value.')
+                nulladdress = 0x4242424242424242
+            elif type(nulladdress) is str:
+                nulladdress = int(nulladdress,16)
+
+            gadgets.append((self._createNumber, [address],{'reg':'rdi'},['rdi','edi', 'di']))
+            gadgets.append((self._createNumber, [nulladdress],{'reg':'rsi'},['rsi','esi', 'si']))
+            gadgets.append((self._createNumber, [nulladdress],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
+            gadgets.append((self._createNumber, [59],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
 
         self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)
@@ -662,7 +686,7 @@ class RopChainSystemX86_64(RopChainX86_64):
                 self._printMessage('syscall opcode found')
 
             except RopChainError:
-                chain_tmp += '# INSERT SYSCALL GADGET HERE'
+                chain_tmp += '# INSERT SYSCALL GADGET HERE\n'
                 self._printMessage('syscall opcode not found')
 
 

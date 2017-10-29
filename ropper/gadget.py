@@ -16,15 +16,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import re
 import hashlib
 import ropper.common.enum as enum
-from ropper.common.utils import toHex
+from ropper.common.utils import toHex, isHex
 from ropper.common.error import RopperError
 from ropper.common.coloredstring import *
 from binascii import hexlify, unhexlify
+from ropper.semantic import Analyser, Category
 import ropper.arch
+import sys
 
 # Optional sqlite support
 try:
@@ -32,8 +34,6 @@ try:
 except:
     pass
 
-class Category(enum.Enum):
-    _enum_ = 'NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG XCHG_REG NONE PUSHAD'
 
 
 
@@ -45,19 +45,37 @@ class Gadget(object):
 
     DETAILED = False
     IMAGE_BASES = {}
+    ANALYSER = Analyser()
 
-    def __init__(self, fileName, section, arch, lines=None, bytes=None, init=False):
+    def __init__(self, fileName, section, arch, lines=None, bytes=None, semantic_information=None):
         #super(Gadget, self).__init__()
+        if isinstance(arch, str):
+            arch = ropper.arch.getArchitecture(arch)
         self.__arch = arch
-        self.__lines = None
+        self.__lines = lines
         self.__gadget = None
         self.__category = None
         self._fileName = fileName
         self._section = section
-        self.__bytes = None
-        if init:
-            self.__initialize(lines, bytes)
+        self.__bytes = bytes
+        self.__info = semantic_information
+        self.__analysed = semantic_information is not None
+        #if init:
+        #    self.__initialize(lines, bytes)
 
+    @property
+    def info(self):
+        
+        return self.__info
+
+    @info.setter
+    def info(self, info):
+        self.__info = info
+
+    @property
+    def arch(self):
+        return self.__arch
+    
     @property
     def lines(self):
         if self.__lines == None:
@@ -139,7 +157,6 @@ class Gadget(object):
         if bytes:
             self.bytes += bytes
 
-
     def match(self, filter):
         if not filter or len(filter) == 0:
             return True
@@ -147,7 +164,6 @@ class Gadget(object):
             return bool(re.match(filter, self._gadget.replace('.w','')))
         else:
             return bool(re.match(filter, self._gadget))
-
 
     def addressesContainsBytes(self, badbytes):
         line =  self._lines[0]
@@ -158,13 +174,11 @@ class Gadget(object):
                 b = ord(b)
 
             # TODO: This should be changed. Only 4 bytes are checked
-            for i in range(4):
+            for i in range(self.arch.addressLength):
                 if (address & 0xff) == b:
 
                     return True
                 address >>= 8
-
-
 
     def simpleInstructionString(self):
         toReturn = ''
@@ -178,13 +192,17 @@ class Gadget(object):
         return toReturn
 
     def simpleString(self):
+        analyseColor = Color.CYAN if self.__info else Color.RED
         address = self.__lines[0][0]
-        if self.__arch == ropper.arch.ARMTHUMB:
+        
+        if isinstance(self.arch, ropper.arch.ArchitectureArmThumb):
             address += 1
-            toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
+            toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
         else:
-            toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), Color.RED)
+            toReturn = '%s: ' % cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor)
         toReturn += self.simpleInstructionString()
+        if self.__info:
+            toReturn += '\nClobbered Register = %s; StackPointer-Offset = %s\n' % (", ".join(list(self.info.clobberedRegisters)),self.info.spOffset if self.info.spOffset is not None else 'Undef')
         return toReturn
 
     @property
@@ -241,6 +259,6 @@ class Gadget(object):
 
         return toReturn
 
-
     def __repr__(self):
-        return 'Gadget(%s,%s,%s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(True))
+        return 'Gadget(%s, %s, %s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(self.info))
+

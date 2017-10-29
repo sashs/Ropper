@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = '1.10.10'
+version = '1.11.0'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """
@@ -34,7 +34,7 @@ setup(
     author_email="sashs@scoding.de",
     install_requires=install_requires,
     url="http://scoding.de/ropper/",
-    scripts=['script/ropper'],
+    scripts=['script/ropper', 'script/ropper2'],
     classifiers=[
         'Topic :: Security',
         'Environment :: Console',

@@ -29,6 +29,7 @@ from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
 from codecs import encode, decode
 from hashlib import md5
+from ropper.semantic import Analyser, SemanticInformation
 import tempfile
 import re
 import os
@@ -101,7 +102,6 @@ def cfgFilterGadgets(binary, gadgets, callback=None):
     
     def intern(gadgets, callback=None,current=0, length=0):
         result = []
-        
         added = False
         for gadget in gadgets:
             loadConfig = binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
@@ -206,6 +206,12 @@ class Options(object):
         elif cfg_only == None:
             options['cfg_only'] = False
 
+        count_of_findings = options.get('count_of_findings')
+        if count_of_findings != None and not isinstance(count_of_findings, int):
+            raise TypeError('cfg_only has to be an instance of bool')
+        elif count_of_findings == None:
+            options['count_of_findings'] = 5
+
     def items(self):
         for key, value in self.__options_dict.items():
             yield key, value
@@ -236,7 +242,8 @@ class Options(object):
 
 class RopperService(object):
 
-    CACHE_FOLDER = 'ropper_cache'
+    ROPPER_FOLDER = os.path.expanduser('~') + os.path.sep + ".ropper/"
+    CACHE_FOLDER = os.path.expanduser('~') + os.path.sep + ".ropper/cache/"
     CACHE_FILE_COUNT = 16
 
     def __init__(self, options={}, callbacks=None):
@@ -304,9 +311,9 @@ class RopperService(object):
 
     def __saveCache(self, file):
         try:
-            temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
+            temp = RopperService.CACHE_FOLDER
             if not os.path.exists(temp):
-                os.mkdir(temp)
+                os.makedirs(temp)
 
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
             count = RopperService.CACHE_FILE_COUNT
@@ -330,12 +337,14 @@ class RopperService(object):
             with open(cache_file,'wb') as f:
                 f.write(encode(repr(file.allGadgets).encode('ascii'),'zip'))
         except BaseException as e:
+            print(e)
             for i in range(1, RopperService.CACHE_FILE_COUNT+1):
                 if os.path.exists(cache_file+'_%d' % i):
                     os.remove(cache_file+'_%d' % i)
 
 
     def __loadCachePerProcess(self, fqueue, gqueue):
+        nan=0
         while True:
             cacheFileName = fqueue.get()
             if cacheFileName is None:
@@ -352,10 +361,11 @@ class RopperService(object):
 
     def __loadCache(self, file):
         mp = False
+        nan= 0
         processes = []
         single = False
         try:
-            temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
+            temp = RopperService.CACHE_FOLDER
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
 
             if not os.path.exists(cache_file):
@@ -375,6 +385,8 @@ class RopperService(object):
                     with open(cache_file,'rb') as f:
                         data = f.read()
                         all_gadgets.extend(eval(decode(data,'zip')))
+                        if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
+                            self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, 1.0)
                 else:
                     for i in range(1,RopperService.CACHE_FILE_COUNT+1):
                         if os.path.exists(cache_file+'_%d' % i):
@@ -464,7 +476,7 @@ class RopperService(object):
         return None
 
     def clearCache(self):
-        temp = tempfile.gettempdir() + os.path.sep + RopperService.CACHE_FOLDER
+        temp = RopperService.CACHE_FOLDER
         if os.path.exists(temp):
             import shutil
             shutil.rmtree(temp)
@@ -481,8 +493,6 @@ class RopperService(object):
             arch=getArchitecture(arch)
 
         loader = Loader.open(name, bytes=bytes, raw=raw, arch=arch)
-        if len(self.__files) > 0 and self.__files[0].loader.arch != loader.arch:
-            raise RopperError('It is not supported to open file with different architectures! Loaded: %s; File to open: %s' % (str(self.__files[0].loader.arch), str(loader.arch)))
         file = FileContainer(loader)
         self.__files.append(file)
 
@@ -560,7 +570,24 @@ class RopperService(object):
 
         return self.__filterBadBytes(to_return)
 
+    def analyseGadgets(self, fileObject):
+        gadgets = fileObject.gadgets
+        analyser = Analyser()
+        cb = None
+        lg = len(gadgets)
+        if self.__callbacks and hasattr(self.__callbacks, '__analyseGadgetsProgress__'):
+            cb = self.__callbacks.__analyseGadgetsProgress__
+        for i,g in enumerate(gadgets):
+            g.info = analyser.analyse(g)
+            if cb:
+                cb(g, float(i)/lg)
+        if cb:
+             cb(None, 1.0)
+        self.__saveCache(fileObject)
+        fileObject.analysed = True
+
     def loadGadgetsFor(self, name=None):
+        
         def load_gadgets(f):
             gtype = None
             cache = False
@@ -577,9 +604,13 @@ class RopperService(object):
             if f.allGadgets == None:
                 cache = True
                 f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
+            
             if cache:
                 self.__saveCache(f)
             f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
+            f.analysed = f.gadgets[0].info is not None if len(f.gadgets) > 0 else False
+            #self._analyseGadgets(f.gadgets)
+
          
         if name is None:
             for fc in self.__files:
@@ -650,6 +681,32 @@ class RopperService(object):
                 for gadget in s.search(fc.gadgets, search, quality):
                     yield(fc.name, gadget)
 
+    def semanticSearch(self, search, stableRegs=[], name=None):
+        count = 0
+        if name:
+            fc = self._getFileFor(name)
+            if not fc:
+                raise RopperError('No such file opened: %s' % name)
+            
+            s = fc.loader.arch.searcher
+            for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
+                if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
+                    yield(fc.name, gadget)
+                else:
+                    break
+                count += 1
+            self.__saveCache(fc)
+        else:        
+            for fc in self.__files:
+                s = fc.loader.arch.searcher
+                for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
+                    if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
+                        yield(fc.name, gadget)
+                    else:
+                        break
+                    count += 1
+                self.__saveCache(fc)
+
     def searchdict(self, search, quality=None, name=None):
         to_return = {}
         for file, gadget in self.search(search, quality, name):
@@ -680,7 +737,7 @@ class RopperService(object):
                 return g.disassemblyString()
         return ''
         
-    def createRopChain(self, chain, options={}):
+    def createRopChain(self, chain, arch, options={}):
         callback = None
         if self.__callbacks and hasattr(self.__callbacks, '__ropchainMessages__'):
             callback = self.__callbacks.__ropchainMessages__
@@ -688,8 +745,9 @@ class RopperService(object):
         b = []
         gadgets = {}
         for binary in self.__files:
-            gadgets[binary.loader] = binary.gadgets
-            b.append(binary.loader)
+            if str(binary.arch) == arch:
+                gadgets[binary.loader] = binary.gadgets
+                b.append(binary.loader)
         generator = RopChain.get(b, gadgets, chain, callback, unhexlify(self.options.badbytes))
 
         if not generator:

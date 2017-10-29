@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2014 Sascha Schirra
+# Copyright 2017 Sascha Schirra
 #
 # This file is part of Ropper.
 #
@@ -16,3 +16,26 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+class ExpressionCompiler(object):
+    """
+    Compile a user given constraints to z3 expressions
+
+    constraint := assignment | pop_reg
+    assignment := reg, adjust, reg | number
+    pop_reg := "pop", reg
+    adjust := "==" | "+=" | "-=" | "*=" | "/="
+    reg := a register of the current architecture
+    number := int
+    """
+
+    ASSIGNMENT = '([a-zA-Z0-9]+) +?([\\+\-\*/=]=) +?(\[?)(\-?[a-zA-Z0-9]+)(\]?)'
+
+    def parse(self, line):
+        """
+        parse a line of semantic expressions
+        """
+        insts = line.split(';')
+
+    def tokenize(self, line):
+

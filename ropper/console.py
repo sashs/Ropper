@@ -23,6 +23,7 @@ from ropper.rop import Ropper
 from ropper.common.error import *
 from ropper.gadget import GadgetType
 from ropper.gadget import Category
+from ropper.semantic import Analyser
 from ropper.common.utils import isHex, getFileNameFromPath
 from ropper.common.coloredstring import *
 from ropper.common.utils import *
@@ -35,6 +36,8 @@ import ropper
 import cmd
 import re
 import os
+import traceback
+import time
 
 # Python2 compatibility
 try:
@@ -45,15 +48,16 @@ except:
 
 def safe_cmd(func):
     def cmd(self, text):
+        cp = ConsolePrinter()
         try:
             func(self, text)
         except RopperError as e:
-            ConsolePrinter().printError(e)
+            cp.printError(e)
         except KeyboardInterrupt:
-            ConsolePrinter().println()
-        except BaseException as e:
-            ConsolePrinter().printError(e)
-            ConsolePrinter().printError('Please report this error on https://github.com/sashs/ropper')
+            cp.println()
+        except:
+            cp.printError('Please report this error on https://github.com/sashs/ropper')            
+            cp.printError( traceback.format_exc())
     return cmd
 
 class CallbackClass(object):
@@ -85,6 +89,12 @@ class CallbackClass(object):
         self.__console.cprinter.printProgress('filtering badbytes...', progress)
         if progress == 1.0:
             self.__console.cprinter.finishProgress()
+
+    def __analyseGadgetsProgress__(self, gadget, progress):
+        self.__console.cprinter.printProgress('analyse gadgets...', progress)
+        if progress == 1.0:
+            self.__console.cprinter.finishProgress()
+            
 
     def __ropchainMessages__(self, message):
         if message.startswith('[*]'):
@@ -179,20 +189,17 @@ class Console(cmd.Cmd):
             self.prompt = cstr('(ropper)> ', Color.RED)
 
     def __loadFile(self, file):
-        try:
             
-            self.__rs.addFile(file, raw=self.__options.raw,
-                              arch=self.__options.arch)
-            self.__options.arch = None
-            
-            self.__currentFileName = file
-            self.__updatePrompt()
-            if self.__options.I is not None:
-                self.__rs.setImageBaseFor(file, self.__options.I)
-            if not self.__options.no_load and self.__options.console:
-                self.__loadGadgets()
-        except BaseException as e:
-            raise RopperError(e)
+        self.__rs.addFile(file, raw=self.__options.raw,
+                          arch=self.__options.arch)
+        self.__options.arch = None
+        
+        self.__currentFileName = file
+        self.__updatePrompt()
+        if self.__options.I is not None:
+            self.__rs.setImageBaseFor(file, self.__options.I)
+        if not self.__options.no_load and self.__options.console:
+            self.__loadGadgets()
         
         #self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
@@ -272,7 +279,6 @@ class Console(cmd.Cmd):
                             [0], header='Instructions')
 
     def __searchPopPopRet(self):
-
         pprs = self.__rs.searchPopPopRet(self.currentFileName)
         self.__printGadgets([g for g in pprs.values()][0],
                             header='POP;POP;RET Instructions')
@@ -339,7 +345,7 @@ class Console(cmd.Cmd):
             try:
                 
                 self.__rs.options.color = False
-                chain = self.__rs.createRopChain(generator, options)
+                chain = self.__rs.createRopChain(generator, str(self.currentFile.arch) ,options)
 
                 #generator = RopChain.get(self.__binaries, self.__gadgets, split[0], self.__ropchainInfoCallback, unhexlify(self.__options.badbytes))
 
@@ -350,6 +356,7 @@ class Console(cmd.Cmd):
                 # self.__printSeparator(before='\n\n')
                 self.__printInfo('rop chain generated!')
             except RopperError as e:
+                self.__rs.options.color = old
                 self.__printError(e)
         except BaseException as e:
             self.__rs.options.color = old
@@ -397,6 +404,12 @@ class Console(cmd.Cmd):
     def __handleOptions(self, options):
         if options.sections:
             self.__printData('sections')
+        elif options.analyse:
+            self.__loadGadgets()
+            #self.do_analyse(options.analyse)
+        elif options.semantic:
+            self.__loadGadgets()
+            self.do_semantic(options.semantic)
         elif options.symbols:
             self.__printData('symbols')
         elif options.segments:
@@ -430,7 +443,7 @@ class Console(cmd.Cmd):
         elif options.unset:
             self.__set(options.unset, False)
         elif options.info:
-            self.__printData('informations')
+            self.__printData('information')
         elif options.ppr:
             self.__searchPopPopRet()
         elif options.jmp:
@@ -527,13 +540,13 @@ class Console(cmd.Cmd):
             for index, binary in enumerate(self.__rs.files):
                 if self.currentFileName == binary.loader.fileName:
                     data.append(
-                        (cstr(index + 1), cstr(binary.loader.fileName + '*'), cstr(binary.loaded)))
+                        (cstr(index + 1), cstr(binary.loader.fileName + '*'), cstr(binary.arch),cstr(binary.loaded)))
                 else:
                     data.append(
-                        (cstr(index + 1), cstr(binary.loader.fileName), cstr(binary.loaded)))
+                        (cstr(index + 1), cstr(binary.loader.fileName), cstr(binary.arch),cstr(binary.loaded)))
 
             printTable('Opened Files', (cstr('No.'),
-                                        cstr('Name'), cstr('Loaded')), data)
+                                        cstr('Name'), cstr('Architecture'),cstr('Loaded')), data)
 
         elif text.isdigit():
             idx = int(text) - 1
@@ -748,7 +761,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                 elif len(splits) == 2:
                     if splits[1] in ['on', 'off']:
                         self.__rs.options[splits[0]] = True if splits[1] == 'on' else False
-                    elif splits[0] == 'inst_count':
+                    elif splits[0] in ('inst_count', 'count_of_findings'):
                         self.__rs.options[splits[0]] = int(splits[1])
                     else:
                         self.__rs.options[splits[0]] = splits[1]
@@ -767,10 +780,11 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     'badbytes':'Gadget addresses are not allowed to contain this bytes',
                     'type':'The file is scanned for this type of gadgets. (rop, jop, sys, all)',
                     'detailed':'If on the gadgets will be printed with more detailed information',
-                    'inst_count':'The max count of instructions in a gadgets'}
+                    'inst_count':'The max count of instructions in a gadgets',
+                    'count_of_findings':'The max count of findings which will be printed with semantic search (0 = undefined, default: 5'}
             for key, value in self.__rs.options.items():
                 if isinstance(value, bool):
-                    data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc[key])))
+                    data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc.get(key,''))))
                 else:
                     data.append((cstr(key), cstr(value), cstr(desc[key])))
 
@@ -817,7 +831,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         if len(text) == 0:
             self.help_ropchain()
             return
-        if not self.currentFile.gadgets:
+        if not self.currentFile.loaded:
             self.do_load(text)
 
         gadgets = []
@@ -964,6 +978,90 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_clearcache(self):
         self.__printHelpText('clearcache','Clears the cache')
+
+    @safe_cmd
+    def do_semantic(self, text):
+        if not text:
+            self.help_semantic()
+        if not self.currentFile.analysed:
+            self.__rs.analyseGadgets(self.currentFile)
+        constraint = None
+        constraints = text.split(';')
+        
+        split = constraints[-1].split(' ')
+        stableRegs = []
+        for s in split:
+            if s.startswith('!'):
+                stableRegs.append(s[1:])
+            else:
+                constraint = s.strip()
+        constraints[-1] = constraint
+        for c in range(len(constraints)):
+            constraints[c] = constraints[c].strip()
+
+        self.__printInfo('Searching for gadgets: ' + text)
+        old = None
+        found = False
+        analysedCount = None
+        count = 0
+        for fc, gadget in self.__rs.semanticSearch(constraints, stableRegs=stableRegs):
+            if fc != old:
+                old = fc
+                self.__cprinter.println()
+                self.__printInfo('File: %s' % fc)
+            found = True
+            self.__printGadget(gadget, self.__options.detailed)
+            count += 1
+
+        self.__cprinter.printInfo('%d gadgets found' % count)
+
+        self.__cprinter.println()
+
+    def help_semantic(self):
+        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax==ebx; ecx==1 !edx !esi\n\nValid constraints:\nreg==reg\nreg==number\nreg==[reg]\nreg<+|-|*|/>=<reg|number|[reg]>')
+
+    # @safe_cmd
+    # def do_analyse(self, text):
+    #     import z3
+    #     from ropper.slicing import Slicer
+    #     slicer = Slicer()
+    #     if text and isHex(text):
+    #         addr = int(text, 16)
+    #         for g in self.currentFile.gadgets:
+    #             if g.address == addr:
+    #                 print(bytes(g.bytes).encode('hex'))
+    #                 print(g.info.regs)
+    #                 g.info.irsb.pp()
+    #                 print(g.info.expressions)
+    #                 set_reg = self.currentFile.arch.searcher.extractValues(["rsp=rbx"], g.info)[0][0]
+    #                # print(self.currentFile.arch.searcher._createConstraint("eax=1",g.info))
+    #                 slice = slicer.slicing(g.info.irsb, set_reg)
+    #                 print(slice.instructions)
+    #                 solver = z3.Solver()
+    #                 expr_len = len(g.info.expressions)
+    #                 for inst in slice.instructions[::-1]:
+    #                     expr = g.info.expressions[expr_len-inst]
+    #                     if expr == False:
+    #                         continue
+    #                     solver.add(expr)
+                    
+                        
+    #                 c = None
+    #                 c2 = None
+    #                 constraint = self.currentFile.arch.searcher._createConstraint(["rsp=rbx"], g.info)
+    #                 print(constraint)
+    #                 if constraint is not None:
+    #                     solver.add(constraint)
+
+    #                 print(solver.assertions())
+    #                 print(solver.check())
+    #                 print(g.info.clobberedRegs)
+    #                 print(g.simpleString())
+
+    #     else:
+    #         self.__printInfo('No such gadget')
+
+        
 
     # @safe_cmd
     # def do_edit(self, text):

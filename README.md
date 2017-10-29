@@ -22,7 +22,7 @@ Optional (not needed to run ropper just to look for gadgets):
 
 Install [Keystone](http://www.keystone-engine.org):
 
-    $ pip install keystone-engine
+    $ sudo pip install keystone-engine
 
 Install and execute Ropper
 
@@ -44,6 +44,37 @@ If you don't want to install filebytes, filebytes is a submodule of the ropper r
     $ git submodule init
     $ git submodule update
     $ ./Ropper.py
+
+Ropper has a semantic search command, which offers the possiblity to search for gadgets. Due to a dependency, this command only works with python2 on linux, but I am working
+on porting this dependency to python3. THIS FEATURE IS STILL UNDER DEVELOPEMENT!
+The following optional dependencies are needed to use semantic search:
+
+Install [pyvex](https://github.com/angr/pyvex)
+
+    $ sudo pip install pyvex
+
+Install [z3py](https://github.com/Z3Prover/z3)
+    
+    $ python scripts/mk_make.py
+    $ cd build
+    $ make
+    $ sudo make install
+
+Currently Possible Constraints
+------------------------------
+    reg == reg     -  assign register to another
+    reg == number  -  assign number to register
+    reg == [reg]   -  assign memory to register
+    reg += number/reg/[reg]
+    reg -= number/reg/[reg]
+    reg *= number/reg/[reg]
+    reg /= number/reg/[reg]
+    
+Constraint Example
+------------------
+
+    eax==1 !ebx    - set eax to 1 and look for gadgets which does not clobber ebx
+
 
 Usage
 -----
@@ -350,16 +381,6 @@ print bytes(gadgets[0].bytes).encode('hex')
 # remove all gadgets containing bad bytes in address
 rs.options.badbytes = '000a0d'  # gadgets are filtered automatically
 ```
-
-Planned features for future versions
-------------------------------------
-
-- Edit header fields;
-- Print more informations;
-
-For any other ideas please contact me
-
-
 
 Project page
 ------------------------------------

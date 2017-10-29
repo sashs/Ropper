@@ -243,9 +243,9 @@ class Ropper(object):
         return toReturn
 
     def _searchPopPopRet(self, section, binary):
-        if binary.arch.arch != capstone.CS_ARCH_X86:
+        if binary.arch != x86:
             raise NotSupportedError(
-                'Wrong architecture, \'pop pop ret\' is only supported on x86/x86_64')
+                'Wrong architecture, \'pop pop ret\' is only supported on x86')
 
         disassembler = self.__getCs(binary.arch)
         code = section.bytes

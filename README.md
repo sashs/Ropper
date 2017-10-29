@@ -409,6 +409,4 @@ Screenshots
 
 <img src="https://scoding.de/uploads/header.jpg" alt="header"></img>
 
-<img src="https://scoding.de/uploads/disass.jpg" alt="disassembler"></img>
-
-<img src="https://scoding.de/uploads/hex.jpg" alt="hex"></img>
+<img src="https://scoding.de/uploads/semantic_search.png" alt="semantic_search"></img>

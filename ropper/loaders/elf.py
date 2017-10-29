@@ -101,7 +101,7 @@ class ELF(Loader):
         for shdr in self._binary.sections:
             if shdr.name == name:
                 
-                return Section(shdr.name, shdr.raw, shdr.header.sh_addr, shdr.header.sh_offset)
+                return Section(shdr.name, shdr.raw, shdr.header.sh_addr, shdr.header.sh_addr - self._binary.imageBase)
         raise RopperError('No such section: %s' % name)
 
     def checksec(self):

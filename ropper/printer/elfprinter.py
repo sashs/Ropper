@@ -69,13 +69,18 @@ class ELFPrinter(FileDataPrinter):
             data.append((cstr('[%.2d]' % index, Color.BLUE),
                         cstr(binary._binary.sections[index].name, Color.WHITE),
                         cstr(toHex(binary._binary.sections[index].header.sh_addr), Color.GREEN),
-                        cstr(elf.SHT[binary._binary.sections[index].header.sh_type], Color.YELLOW)))
+                        cstr(toHex(binary._binary.sections[index].header.sh_offset), Color.GREEN),
+                        cstr(elf.SHT[binary._binary.sections[index].header.sh_type], Color.YELLOW)
+                        ))
 
         self._printTable('Sections',
                         (cstr('Nr', Color.LIGHT_GRAY),
                             cstr('Name', Color.LIGHT_GRAY),
                             cstr('Address', Color.LIGHT_GRAY),
-                            cstr('Type', Color.LIGHT_GRAY)),
+                            cstr('Offset', Color.LIGHT_GRAY),
+                            cstr('Type', Color.LIGHT_GRAY),
+                            
+                            ),
                         data)
 
     def printSegments(self, elffile):

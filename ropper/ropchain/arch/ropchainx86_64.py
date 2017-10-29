@@ -627,7 +627,7 @@ class RopChainSystemX86_64(RopChainX86_64):
 
             length = math.ceil(float(len(cmd))/8) * 8
             try:
-                chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
+                chain_tmp += self._createCommand(cmd,section.offset)[0]
                 can_create_command = True
 
             except RopChainError as e:

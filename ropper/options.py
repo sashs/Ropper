@@ -138,7 +138,7 @@ epilog="""example uses:
         parser.add_argument(
             '--hex', help='Prints the selected sections in a hex format', action='store_true')
         parser.add_argument(
-            '--asm', help='A string to assemble and a format of the output (H=HEX, S=STRING, R=RAW, default: H)', nargs='+', metavar="<asm> [H|S|R]")
+            '--asm', help='A string to assemble and a format of the output (H=HEX, S=STRING, R=RAW, default: H)', nargs='*', metavar="<asm> [H|S|R]")
         parser.add_argument(
             '--disasm', help='Opcode to disassemble (e.g. ffe4, 89c8c3, ...)', metavar="<opcode>")
         parser.add_argument(

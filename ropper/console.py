@@ -170,7 +170,7 @@ class Console(cmd.Cmd):
         if self.__options.clear_cache:
             self.__rs.clearCache()
 
-        if self.__options.file:
+        if self.__options.file and self.__options.asm is None:
             for file in self.__options.file:
                 self.__loadFile(file)
             if len(self.__options.file) > 1:
@@ -178,7 +178,7 @@ class Console(cmd.Cmd):
 
         if self.__options.console:
             self.cmdloop()
-
+        
         self.__handleOptions(self.__options)
 
     def __updatePrompt(self):
@@ -422,12 +422,18 @@ class Console(cmd.Cmd):
             self.__printData('entry_point')
         elif options.imports:
             self.__printData('imports')
-        elif options.asm:
-            code = options.asm[0]
+        elif options.asm is not None:
             format = 'H'
-            if len(options.asm) == 2:
+            if options.file is not None:
+                with open(options.file[0]) as f:
+                    code = f.read()
+                if len(options.asm) > 0:
+                    format = options.asm[0]
+            else:
                 code = options.asm[0]
-                format = options.asm[1]
+                if len(options.asm) == 2:
+                    code = options.asm[0]
+                    format = options.asm[1]
             arch = 'x86'
             if options.arch:
                 arch = options.arch

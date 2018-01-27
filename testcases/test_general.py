@@ -44,7 +44,7 @@ class GeneralTests(unittest.TestCase):
         self.assertEqual(len(found_gadgets), 2)
 
         found_gadgets = self.rs.searchdict('mov [r?x]')[FILE]
-        self.assertEqual(len(found_gadgets), 12)
+        self.assertEqual(len(found_gadgets), 7)
 
         found_gadgets = self.rs.searchdict('mov [r?x%]')[FILE]
         self.assertGreater(len(found_gadgets), 12)
@@ -59,9 +59,6 @@ class GeneralTests(unittest.TestCase):
         gadget = self.rs.files[0].gadgets[0]
         self.assertNotEqual(gadget.lines[0][0], 0x1adfd)
 
-        self.rs.options.badbytes = '52f8'
-        gadgets = self.rs.searchPopPopRet()
-        self.assertNotEqual(int(gadgets[FILE][0].lines[0][0]), 0x52f8)
 
         self.rs.options.badbytes =  'b1c7'
         gadgets = self.rs.searchJmpReg(['rsp'])

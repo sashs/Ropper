@@ -36,6 +36,8 @@ class ELF_PPC(unittest.TestCase):
 
 
     def test_gadgets(self):
+        self.assertEqual(self.file.arch, PPC)
+        self.assertEqual(self.file.type, Type.ELF)
         ropper = Ropper()
         gadgets = ropper.searchGadgets(self.file)
 

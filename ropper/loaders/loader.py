@@ -70,7 +70,7 @@ class Loader(Abstract):
         self.loaded = False
 
         self.__binary = self._loadFile(filename, bytes)
-        if not arch:
+        if arch is None:
             self._arch = self._loadDefaultArch()
 
     @property

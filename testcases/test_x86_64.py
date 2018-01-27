@@ -78,14 +78,6 @@ class ELF_x86_84(unittest.TestCase):
             regs=['invalid']
             ropper.searchJmpReg(self.file, regs)
 
-    def test_ppr(self):
-        ropper = Ropper()
-        
-        gadgets = ropper.searchPopPopRet(self.file)
-        
-        self.assertEqual(len(gadgets), 118)
-        self.assertEqual(gadgets[0].lines[0][0], 0x52f8)
-
 
 class PE_x86_84(unittest.TestCase):
 
@@ -135,13 +127,6 @@ class PE_x86_84(unittest.TestCase):
 
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
-    def test_ppr(self):
-        ropper = Ropper()
-        
-        gadgets = ropper.searchPopPopRet(self.file)
-        
-        self.assertEqual(len(gadgets), 242)
-        self.assertEqual(gadgets[0].lines[0][0], 0x14ec)
 
 
 class MACHO_x86_84(unittest.TestCase):
@@ -196,13 +181,6 @@ class MACHO_x86_84(unittest.TestCase):
             regs=['invalid']
             ropper.searchJmpReg(self.file, regs)
 
-    def test_ppr(self):
-        ropper = Ropper()
-        
-        gadgets = ropper.searchPopPopRet(self.file)
-        
-        self.assertEqual(len(gadgets), 32)
-        self.assertEqual(gadgets[0].lines[0][0], 0x1cdc)
     
 if __name__ == '__main__':
     unittest.main()

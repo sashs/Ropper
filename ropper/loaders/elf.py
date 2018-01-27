@@ -20,6 +20,7 @@
 from ctypes import *
 from ropper.loaders.loader import *
 from ropper.common.error import LoaderError
+from ropper.common.error import RopperError
 from ropper.arch import Endianess
 import filebytes.elf as elf
 import os
@@ -44,14 +45,17 @@ class ELF(Loader):
 
 
     def _loadDefaultArch(self):
-        try:      
+        try:
             machine = elf.EM[self._binary.elfHeader.header.e_machine]
             cls = elf.ELFCLASS[self._binary.elfHeader.header.e_ident[elf.EI.CLASS]]
             end = self._binary._bytes[elf.EI.DATA]
 
             return getArch( (machine,cls, end ),self._binary.elfHeader.header.e_entry)
-        except:
-            return None
+        except BaseException as e:
+            raise RopperError(e)
+
+
+
 
     @property
     def executableSections(self):
@@ -134,5 +138,5 @@ ARCH = {(elf.EM.INTEL_386 , elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB): x86,
         (elf.EM.ARM, elf.ELFCLASS.BITS_32, elf.ELFDATA.MSB) : ARMBE,
         (elf.EM.ARM, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB) : ARM,
         (elf.EM.ARM64, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB) : ARM64,
-        (elf.EM.PPC, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB) : PPC,
-        (elf.EM.PPC, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB) : PPC64}
+        (elf.EM.PPC, elf.ELFCLASS.BITS_32, elf.ELFDATA.MSB) : PPC,
+        (elf.EM.PPC, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB) : PPC64}

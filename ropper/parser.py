@@ -38,4 +38,4 @@ class ExpressionCompiler(object):
         insts = line.split(';')
 
     def tokenize(self, line):
-
+        pass

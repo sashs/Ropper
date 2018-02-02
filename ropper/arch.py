@@ -306,6 +306,7 @@ class ArchitectureMipsBE(ArchitectureMips):
         super(ArchitectureMipsBE, self).__init__(Endianess.BIG)
         self._name = 'MIPSBE'
         self._mode |= CS_MODE_BIG_ENDIAN
+        self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
 
 class ArchitectureMips64(ArchitectureMips):
 
@@ -332,6 +333,7 @@ class ArchitectureMips64BE(ArchitectureMips64):
         super(ArchitectureMips64BE, self).__init__(Endianess.BIG)
         self._name = 'MIPS64BE'
         self._mode |= CS_MODE_BIG_ENDIAN
+        self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
 
 class ArchitectureArm(Architecture):
 
@@ -360,6 +362,7 @@ class ArchitectureArmBE(ArchitectureArm):
         super(ArchitectureArmBE, self).__init__(Endianess.BIG)
         self._name = 'ARMBE'
         self._mode |= CS_MODE_BIG_ENDIAN
+        self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
 
     def _initEndianess(self, endianess):
         super(ArchitectureArmBE, self)._initEndianess(endianess)    

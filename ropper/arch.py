@@ -20,9 +20,7 @@
 from ropper.common.abstract import *
 from ropper.common.enum import Enum
 from ropper.common.error import NotSupportedError
-from ropper.search import Searcher
-from ropper.search import Searcherx86
-from ropper.search import SearcherARM
+from ropper.search import Searcher, Searcherx86, SearcherARM, SearcherMIPS
 from re import compile
 from capstone import *
 from . import gadget
@@ -291,6 +289,8 @@ class ArchitectureMips(Architecture):
 
         if 'archinfo' in globals():
             self._info = archinfo.ArchMIPS32()
+
+        self._searcher = SearcherMIPS()
 
     def _initGadgets(self):
         super(ArchitectureMips, self)._initGadgets()

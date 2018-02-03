@@ -244,3 +244,11 @@ class SearcherARM(Searcher):
             pprinter.printInfo('r9=sb r10=sl r11=fp r12=ip r13=sp r14=lr r15=pc')
         for x in super(SearcherARM, self).search(gadgets, filter, quality, pprinter):
             yield x
+
+class SearcherMIPS(Searcher):
+
+    def prepareFilter(self, filter):
+        filter = super(SearcherMIPS, self).prepareFilter(filter)
+        filter = filter.replace('$','\$')
+
+        return filter

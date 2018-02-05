@@ -989,6 +989,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     def do_semantic(self, text):
         if not text:
             self.help_semantic()
+            return
         if not self.currentFile.analysed:
             self.__rs.analyseGadgets(self.currentFile)
         constraint = None

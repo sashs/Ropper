@@ -354,7 +354,7 @@ class ArchitectureArm(Architecture):
         self._endings[gadget.GadgetType.ROP] = [(b'[\x01-\xff]\x80\xbd\xe8', 4)] # pop {[reg]*,pc}
         self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x1e]\xff\x2f\xe1', 4), # bx <reg>
                                                 (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
-
+                                                (b'[\x00-\x0f]\xf0\xa0\xe1', 4), # mov pc, <reg>
                                                 (b'\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
 
@@ -372,7 +372,7 @@ class ArchitectureArmBE(ArchitectureArm):
         self._endings[gadget.GadgetType.ROP] = [(b'\xe8\xbd\x80[\x01-\xff]', 4)] # pop {[reg]*,pc}
         self._endings[gadget.GadgetType.JOP] = [(b'\xe1\x2f\xff[\x10-\x1e]', 4), # bx <reg>
                                                 (b'\xe1\x2f\xff[\x30-\x3e]', 4), # blx <reg>
-
+                                                (b'\xe1\xa0\xf0[\x00-\x0f]', 4), # mov pc, <reg>
                                                 (b'\xe8\xdb\x80\x01', 4)] # ldm sp! ,{pc}
 
 class ArchitectureArmThumb(Architecture):

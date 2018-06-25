@@ -611,7 +611,6 @@ class RopChainSystemX86_64(RopChainX86_64):
     def create(self, options):
         cmd = options.get('cmd')
         address = options.get('address')
-        print(addres)
         if not cmd:
             cmd = '/bin/sh'
         if len(cmd.split(' ')) > 1:

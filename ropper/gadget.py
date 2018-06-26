@@ -208,21 +208,85 @@ class Gadget(object):
     @property
     def category(self):
         if not self.__category:
+            if hex(self.address) == '0x478ec6L':
+                debug = True
+            else:
+                debug = False
             line = self.__lines[0][1]
+            full_line = self.simpleInstructionString()
+            d = {}
             for cat, regexs in self.__arch._categories.items():
                 for regex in regexs[0]:
-                    match = re.match(regex, line)
+                    r = re.compile(regex)
+                    #match = re.match(regex, line)
+                    if cat == Category.STACK_PIVOT:
+                        match = r.findall(line)
+                    else:
+                        match = r.findall(full_line)
                     if match:
+                        if debug:
+                            print('******** category init *********')
+                            print(self.simpleInstructionString())
+                            if cat == Category.STACK_PIVOT:
+                                print(line)
+                            else:
+                                print(full_line)
+                            print('-------- match --------')
+                            print(cat)
+                            print(regex)
+                            print(match)
+                            try:
+                                input("Press enter to continue")
+                            except SyntaxError:
+                                    pass
+                        if debug:
+                            print('checking invalid')
+                            print(regexs[1])
                         for invalid in regexs[1]:
+                            if debug:
+                                print(invalid)
+                                print(self.__lines[1:])
                             for l in self.__lines[1:]:
                                 if l[1].startswith(invalid):
                                     self.__category = (Category.NONE,)
+                                    if debug:
+                                        print('invalid -> NONE')
+                                        print('********** init end *************')
                                     return self.__category
-                        d = match.groupdict()
-                        for key, value in d.items():
-                            d[key] = str(value)
 
-                        self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
+                        print('dict:')
+                        print(d)
+                        print(r.groupindex.items())
+                        for g, i in r.groupindex.items():
+                            print('g: %s' % g)
+                            print('i: %d' % i)
+                            print('match: %s' % match)
+                            if g not in d:
+                                d[g] = []
+                            if type(match[0]) == tuple: 
+                                for m in match[0]:
+                                    d[g].append(str(m[i-1]))
+                            else:
+                                for m in match:
+                                    d[g].append(str(m))
+                            print(d)
+
+                        #d = match.groupdict()
+                        if debug:
+                            print('dict:')
+                            print(d)
+#                        for key, value in d.items():
+#                            d[key] = str(value)
+
+                        #self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
+                        self.__category = (cat, len(self.__lines) -1 ,d)
+                        if debug:
+                            print(self.__category)
+                            print('********** init end *************')
+                            try:
+                                input("Press enter to continue")
+                            except SyntaxError:
+                                    pass
                         return self.__category
             self.__category = (Category.NONE,)
 

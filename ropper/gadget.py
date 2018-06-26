@@ -208,7 +208,6 @@ class Gadget(object):
 
     @property
     def affected_regs(self):
-        print('getting affected regs')
         if not self.__affected_regs:
             self.__affected_regs = set()
 
@@ -216,6 +215,7 @@ class Gadget(object):
                 debug = True
             else:
                 debug = False
+            debug=True
 
             full_line = self.simpleInstructionString()
             line = self.__lines[0][1]
@@ -226,8 +226,9 @@ class Gadget(object):
                 print(self.simpleInstructionString())
                 print(full_line)
 
-            from pprint import pprint
-            pprint(self.__arch._categories)
+            if debug:
+                from pprint import pprint
+                pprint(self.__arch._categories)
 
             for l_tup in self.__lines:
                 line = l_tup[1]
@@ -235,41 +236,50 @@ class Gadget(object):
                     for regex in regexs[0]:
                         if regex != 'ret.+':
                             r = re.compile(regex)
-                            #match_all = r.findall(full_line)
-                            match_all = r.findall(line)
+                            match_all = r.match(line)
 
-                            if match_all:
+                            if  match_all:
+                                if 'dst' in match_all.groupdict():
+                                    if debug:
+                                        print('-------- match --------')
+                                        print(cat)
 
-                                if debug:
-                                    print('-------- match --------')
-                                    print(cat)
-#                                    try:
-#                                        input("Press enter to continue")
-#                                    except SyntaxError:
-#                                        pass
+                                    print(self.simpleString())
+                                    print(match_all.groupdict())
+                                    affected = match_all.groupdict()['dst']
+                                    self.__affected_regs.add(affected)
+    #                                if debug:
+    #                                    try:
+    #                                        input("Press enter to continue")
+    #                                    except SyntaxError:
+    #                                        pass
 
-                                for g, i in r.groupindex.items():
-                                    print('g: %s' % g)
-                                    print('i: %d' % i)
-                                    print('match all: %s' % match_all)
-                                    print(r.groupindex)
+                                    '''
+                                    for g, i in r.groupindex.items():
+                                        if debug:
+                                            print('g: %s' % g)
+                                            print('i: %d' % i)
+                                            print('match all: %s' % match_all)
+                                            print(r.groupindex)
 
-                                    if type(match_all[0]) == tuple:
-                                        for e in set(match_all[0]):
-                                            self.__affected_regs.add(e)
-                                    else:
-                                        for e in set(match_all):
-                                            self.__affected_regs.add(e)
+                                        if type(match_all[0]) == tuple:
+                                            for e in set(match_all[0]):
+                                                self.__affected_regs.add(e)
+                                        else:
+                                            for e in set(match_all):
+                                    '''
 
             if debug:
                 print(self.simpleString())
                 print('affected regs:')
                 print(self.__affected_regs)
                 print('********** affected regs end *************')
-                try:
-                    input("Press enter to continue")
-                except SyntaxError:
-                        pass
+#                try:
+#                    input("Press enter to continue")
+#                except SyntaxError:
+#                        pass
+
+            return self.__affected_regs
         else:
             return self.__affected_regs
 
@@ -288,8 +298,14 @@ class Gadget(object):
                                     return self.__category
 
                         self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
+                        self.__category[2]['affected'] = self.affected_regs
+                        '''
                         print('category: %s' % str(self.__category))
-                        a = self.affected_regs
+                        try:
+                            input("Press enter to continue")
+                        except SyntaxError:
+                            pass
+                        '''
                         return self.__category
             self.__category = (Category.NONE,)
 

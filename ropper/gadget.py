@@ -55,6 +55,7 @@ class Gadget(object):
         self.__lines = lines
         self.__gadget = None
         self.__category = None
+        self.__affected_regs = None
         self._fileName = fileName
         self._section = section
         self.__bytes = bytes
@@ -206,83 +207,89 @@ class Gadget(object):
         return toReturn
 
     @property
-    def category(self):
-        if not self.__category:
+    def affected_regs(self):
+        print('getting affected regs')
+        if not self.__affected_regs:
+            self.__affected_regs = set()
+
             if hex(self.address) == '0x478ec6L':
                 debug = True
             else:
                 debug = False
-            line = self.__lines[0][1]
+
             full_line = self.simpleInstructionString()
-            self.__affected_regs = set()
+            line = self.__lines[0][1]
+            print(line)
+
+            if debug:
+                print('******** find affected regs *********')
+                print(self.simpleInstructionString())
+                print(full_line)
+
+            from pprint import pprint
+            pprint(self.__arch._categories)
+
+            for l_tup in self.__lines:
+                line = l_tup[1]
+                for cat, regexs in self.__arch._categories.items():
+                    for regex in regexs[0]:
+                        if regex != 'ret.+':
+                            r = re.compile(regex)
+                            #match_all = r.findall(full_line)
+                            match_all = r.findall(line)
+
+                            if match_all:
+
+                                if debug:
+                                    print('-------- match --------')
+                                    print(cat)
+#                                    try:
+#                                        input("Press enter to continue")
+#                                    except SyntaxError:
+#                                        pass
+
+                                for g, i in r.groupindex.items():
+                                    print('g: %s' % g)
+                                    print('i: %d' % i)
+                                    print('match all: %s' % match_all)
+                                    print(r.groupindex)
+
+                                    if type(match_all[0]) == tuple:
+                                        for e in set(match_all[0]):
+                                            self.__affected_regs.add(e)
+                                    else:
+                                        for e in set(match_all):
+                                            self.__affected_regs.add(e)
+
+            if debug:
+                print(self.simpleString())
+                print('affected regs:')
+                print(self.__affected_regs)
+                print('********** affected regs end *************')
+                try:
+                    input("Press enter to continue")
+                except SyntaxError:
+                        pass
+        else:
+            return self.__affected_regs
+
+    @property
+    def category(self):
+        if not self.__category:
+            line = self.__lines[0][1]
             for cat, regexs in self.__arch._categories.items():
                 for regex in regexs[0]:
-                    r = re.compile(regex)
-                    match = r.match(line)
-                    match_all = r.findall(line)
+                    match = re.match(regex, line)
                     if match:
-                        if debug:
-                            print('******** category init *********')
-                            print(self.simpleInstructionString())
-                            print(line)
-                            print('-------- match --------')
-                            print(cat)
-                            print(regex)
-                            print(match)
-                            try:
-                                input("Press enter to continue")
-                            except SyntaxError:
-                                    pass
-                        if debug:
-                            print('checking invalid')
-                            print(regexs[1])
                         for invalid in regexs[1]:
-                            if debug:
-                                print(invalid)
-                                print(self.__lines[1:])
                             for l in self.__lines[1:]:
                                 if l[1].startswith(invalid):
                                     self.__category = (Category.NONE,)
-                                    if debug:
-                                        print('invalid -> NONE')
-                                        print('********** init end *************')
                                     return self.__category
 
-                        print(r.groupindex.items())
-                        for g, i in r.groupindex.items():
-                            print('g: %s' % g)
-                            print('i: %d' % i)
-                            print(self.simpleString())
-                            print('match: %s' % match)
-                            print('match all: %s' % match_all)
-                            print(r.groupindex)
-                            print(regex)
-
-                            if len(match_all) > 1:
-                                print(match_all)
-                                try:
-                                    input('length >1')
-                                except SyntaxError:
-                                    pass
-                            if type(match_all[0]) == tuple:
-                                for e in set(match_all[0]):
-                                    self.__affected_regs.add(e)
-                            else:
-                                for e in set(match_all):
-                                    self.__affected_regs.add(e)
-
-                        print(self.simpleString())
-                        print('affected regs:')
-                        print(self.__affected_regs)
-
                         self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
-                        if debug:
-                            print(self.__category)
-                            print('********** init end *************')
-                            try:
-                                input("Press enter to continue")
-                            except SyntaxError:
-                                    pass
+                        print('category: %s' % str(self.__category))
+                        a = self.affected_regs
                         return self.__category
             self.__category = (Category.NONE,)
 

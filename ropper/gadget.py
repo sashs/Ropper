@@ -65,7 +65,7 @@ class Gadget(object):
 
     @property
     def info(self):
-        
+
         return self.__info
 
     @info.setter
@@ -75,7 +75,7 @@ class Gadget(object):
     @property
     def arch(self):
         return self.__arch
-    
+
     @property
     def lines(self):
         if self.__lines == None:
@@ -194,7 +194,7 @@ class Gadget(object):
     def simpleString(self):
         analyseColor = Color.CYAN if self.__info else Color.RED
         address = self.__lines[0][0]
-        
+
         if isinstance(self.arch, ropper.arch.ArchitectureArmThumb):
             address += 1
             toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
@@ -214,23 +214,17 @@ class Gadget(object):
                 debug = False
             line = self.__lines[0][1]
             full_line = self.simpleInstructionString()
-            d = {}
+            self.__affected_regs = set()
             for cat, regexs in self.__arch._categories.items():
                 for regex in regexs[0]:
                     r = re.compile(regex)
-                    #match = re.match(regex, line)
-                    if cat == Category.STACK_PIVOT:
-                        match = r.findall(line)
-                    else:
-                        match = r.findall(full_line)
+                    match = r.match(line)
+                    match_all = r.findall(line)
                     if match:
                         if debug:
                             print('******** category init *********')
                             print(self.simpleInstructionString())
-                            if cat == Category.STACK_PIVOT:
-                                print(line)
-                            else:
-                                print(full_line)
+                            print(line)
                             print('-------- match --------')
                             print(cat)
                             print(regex)
@@ -254,32 +248,34 @@ class Gadget(object):
                                         print('********** init end *************')
                                     return self.__category
 
-                        print('dict:')
-                        print(d)
                         print(r.groupindex.items())
                         for g, i in r.groupindex.items():
                             print('g: %s' % g)
                             print('i: %d' % i)
+                            print(self.simpleString())
                             print('match: %s' % match)
-                            if g not in d:
-                                d[g] = []
-                            if type(match[0]) == tuple: 
-                                for m in match[0]:
-                                    d[g].append(str(m[i-1]))
+                            print('match all: %s' % match_all)
+                            print(r.groupindex)
+                            print(regex)
+
+                            if len(match_all) > 1:
+                                print(match_all)
+                                try:
+                                    input('length >1')
+                                except SyntaxError:
+                                    pass
+                            if type(match_all[0]) == tuple:
+                                for e in set(match_all[0]):
+                                    self.__affected_regs.add(e)
                             else:
-                                for m in match:
-                                    d[g].append(str(m))
-                            print(d)
+                                for e in set(match_all):
+                                    self.__affected_regs.add(e)
 
-                        #d = match.groupdict()
-                        if debug:
-                            print('dict:')
-                            print(d)
-#                        for key, value in d.items():
-#                            d[key] = str(value)
+                        print(self.simpleString())
+                        print('affected regs:')
+                        print(self.__affected_regs)
 
-                        #self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
-                        self.__category = (cat, len(self.__lines) -1 ,d)
+                        self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
                         if debug:
                             print(self.__category)
                             print('********** init end *************')
@@ -325,4 +321,3 @@ class Gadget(object):
 
     def __repr__(self):
         return 'Gadget(%s, %s, %s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(self.info))
-

@@ -215,11 +215,10 @@ class Gadget(object):
                 debug = True
             else:
                 debug = False
-            debug=True
+            debug=False
 
             full_line = self.simpleInstructionString()
             line = self.__lines[0][1]
-            print(line)
 
             if debug:
                 print('******** find affected regs *********')
@@ -244,8 +243,8 @@ class Gadget(object):
                                         print('-------- match --------')
                                         print(cat)
 
-                                    print(self.simpleString())
-                                    print(match_all.groupdict())
+                                        print(self.simpleString())
+                                        print(match_all.groupdict())
                                     affected = match_all.groupdict()['dst']
                                     self.__affected_regs.add(affected)
     #                                if debug:

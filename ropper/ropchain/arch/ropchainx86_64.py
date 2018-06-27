@@ -151,12 +151,21 @@ class RopChainX86_64(RopChain):
 
 
     def _paddingNeededFor(self, gadget):
+        if gadget.address == 0x478ec6:
+            debug = True
+        else:
+            debug = False
+        if debug:
+            print('checking padding')
+            print(gadget.simpleString())
         regs = []
         for idx in range(1,len(gadget.lines)):
             line = gadget.lines[idx][1]
             matched = match('^pop (...)$', line)
             if matched:
                 regs.append(matched.group(1))
+        if debug:
+            print(regs)
         return regs
 
 
@@ -164,8 +173,16 @@ class RopChainX86_64(RopChain):
         toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],8), gadget.simpleString()))
         if padding:
             regs = self._paddingNeededFor(gadget)
+            if gadget.address == 0x478ec6:
+                debug = True
+            else:
+                debug = False
             for i in range(len(regs)):
                 toReturn +=self._printPaddingInstruction()
+            if debug:
+                print('padding found')
+                print(toReturn)
+
         return toReturn
 
     def _printAddString(self, string):
@@ -671,7 +688,7 @@ class RopChainSystemX86_64(RopChainX86_64):
 
         self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)
-        
+
         try:
             self._printMessage('Look for syscall gadget')
             chain_tmp += self._createSyscall()[0]

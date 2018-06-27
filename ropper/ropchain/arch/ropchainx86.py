@@ -171,9 +171,25 @@ class RopChainX86(RopChain):
         if number is not None:
             toReturn +=self._printPaddingInstruction(number)
         if padding:
-            regs = self._paddingNeededFor(gadget)
+            if len(regs) > 0:
+                dst = gadget.category[2]['dst']
+                search = '^pop (%s)$' % dst
+                first_line = gadget.lines[0][1]
+                if match(search, first_line):
+                    value_first = True
+
+            padding_str = ''
             for i in range(len(regs)):
-                toReturn +=self._printPaddingInstruction()
+                padding_str +=self._printPaddingInstruction()
+
+            if value_first:
+                toReturn += value
+                toReturn += padding_str
+            else:
+                toReturn += padding_str
+                if value:
+                    toReturn += value
+
         return toReturn
 
     def _printAddString(self, string):
@@ -333,8 +349,8 @@ class RopChainX86(RopChain):
                 else:
                     break;
 
-        toReturn = self._printRopInstruction(popReg2, False)
-        toReturn += self._printPaddingInstruction(toHex(from_reg,4))
+        value = self._printPaddingInstruction(toHex(from_reg,4))
+        toReturn = self._printRopInstruction(popReg2, False, value=value)
         regs = self._paddingNeededFor(popReg2)
         for i in range(len(regs)):
             toReturn +=self._printPaddingInstruction()
@@ -460,8 +476,8 @@ class RopChainX86(RopChain):
             else:
                 break
 
-        toReturn = self._printRopInstruction(popReg)
-        toReturn += self._printPaddingInstruction(toHex(0xffffffff,4))
+        value = self._printPaddingInstruction(toHex(0xffffffff,4))
+        toReturn = self._printRopInstruction(popReg, value=value)
         for i in range(number+1):
             toReturn += self._printRopInstruction(incReg)
 
@@ -518,8 +534,8 @@ class RopChainX86(RopChain):
         toReturn = self._printRopInstruction(pop)
 
 
-        toReturn += self._printPaddingInstruction(toHex((~number)+1)) # two's complement
-        toReturn += self._printRopInstruction(neg)
+        value = self._printPaddingInstruction(toHex((~number)+1)) # two's complement
+        toReturn += self._printRopInstruction(neg, value=value)
         return (toReturn, reg,)
 
     def _createNumber(self, number, reg=None, badRegs=None, dontModify=None, xchg=True):

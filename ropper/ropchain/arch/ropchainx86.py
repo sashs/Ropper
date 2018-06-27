@@ -210,9 +210,11 @@ class RopChainX86(RopChain):
             for binary in self._binaries:
                 for gadget in self._gadgets[binary]:
                     if gadget.category[0] == category and gadget.category[1] == quali:
-                        if badSrc and gadget.category[2]['src'] in badSrc:
+                        if badSrc and (gadget.category[2]['src'] in badSrc \
+                                       or gadget.affected_regs.intersection(badSrc)):
                             continue
-                        if badDst and gadget.category[2]['dst'] in badDst:
+                        if badDst and (gadget.category[2]['dst'] in badDst \
+                                       or gadget.affected_regs.intersection(badDst)):
                             continue
                         if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString():
                             continue

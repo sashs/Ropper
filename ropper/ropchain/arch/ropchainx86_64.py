@@ -130,7 +130,6 @@ class RopChainX86_64(RopChain):
         else:
             self._printMessage('')
             self._printMessage('Cannot create chain which fills all registers')
-        #    print('Impossible to create complete chain')
         self._printMessage('')
         return cur_chain
 
@@ -151,37 +150,53 @@ class RopChainX86_64(RopChain):
 
 
     def _paddingNeededFor(self, gadget):
-        if gadget.address == 0x478ec6:
-            debug = True
-        else:
-            debug = False
-        if debug:
-            print('checking padding')
-            print(gadget.simpleString())
         regs = []
         for idx in range(1,len(gadget.lines)):
             line = gadget.lines[idx][1]
             matched = match('^pop (...)$', line)
             if matched:
                 regs.append(matched.group(1))
-        if debug:
-            print(regs)
         return regs
 
 
-    def _printRopInstruction(self, gadget, padding=True):
+    def _printRopInstruction(self, gadget, padding=True, value=None):
         toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],8), gadget.simpleString()))
+
+        value_first = False
+
         if padding:
             regs = self._paddingNeededFor(gadget)
             if gadget.address == 0x478ec6:
                 debug = True
             else:
                 debug = False
-            for i in range(len(regs)):
-                toReturn +=self._printPaddingInstruction()
+            debug=True
             if debug:
-                print('padding found')
-                print(toReturn)
+                if len(regs) > 0:
+                    print(regs)
+                    dst = gadget.category[2]['dst']
+                    search = '^pop (%s)$' % dst
+                    first_line = gadget.lines[0][1]
+                    if match(search, first_line):
+                        value_first = True
+                        print('first line pops dst!')
+
+            padding_str = ''
+            for i in range(len(regs)):
+                padding_str +=self._printPaddingInstruction()
+
+            if value_first:
+                toReturn += value
+                toReturn += padding_str
+            else:
+                toReturn += padding_str
+                if value:
+                    toReturn += value
+
+            if debug:
+                if len(regs) > 0:
+                    print('padding found')
+                    print(toReturn)
 
         return toReturn
 
@@ -471,8 +486,8 @@ class RopChainX86_64(RopChain):
             else:
                 break
 
-        toReturn = self._printRopInstruction(popReg)
-        toReturn += self._printPaddingInstruction(toHex(0xffffffff,8))
+        value = self._printPaddingInstruction(toHex(0xffffffff,8))
+        toReturn = self._printRopInstruction(popReg, value=value)
         for i in range(number+1):
             toReturn += self._printRopInstruction(incReg)
 
@@ -526,8 +541,8 @@ class RopChainX86_64(RopChain):
         if not pop:
             raise RopChainError('Cannot build number gadget with neg!')
 
-        toReturn = self._printRopInstruction(pop)
-        toReturn += self._printPaddingInstruction(toHex((~number)+1, 8)) # two's complement
+        value = self._printPaddingInstruction(toHex((~number)+1, 8)) # two's complement
+        toReturn = self._printRopInstruction(pop, value=value)
         toReturn += self._printRopInstruction(neg)
         return (toReturn, reg,)
 
@@ -559,8 +574,8 @@ class RopChainX86_64(RopChain):
                 popReg =self._find(Category.LOAD_REG, reg=reg, badDst=badRegs,dontModify=dontModify)
                 if not popReg:
                     raise RopChainError('Cannot build number gadget!')
-                toReturn = self._printRopInstruction(popReg)
-                toReturn += self._printPaddingInstruction(toHex(number,8))
+                value = self._printPaddingInstruction(toHex(number,8))
+                toReturn = self._printRopInstruction(popReg, value=value)
                 return (toReturn , popReg.category[2]['dst'])
         except RopChainError:
             return self._createNumberXchg(number, reg, badRegs, dontModify)

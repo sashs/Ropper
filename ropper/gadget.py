@@ -211,23 +211,8 @@ class Gadget(object):
         if not self.__affected_regs:
             self.__affected_regs = set()
 
-            if hex(self.address) == '0x478ec6L':
-                debug = True
-            else:
-                debug = False
-            debug=False
-
             full_line = self.simpleInstructionString()
             line = self.__lines[0][1]
-
-            if debug:
-                print('******** find affected regs *********')
-                print(self.simpleInstructionString())
-                print(full_line)
-
-            if debug:
-                from pprint import pprint
-                pprint(self.__arch._categories)
 
             for l_tup in self.__lines:
                 line = l_tup[1]
@@ -239,45 +224,8 @@ class Gadget(object):
 
                             if  match_all:
                                 if 'dst' in match_all.groupdict():
-                                    if debug:
-                                        print('-------- match --------')
-                                        print(cat)
-
-                                        print(self.simpleString())
-                                        print(match_all.groupdict())
                                     affected = match_all.groupdict()['dst']
                                     self.__affected_regs.add(affected)
-    #                                if debug:
-    #                                    try:
-    #                                        input("Press enter to continue")
-    #                                    except SyntaxError:
-    #                                        pass
-
-                                    '''
-                                    for g, i in r.groupindex.items():
-                                        if debug:
-                                            print('g: %s' % g)
-                                            print('i: %d' % i)
-                                            print('match all: %s' % match_all)
-                                            print(r.groupindex)
-
-                                        if type(match_all[0]) == tuple:
-                                            for e in set(match_all[0]):
-                                                self.__affected_regs.add(e)
-                                        else:
-                                            for e in set(match_all):
-                                    '''
-
-            if debug:
-                print(self.simpleString())
-                print('affected regs:')
-                print(self.__affected_regs)
-                print('********** affected regs end *************')
-#                try:
-#                    input("Press enter to continue")
-#                except SyntaxError:
-#                        pass
-
             return self.__affected_regs
         else:
             return self.__affected_regs
@@ -298,13 +246,6 @@ class Gadget(object):
 
                         self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
                         self.__category[2]['affected'] = self.affected_regs
-                        '''
-                        print('category: %s' % str(self.__category))
-                        try:
-                            input("Press enter to continue")
-                        except SyntaxError:
-                            pass
-                        '''
                         return self.__category
             self.__category = (Category.NONE,)
 

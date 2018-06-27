@@ -195,8 +195,6 @@ class RopChainX86_64(RopChain):
     def _find(self, category, reg=None, srcdst='dst', badDst=[], badSrc=None, dontModify=None, srcEqDst=False, switchRegs=False ):
         quali = 1
 
-#        print('in find')
-#        print('baddst: %s' % badDst)
         if reg and reg[0] != 'r':
             return
         while quali < RopChainSystemX86_64.MAX_QUALI:
@@ -205,51 +203,24 @@ class RopChainX86_64(RopChain):
 
                     if gadget.category[0] == category and gadget.category[1] == quali:
 
-#                        print(gadget.simpleString())
-#                        print('gadget category')
-#                        print(gadget.category)
-
-#                        print('badsrc: %s' % badSrc)
-
                         if badSrc and (gadget.category[2]['src'] in badSrc \
                                        or gadget.affected_regs.intersection(badSrc)):
-#                            print(gadget.category)
-#                            print('skipping, badsrc')
                             continue
                         if badDst and (gadget.category[2]['dst'] in badDst \
                                        or gadget.affected_regs.intersection(badDst)):
-#                            print(gadget.category)
-#                            print('skipping, baddst=%s' % str(badDst))
-#                            print(gadget.simpleInstructionString())
                             continue
                         if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString() or 'rsp' in gadget.simpleString():
-
- #                           print(gadget.category)
- #                           print(gadget.simpleString())
- #                           print('skipping, no ending ret or contains esp/rsp')
                             continue
                         if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
- #                           print(gadget.category)
- #                           print('skipping, src != dst')
-
                             continue
                         elif not srcEqDst and 'src' in gadget.category[2] and (gadget.category[2]['dst'] == gadget.category[2]['src']):
-  #                          print(gadget.category)
-  #                          print('skipping, src = dst')
-
                             continue
                         if self._isModifiedOrDereferencedAccess(gadget, dontModify):
-   #                         print(gadget.category)
-   #                         print('skipping, is modified or defererenced')
-
                             continue
                         if reg:
                             if gadget.category[2][srcdst] == reg:
                                 if (gadget.fileName, gadget.section) not in self._usedBinaries:
                                     self._usedBinaries.append((gadget.fileName, gadget.section))
-   #                             print(gadget.category)
-   #                             print(gadget.simpleString())
-   #                             print('returning')
                                 return gadget
                             elif switchRegs:
                                 other = 'src' if srcdst == 'dst' else 'dst'
@@ -269,20 +240,12 @@ class RopChainX86_64(RopChain):
         badRegs = []
         badDst = []
         while True:
- #           print('------ createwritestringwhere ------')
- #           print('about to find')
- #           print('reg=%s' % reg)
- #           print('badDst=%s' % str(badRegs))
             popReg = self._find(Category.LOAD_REG, reg=reg, badDst=badRegs, dontModify=dontModify)
- #           print('------ createwritestringwhere ------')
             if not popReg:
                 raise RopChainError('Cannot build writewhatwhere gadget!')
             write4 = self._find(Category.WRITE_MEM, reg=popReg.category[2]['dst'],  badDst=
             badDst, srcdst='src')
             if not write4:
- #               print(popReg.category)
- #               print(popReg.simpleString())
- #               print('createwritestringwhere: appending %s' %popReg.category[2]['dst'])
                 badRegs.append(popReg.category[2]['dst'])
                 continue
             else:
@@ -326,7 +289,6 @@ class RopChainX86_64(RopChain):
             else:
                 popReg2 = self._find(Category.LOAD_REG, reg=write4.category[2]['dst'], dontModify=[what]+dontModify)
                 if not popReg2:
-                    print('writeregvaluewhere: appending %s' % write4.category[2]['dst'])
                     badDst.append(write4.category[2]['dst'])
                     continue
                 else:
@@ -418,12 +380,10 @@ class RopChainX86_64(RopChain):
                 raise RopChainError('Cannot build number with subtract gadget for reg %s!' % reg)
             popSrc = self._find(Category.LOAD_REG, reg=sub.category[2]['src'], dontModify=dontModify)
             if not popSrc:
-                print('createnumbersubtract: appending %s' % sub.category[2]['src'])
                 badRegs.append=[sub.category[2]['src']]
                 continue
             popDst = self._find(Category.LOAD_REG, reg=sub.category[2]['dst'], dontModify=[sub.category[2]['src']]+dontModify)
             if not popDst:
-                print('createnumbersubtract: appending %s' % sub.category[2]['dst'])
                 badRegs.append=[sub.category[2]['dst']]
                 continue
             else:
@@ -453,12 +413,10 @@ class RopChainX86_64(RopChain):
                 raise RopChainError('Cannot build number with addition gadget for reg %s!' % reg)
             popSrc = self._find(Category.LOAD_REG, reg=sub.category[2]['src'], dontModify=dontModify)
             if not popSrc:
-                print('createnumberaddition: appending %s' % sub.category[2]['src'])
                 badRegs.append=[sub.category[2]['src']]
                 continue
             popDst = self._find(Category.LOAD_REG, reg=sub.category[2]['dst'], dontModify=[sub.category[2]['src']]+dontModify)
             if not popDst:
-                print('createnumberaddition: appending %s' % sub.category[2]['dst'])
                 badRegs.append(sub.category[2]['dst'])
                 continue
             else:
@@ -491,7 +449,6 @@ class RopChainX86_64(RopChain):
             if not incReg:
                 if not badRegs:
                     badRegs = []
-                print('createnumberpop: appending %s' % sub.category[2]['dst'])
                 badRegs.append(popReg.category[2]['dst'])
             else:
                 break
@@ -514,7 +471,6 @@ class RopChainX86_64(RopChain):
                 if not incReg:
                     if not badRegs:
                         badRegs = []
-                    print('createnumberxor: appending %s' % sub.category[2]['src'])
                     badRegs.append(clearReg.category[2]['src'])
                 else:
                     break

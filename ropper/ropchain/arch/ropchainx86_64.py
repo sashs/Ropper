@@ -166,20 +166,13 @@ class RopChainX86_64(RopChain):
 
         if padding:
             regs = self._paddingNeededFor(gadget)
-            if gadget.address == 0x478ec6:
-                debug = True
-            else:
-                debug = False
-            debug=True
-            if debug:
-                if len(regs) > 0:
-                    print(regs)
-                    dst = gadget.category[2]['dst']
-                    search = '^pop (%s)$' % dst
-                    first_line = gadget.lines[0][1]
-                    if match(search, first_line):
-                        value_first = True
-                        print('first line pops dst!')
+
+            if len(regs) > 0:
+                dst = gadget.category[2]['dst']
+                search = '^pop (%s)$' % dst
+                first_line = gadget.lines[0][1]
+                if match(search, first_line):
+                    value_first = True
 
             padding_str = ''
             for i in range(len(regs)):
@@ -192,11 +185,6 @@ class RopChainX86_64(RopChain):
                 toReturn += padding_str
                 if value:
                     toReturn += value
-
-            if debug:
-                if len(regs) > 0:
-                    print('padding found')
-                    print(toReturn)
 
         return toReturn
 

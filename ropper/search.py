@@ -38,7 +38,7 @@ class Searcher(object):
     def prepareFilter(self, filter):
         filter = filter.replace('\\','\\\\')
         filter = filter.replace('(','\\(')
-        filter = filter.replace(')','\\(')
+        filter = filter.replace(')','\\)')
         filter = filter.replace('[','\\[')
         filter = filter.replace(']','\\]')
         filter = filter.replace('+','\\+')

@@ -169,7 +169,7 @@ class RopChainX86(RopChain):
     def _printRopInstruction(self, gadget, padding=True, number=None):
         toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],4), gadget.simpleString()))
         if number is not None:
-            toReturn +=self._printPaddingInstruction(number)        
+            toReturn +=self._printPaddingInstruction(number)
         if padding:
             regs = self._paddingNeededFor(gadget)
             for i in range(len(regs)):
@@ -636,36 +636,38 @@ class RopChainX86System(RopChainX86):
         if address is None:
             section = self._binaries[0].getSection('.data')
             length = math.ceil(float(len(cmd))/4) * 4
-            
+            nulladdress = section.offset+length
+
             try:
-                chain_tmp += self._createCommand(cmd,section.offset+0x1000)[0]
+                cmdaddress = section.offset
+                chain_tmp += self._createCommand(cmd,cmdaddress)[0]
                 can_create_command = True
-                
+
             except RopChainError as e:
                 self._printMessage('Cannot create gadget: writewhatwhere')
                 self._printMessage('Use 0x41414141 as command address. Please replace that value.')
-                address = 0x41414141
+                cmdaddress = 0x41414141
             if can_create_command:
-                
+
                 badregs = []
                 while True:
 
                     ret = self._createNumber(0x0, badRegs=badregs)
                     chain_tmp += ret[0]
                     try:
-                        chain_tmp += self._createWriteRegValueWhere(ret[1], section.offset+0x1000+length)[0]
+                        chain_tmp += self._createWriteRegValueWhere(ret[1], nulladdress)[0]
                         break
                     except BaseException as e:
                         #raise e
                         badregs.append(ret[1])
 
-                gadgets.append((self._createAddress, [section.offset+0x1000],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
-                gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
-                gadgets.append((self._createAddress, [section.offset+0x1000+length],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
+                gadgets.append((self._createAddress, [cmdaddress],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
+                gadgets.append((self._createAddress, [nulladdress],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
+                gadgets.append((self._createAddress, [nulladdress],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
                 gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
         if address is not None and not can_create_command:
             if type(address) is str:
-                address = int(address, 16)
+                cmdaddress = int(address, 16)
             nulladdress = options.get('nulladdress')
             if nulladdress is None:
                 self._printMessage('No address to a null bytes was given, 0x42424242 is used instead.')
@@ -673,7 +675,7 @@ class RopChainX86System(RopChainX86):
                 nulladdress = 0x42424242
             elif type(nulladdress) is str:
                 nulladdress = int(nulladdress,16)
-            gadgets.append((self._createNumber, [address],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
+            gadgets.append((self._createNumber, [cmdaddress],{'reg':'ebx'},['ebx', 'bx', 'bl', 'bh']))
             gadgets.append((self._createNumber, [nulladdress],{'reg':'ecx'},['ecx', 'cx', 'cl', 'ch']))
             gadgets.append((self._createNumber, [nulladdress],{'reg':'edx'},['edx', 'dx', 'dl', 'dh']))
             gadgets.append((self._createNumber, [0xb],{'reg':'eax'},['eax', 'ax', 'al', 'ah']))
@@ -876,9 +878,9 @@ class RopChainX86VirtualProtect(RopChainX86):
 
         self._printMessage('Ropchain Generator for VirtualProtect:\n')
         self._printMessage('eax 0x90909090\necx old protection (writable addr)\nedx 0x40 (RWE)\nebx size\nesp address\nebp return address (jmp esp)\nesi pointer to VirtualProtect\nedi ret (rop nop)\n')
-        
+
         image_base = 0
-        address = options.get('address')      
+        address = options.get('address')
         given = False
         if not address:
             address, image_base = self.__getVirtualProtectEntry()
@@ -925,9 +927,9 @@ class RopChainX86VirtualProtect(RopChainX86):
 
             jmp_eax = self._searchOpcode('ff20') # jmp [eax]
             gadgets.append((self._createAddress, [jmp_eax.lines[0][0]],{'reg':'esi'},['esi','si']))
-            
+
             gadgets.append((self._createNumber, [address],{'reg':'eax'},['eax', 'ax', 'ah', 'al']))
-            
+
             pop_ebp = self._searchOpcode('5dc3')
             if pop_ebp:
                 gadgets.append((self._createAddress, [pop_ebp.lines[0][0]],{'reg':'ebp'},['ebp', 'bp']+to_extend))

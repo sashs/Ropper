@@ -626,7 +626,7 @@ class RopChainSystemX86_64(RopChainX86_64):
             section = self._binaries[0].getSection('.data')
 
             length = math.ceil(float(len(cmd))/8) * 8
-            nulladdress = section.offset+0x1000+length
+            nulladdress = section.offset+length
             try:
                 cmdaddress = section.offset
                 chain_tmp += self._createCommand(cmd,cmdaddress)[0]

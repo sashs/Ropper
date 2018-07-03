@@ -636,7 +636,7 @@ class RopChainX86System(RopChainX86):
         if address is None:
             section = self._binaries[0].getSection('.data')
             length = math.ceil(float(len(cmd))/4) * 4
-            nulladdress = section.offset+0x1000
+            nulladdress = section.offset+length
 
             try:
                 cmdaddress = section.offset

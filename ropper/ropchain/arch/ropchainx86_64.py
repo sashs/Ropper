@@ -214,6 +214,7 @@ class RopChainX86_64(RopChain):
 
     def _find(self, category, reg=None, srcdst='dst', badDst=[], badSrc=None, dontModify=None, srcEqDst=False, switchRegs=False ):
         quali = 1
+
         if reg and reg[0] != 'r':
             return
         while quali < RopChainSystemX86_64.MAX_QUALI:
@@ -222,21 +223,19 @@ class RopChainX86_64(RopChain):
 
                     if gadget.category[0] == category and gadget.category[1] == quali:
 
-                        if badSrc and gadget.category[2]['src'] in badSrc:
+                        if badSrc and (gadget.category[2]['src'] in badSrc \
+                                       or gadget.affected_regs.intersection(badSrc)):
                             continue
-                        if badDst and gadget.category[2]['dst'] in badDst:
+                        if badDst and (gadget.category[2]['dst'] in badDst \
+                                       or gadget.affected_regs.intersection(badDst)):
                             continue
                         if not gadget.lines[len(gadget.lines)-1][1].strip().endswith('ret') or 'esp' in gadget.simpleString() or 'rsp' in gadget.simpleString():
-
                             continue
                         if srcEqDst and (not (gadget.category[2]['dst'] == gadget.category[2]['src'])):
-
                             continue
                         elif not srcEqDst and 'src' in gadget.category[2] and (gadget.category[2]['dst'] == gadget.category[2]['src']):
-
                             continue
                         if self._isModifiedOrDereferencedAccess(gadget, dontModify):
-
                             continue
                         if reg:
                             if gadget.category[2][srcdst] == reg:

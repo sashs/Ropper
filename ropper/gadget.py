@@ -55,6 +55,7 @@ class Gadget(object):
         self.__lines = lines
         self.__gadget = None
         self.__category = None
+        self.__affected_regs = None
         self._fileName = fileName
         self._section = section
         self.__bytes = bytes
@@ -65,7 +66,7 @@ class Gadget(object):
 
     @property
     def info(self):
-        
+
         return self.__info
 
     @info.setter
@@ -75,7 +76,7 @@ class Gadget(object):
     @property
     def arch(self):
         return self.__arch
-    
+
     @property
     def lines(self):
         if self.__lines == None:
@@ -194,7 +195,7 @@ class Gadget(object):
     def simpleString(self):
         analyseColor = Color.CYAN if self.__info else Color.RED
         address = self.__lines[0][0]
-        
+
         if isinstance(self.arch, ropper.arch.ArchitectureArmThumb):
             address += 1
             toReturn = '%s (%s): ' % (cstr(toHex(self._lines[0][0] + self.imageBase, self.__arch.addressLength), analyseColor),cstr(toHex(address + self.imageBase, self.__arch.addressLength), Color.GREEN))
@@ -204,6 +205,30 @@ class Gadget(object):
         if self.__info:
             toReturn += '\nClobbered Register = %s; StackPointer-Offset = %s\n' % (", ".join(list(self.info.clobberedRegisters)),self.info.spOffset if self.info.spOffset is not None else 'Undef')
         return toReturn
+
+    @property
+    def affected_regs(self):
+        if not self.__affected_regs:
+            self.__affected_regs = set()
+
+            full_line = self.simpleInstructionString()
+            line = self.__lines[0][1]
+
+            for l_tup in self.__lines:
+                line = l_tup[1]
+                for cat, regexs in self.__arch._categories.items():
+                    for regex in regexs[0]:
+                        if regex != 'ret.+':
+                            r = re.compile(regex)
+                            match_all = r.match(line)
+
+                            if  match_all:
+                                if 'dst' in match_all.groupdict():
+                                    affected = match_all.groupdict()['dst']
+                                    self.__affected_regs.add(affected)
+            return self.__affected_regs
+        else:
+            return self.__affected_regs
 
     @property
     def category(self):
@@ -218,11 +243,9 @@ class Gadget(object):
                                 if l[1].startswith(invalid):
                                     self.__category = (Category.NONE,)
                                     return self.__category
-                        d = match.groupdict()
-                        for key, value in d.items():
-                            d[key] = str(value)
 
                         self.__category = (cat, len(self.__lines) -1 ,match.groupdict())
+                        self.__category[2]['affected'] = self.affected_regs
                         return self.__category
             self.__category = (Category.NONE,)
 
@@ -261,4 +284,3 @@ class Gadget(object):
 
     def __repr__(self):
         return 'Gadget(%s, %s, %s, %s, %s, %s)' % (repr(self.fileName), repr(self.section), repr(self.__arch), repr(self.__lines), repr(self._bytes), repr(self.info))
-

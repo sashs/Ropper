@@ -421,6 +421,8 @@ class ArchitectureArm64(Architecture):
                                                 (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4), # blr <reg>
                                                 (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # blr <reg>
 
+    def _initBadInstructions(self):
+        self._badInstructions = ['brk', 'hlt', 'drps', 'hvc', 'smc', 'dcps1', 'dcps2', 'dcps3']
 
 
 class ArchitecturePPC(Architecture):

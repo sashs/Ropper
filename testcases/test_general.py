@@ -23,6 +23,7 @@ from ropper.arch import *
 from ropper.common.error import *
 from ropper.service import RopperService
 
+from filebytes.binary import BinaryError
 
 from sys import version_info
 import unittest
@@ -96,3 +97,8 @@ class GeneralTests(unittest.TestCase):
             with self.assertRaisesRegexp(RopperError,'Invalid characters in opcode string'):
                 self.rs.searchOpcode('ff4r')
 
+class RegressionTests(unittest.TestCase):
+
+    def test_segfault_pe_001(self):
+        with self.assertRaises(BinaryError):
+            _ = Loader.open('test-binaries/hang-mutate_bytes2:3da2c4818ffe26a52b06b348969026f3:.exe')

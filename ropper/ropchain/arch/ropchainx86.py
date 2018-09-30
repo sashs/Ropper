@@ -171,6 +171,7 @@ class RopChainX86(RopChain):
         if number is not None:
             toReturn +=self._printPaddingInstruction(number)
         if padding:
+            regs = self._paddingNeededFor(gadget)
             if len(regs) > 0:
                 dst = gadget.category[2]['dst']
                 search = '^pop (%s)$' % dst

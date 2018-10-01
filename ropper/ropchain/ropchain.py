@@ -37,6 +37,11 @@ class RopChain(Abstract):
     def create(self, options):
         pass
 
+    def _updateUsedBinaries(self,gadget):
+        if (gadget.fileName, gadget._section) not in self._usedBinaries:
+            self._usedBinaries.append((gadget.fileName, gadget._section))
+
+    
     @classmethod
     def name(cls):
         return None

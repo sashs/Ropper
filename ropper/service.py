@@ -28,7 +28,6 @@ from ropper.rop import Ropper, Format
 from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
 from codecs import encode, decode
-from hashlib import md5
 from ropper.semantic import Analyser, SemanticInformation
 import tempfile
 import re
@@ -304,12 +303,10 @@ class RopperService(object):
         return gadgets
 
     def __getCacheFileName(self, file):
-        m = md5()
-        m.update(file.loader._binary._bytes)
-        d = m.hexdigest()
-        return "%s_%s_%d_%s_%d_%s" % (getFileNameFromPath(file.name), str(file.arch), self.options.inst_count,str(self.options.type), sys.version_info.major,d)
+        return "%s_%s_%d_%s_%d" % (file.loader.checksum, str(file.arch), self.options.inst_count,str(self.options.type), sys.version_info.major)
 
     def __saveCache(self, file):
+        cache_file = None
         try:
             temp = RopperService.CACHE_FOLDER
             if not os.path.exists(temp):
@@ -338,9 +335,10 @@ class RopperService(object):
                 f.write(encode(repr(file.allGadgets).encode('ascii'),'zip'))
         except BaseException as e:
             print(e)
-            for i in range(1, RopperService.CACHE_FILE_COUNT+1):
-                if os.path.exists(cache_file+'_%d' % i):
-                    os.remove(cache_file+'_%d' % i)
+            if cache_file:
+                for i in range(1, RopperService.CACHE_FILE_COUNT+1):
+                    if os.path.exists(cache_file+'_%d' % i):
+                        os.remove(cache_file+'_%d' % i)
 
 
     def __loadCachePerProcess(self, fqueue, gqueue):
@@ -364,6 +362,7 @@ class RopperService(object):
         nan= 0
         processes = []
         single = False
+        cache_file = None
         try:
             temp = RopperService.CACHE_FOLDER
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
@@ -432,9 +431,10 @@ class RopperService(object):
                     p = processes[i]
                     if p and p.is_alive():
                         p.terminate()
-            for i in range(1,RopperService.CACHE_FILE_COUNT+1):
-                if os.path.exists(cache_file+'_%d' % i):
-                    os.remove(cache_file+'_%d' % i)
+            if cache_file:
+                for i in range(1,RopperService.CACHE_FILE_COUNT+1):
+                    if os.path.exists(cache_file+'_%d' % i):
+                        os.remove(cache_file+'_%d' % i)
 
 
     def _badbytes_changed(self, value):
@@ -591,7 +591,7 @@ class RopperService(object):
         def load_gadgets(f):
             gtype = None
             cache = False
-            Gadget.IMAGE_BASES[f.name] = f.loader.imageBase
+            Gadget.IMAGE_BASES[f.loader.checksum] = f.loader.imageBase
             if self.options.type == 'rop':
                 gtype = GadgetType.ROP
             elif self.options.type == 'jop':
@@ -760,7 +760,7 @@ class RopperService(object):
         if not file:
             raise RopperError('No such file opened: %s' % name)
         file.loader.imageBase = imagebase
-        Gadget.IMAGE_BASES[name] = file.loader.imageBase
+        Gadget.IMAGE_BASES[file.loader.checksum] = file.loader.imageBase
         if file.loaded and (self.options.badbytes or self.options.cfg_only and file.type == Type.PE):
             file.gadgets = self.__prepareGadgets(file, file.allGadgets, file.type)
 

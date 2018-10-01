@@ -239,18 +239,15 @@ class RopChainX86_64(RopChain):
                             continue
                         if reg:
                             if gadget.category[2][srcdst] == reg:
-                                if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                    self._usedBinaries.append((gadget.fileName, gadget.section))
+                                self._updateUsedBinaries(gadget)
                                 return gadget
                             elif switchRegs:
                                 other = 'src' if srcdst == 'dst' else 'dst'
                                 if gadget.category[2][other] == reg:
-                                    if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                        self._usedBinaries.append((gadget.fileName, gadget.section))
+                                    self._updateUsedBinaries(gadget)
                                     return gadget
                         else:
-                            if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                self._usedBinaries.append((gadget.fileName, gadget.section))
+                            self._updateUsedBinaries(gadget)
                             return gadget
 
             quali += 1

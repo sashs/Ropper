@@ -166,7 +166,8 @@ class RopChainX86(RopChain):
         return regs
 
 
-    def _printRopInstruction(self, gadget, padding=True, number=None):
+    def _printRopInstruction(self, gadget, padding=True, number=None, value=None):
+        value_first = False
         toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],4), gadget.simpleString()))
         if number is not None:
             toReturn +=self._printPaddingInstruction(number)

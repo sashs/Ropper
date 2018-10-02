@@ -40,6 +40,7 @@ def deleteDuplicates(gadgets, callback=None):
     inst = set()
     count = 0
     added = False
+    len_gadgets = len(gadgets)
     for i,gadget in enumerate(gadgets):
         inst.add(gadget._gadget)
         if len(inst) > count:
@@ -47,7 +48,7 @@ def deleteDuplicates(gadgets, callback=None):
             toReturn.append(gadget)
             added = True
         if callback:
-            callback(gadget, added, float(i)/(len(gadgets)-1))
+            callback(gadget, added, float(i+1)/(len_gadgets))
             added = False
     return toReturn
 

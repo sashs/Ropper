@@ -54,7 +54,7 @@ class Analyser(object):
         #print(gadget)
         try:
             thumb = 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else 0
-            irsb = pyvex.IRSB(str(gadget.bytes), gadget.address+thumb, gadget.arch.info, bytes_offset=thumb, num_bytes=len(gadget.bytes))
+            irsb = pyvex.IRSB(bytes(gadget.bytes), gadget.address+thumb, gadget.arch.info, bytes_offset=thumb, num_bytes=len(gadget.bytes))
             irsb_anal = IRSBAnalyser()
             anal = irsb_anal.analyse(irsb)
             #print(anal.spOffset)

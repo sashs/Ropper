@@ -19,11 +19,10 @@
 import sys
 from ropper.common.error import RopperError
 try:
-    if sys.version_info.major < 3:
-        import z3
-        from z3 import *
-        import pyvex
-        import archinfo
+    import z3
+    from z3 import *
+    import pyvex
+    import archinfo
 except ImportError as e:
     pass
 
@@ -35,7 +34,8 @@ import ropper.common.enum as enum
 import math
 import re
 
-
+if sys.version_info.major == 3:
+    long = int
 
 class Category(enum.Enum):
     _enum_ = 'NONE WRITE_MEM_FROM_MEM WRITE_REG_FROM_MEM WRITE_REG_FROM_REG WRITE_MEM_FROM_REG NEG_REG STACK_PIVOTING LOAD_REG LOAD_MEM STACK_PIVOT SYSCALL JMP CALL WRITE_MEM INC_REG CLEAR_REG SUB_REG ADD_REG SUB_REG MUL_REG DIV_REG XCHG_REG PUSHAD WRITE_MEM'
@@ -200,7 +200,7 @@ class Analysis(object):
     def writeMemory(self, addr, size, data):
         size = size/8
         old = self._memory
-        for i in range(size):
+        for i in range(int(size)):
             #old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
             
             value = 'Extract(%d, %d, %s)' % ((i+1)*8-1, i*8, data)

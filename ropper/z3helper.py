@@ -199,7 +199,7 @@ def create_number_expression(number, size):
 
 def create_read_memory_expression(memory, addr, size):
     to_return = '%s[%s]' % (memory, addr)
-    for i in range(1, size/8):
+    for i in range(1, int(size/8)):
         value = '%s[%s]' % (memory, '%s + %d' % (addr, i))
         to_return = 'Concat(%s, %s)' % (value, to_return)
 

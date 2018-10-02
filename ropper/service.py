@@ -421,14 +421,12 @@ class RopperService(object):
                 return sorted(all_gadgets, key=Gadget.simpleInstructionString)
         except KeyboardInterrupt:
             if mp:
-                for i in range(count):
-                    p = processes[i]
+                for p in processes:
                     if p and p.is_alive():
                         p.terminate()
         except BaseException as e:
             if mp:
-                for i in range(count):
-                    p = processes[i]
+                for p in processes:
                     if p and p.is_alive():
                         p.terminate()
             if cache_file:

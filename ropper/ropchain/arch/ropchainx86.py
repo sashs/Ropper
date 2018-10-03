@@ -23,6 +23,10 @@ from ropper.rop import Ropper
 from ropper.arch import x86
 from ropper.ropchain.ropchain import *
 from ropper.loaders.loader import Type
+from ropper.loaders.pe import PE
+from ropper.loaders.elf import ELF
+from ropper.loaders.mach_o import MachO
+from ropper.loaders.raw import Raw
 from ropper.gadget import Gadget
 from re import match
 from filebytes.pe import ImageDirectoryEntry
@@ -625,6 +629,10 @@ class RopChainX86(RopChain):
 
 class RopChainX86System(RopChainX86):
 
+    
+    @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
 
     @classmethod
     def name(cls):
@@ -741,6 +749,11 @@ class RopChainX86Mprotect(RopChainX86):
     """
 
     @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
+
+    
+    @classmethod
     def name(cls):
         return 'mprotect'
 
@@ -833,7 +846,10 @@ class RopChainX86VirtualProtect(RopChainX86):
     edi ret (rop nop)
     """
 
-
+    @classmethod
+    def usableTypes(self):
+        return (PE, Raw)
+    
     @classmethod
     def name(cls):
         return 'virtualprotect'

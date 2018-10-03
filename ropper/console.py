@@ -283,6 +283,9 @@ class Console(cmd.Cmd):
         self.__printGadgets([g for g in pprs.values()][0],
                             header='POP;POP;RET Instructions')
 
+    def __loadGadgetsForAllFiles(self):
+        self.__rs.loadGadgetsFor()
+        
     def __loadGadgets(self):
         self.__searchGadgetsFor(self.currentFileName)
 
@@ -360,6 +363,8 @@ class Console(cmd.Cmd):
                 self.__printError(e)
         except BaseException as e:
             self.__rs.options.color = old
+            print( traceback.format_exc())
+
             raise e
         self.__rs.options.color = old
 
@@ -481,7 +486,7 @@ class Console(cmd.Cmd):
         # elif options.checksec:
          #   self.__checksec()
         elif options.chain:
-            self.__loadGadgets()
+            self.__loadGadgetsForAllFiles()
             self.__generateChain(options.chain)
         elif self.__options.file:
             self.__loadGadgets()

@@ -29,6 +29,7 @@ class RopChain(Abstract):
         self._gadgets = gadgets
         self.__badbytes = badbytes
 
+
     @property
     def badbytes(self):
         return self.__badbytes
@@ -40,7 +41,6 @@ class RopChain(Abstract):
     def _updateUsedBinaries(self,gadget):
         if (gadget.fileName, gadget._section) not in self._usedBinaries:
             self._usedBinaries.append((gadget.fileName, gadget._section))
-
     
     @classmethod
     def name(cls):
@@ -54,6 +54,20 @@ class RopChain(Abstract):
     def archs(self):
         return []
 
+
+    @classmethod
+    def usableTypes(self):
+        return ()
+
+    @classmethod
+    def getUsableBinaries(cls, binaries):
+        to_return = []
+        for binary in binaries:
+            if isinstance(binary, cls.usableTypes()):
+                to_return.append(binary)
+
+        return to_return
+                
     @classmethod
     def get(cls, binaries, gadgets, name, callback, badbytes=''):
         for subclass in cls.__subclasses__():
@@ -61,7 +75,12 @@ class RopChain(Abstract):
                 gens = subclass.availableGenerators()
                 for gen in gens:
                     if gen.name() == name:
-                        return gen(binaries, gadgets, callback, badbytes)
+                        ub = gen.getUsableBinaries(binaries)
+                        if ub:
+                            return gen(ub, gadgets, callback, badbytes)
+                        else:
+                            filetypes = set([str(b.type) for b in binaries])
+                            raise RopperError('The generator {} is not useable for the filetypes: {}'.format(name, ', '.join(filetypes)))
         
 
     def containsBadbytes(self, value, bytecount=4):

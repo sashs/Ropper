@@ -101,4 +101,4 @@ class GeneralTests(unittest.TestCase):
 class RegressionTests(unittest.TestCase):
     def test_segfault_pe_001(self):
         with self.assertRaises(BinaryError):
-            _ = Loader.open('test-binaries/hang-mutate_bytes2:3da2c4818ffe26a52b06b348969026f3:.exe')
+            _ = Loader.open('test-binaries/hang-mutate_bytes2_3da2c4818ffe26a52b06b348969026f3_.exe')

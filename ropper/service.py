@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 from filebytes.pe import ImageDirectoryEntry
-from ropper.common.utils import isHex, toHex, getFileNameFromPath
+from ropper.common.utils import isWindows, isHex, toHex, getFileNameFromPath
 from ropper.common.coloredstring import cstr, Color
 from ropper.common.error import RopperError
 from ropper.loaders.loader import Loader, Type
@@ -315,7 +315,7 @@ class RopperService(object):
 
             cache_file = temp + os.path.sep + self.__getCacheFileName(file)
             count = RopperService.CACHE_FILE_COUNT
-            if len(file.allGadgets) > 1000:
+            if not isWindows() and len(file.allGadgets) > 1000:
                 if os.path.exists(cache_file):
                     os.remove(cache_file)
 

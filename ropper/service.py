@@ -372,6 +372,8 @@ class RopperService(object):
                 if not os.path.exists(cache_file+'_%d' % 1):
                     return
                 else:
+                    if isWindows():
+                        raise RopperError('Cache has to be cleared.')
                     mp = True and multiprocessing.cpu_count()>1
             else: 
                 single = True

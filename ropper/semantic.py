@@ -21,6 +21,7 @@ from ropper.common.error import RopperError
 try:
     import z3
     from z3 import *
+    from z3.z3types import Z3Exception
     import pyvex
     import archinfo
 except ImportError as e:
@@ -51,19 +52,59 @@ class Analyser(object):
     def analyse(self, gadget):
         if not self.__work:
             return False
-        #print(gadget)
         try:
             thumb = 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else 0
-            irsb = pyvex.IRSB(bytes(gadget.bytes), gadget.address+thumb, gadget.arch.info, bytes_offset=thumb, num_bytes=len(gadget.bytes))
+            irsb = pyvex.IRSB(bytes(gadget.bytes), gadget.address+thumb, gadget.arch.info, bytes_offset=thumb, num_bytes=len(gadget.bytes), opt_level=0)
             irsb_anal = IRSBAnalyser()
             anal = irsb_anal.analyse(irsb)
-            #print(anal.spOffset)
+            archinfo = gadget.arch.info
+            anal.spOffset = self.findSpOffset(gadget, anal, archinfo.register_names[archinfo.registers['sp'][0]])
             return anal
 
         except pyvex.PyVEXError as e:
             pass
+        except:
+            pass
 
+    def findSpOffset(self, g, anal, sp ):
+        if sp not in anal.regs:
+            return 0
+        slicer = Slicer()
+        slice_instructions = []
+        slice = slicer.slice(anal.expressions, [sp])
+        solver = z3.Solver()
+        
+        expr_len = len(anal.expressions)
+        expr = None
+        tmp = None
 
+        for inst in anal.expressions:
+            
+            if not inst:
+                continue
+            if expr is None:
+                expr = inst[0]
+            else:
+                expr = 'And(%s, %s)' % (expr, inst[0])
+
+        if expr:
+            expr = ExpressionBuilder().build(anal.regs, anal.mems, expr)
+            sp1 = anal.regs[sp][0]
+            sp2 = anal.regs[sp][-1]
+            size = int(sp1.split('_')[-1])
+            sp1 = z3.BitVec(sp1, size)
+            sp2 = z3.BitVec(sp2, size)
+            diff = z3.BitVec('diff', size)
+            solver.add(z3.And(expr, diff == sp2 - sp1))
+            solver.check()
+            spOffset = solver.model()[diff].as_signed_long()
+            solver = z3.Solver()
+            solver.add(z3.And(expr, sp2 - sp1 == spOffset))
+            if solver.check() == z3.unsat:
+                return 'Undef'
+            return spOffset
+            
+                
 class InstructionAnalysis(object):
 
     MEM_COUNTER = 0
@@ -264,7 +305,7 @@ class Analysis(object):
 
 class SemanticInformation(object):
 
-    def __init__(self, regs, usedRegs, clobberedRegs, mems, expressions, spOffset, checked_constraints=None):
+    def __init__(self, regs, usedRegs, clobberedRegs, mems, expressions, spOffset, checked_constraints=None, irsb=None):
         
         self.regs = regs
         self.usedRegs = usedRegs
@@ -273,13 +314,13 @@ class SemanticInformation(object):
         self.expressions = expressions
         self.spOffset = spOffset
         self._checkedConstraints = {} if checked_constraints is None else checked_constraints
-
+        self.irsb = irsb
     @property    
     def checkedConstraints(self):
         return self._checkedConstraints
 
     def __repr__(self):
-        return 'SemanticInformation(%s, %s, %s, %s, %s, %s, %s)' % (repr(self.regs), repr(self.usedRegs), repr(self.clobberedRegisters), repr(self.mems), repr(self.expressions), repr(self.spOffset), repr(self.checkedConstraints))
+        return 'SemanticInformation(%s, %s, %s, %s, %s, %s, %s, %s)' % (repr(self.regs), repr(self.usedRegs), repr(self.clobberedRegisters), repr(self.mems), repr(self.expressions), repr(self.spOffset), repr(self.checkedConstraints), repr(self.irsb))
 
 class IRSB_DATA(enum.Enum):
     _enum_ = 'WRITE_REG READ_REG SP_OFFSET CONSTANT'
@@ -615,8 +656,7 @@ class IRSBAnalyser(object):
             ci.expressions.append(expr)
 
         clobbered_regs = self.__resolveAssignments(anal)
-
-        return SemanticInformation(anal.regs, anal.usedRegs, clobbered_regs, anal.mems, anal.expressions, anal.spOffset)
+        return SemanticInformation(anal.regs, anal.usedRegs, clobbered_regs, anal.mems, anal.expressions, anal.spOffset, irsb=irsb._pp_str())
 
 
 class Slice(object):
@@ -639,7 +679,8 @@ class Slicer(object):
                     slice.regs.append(expr[2][0])
                 if len(expr[2]) == 2 and type(expr[2][1]) is str and not expr[2][1].isdigit():
                     slice.regs.append(expr[2][1])
-                slice.expressions.append(expr[0])
+                if expr[0]:
+                    slice.expressions.append(expr[0])
 
         return slice
 
@@ -670,4 +711,10 @@ class ExpressionBuilder(object):
         self._createMem(z3objects, mems)
         if constraint is None:
             return eval(expression, globals(), z3objects)
-        return z3.And(eval(expression, globals(), z3objects), z3.Not(eval(constraint, globals(), z3objects)))
+        f = True
+        f = z3.And(f,eval(expression, globals(), z3objects))
+        g = eval(constraint, globals(), z3objects)
+        
+        return z3.And(f, z3.Not(g))
+#        return z3.Not(eval(expression, globals(), z3objects) == eval(constraint, globals(), z3objects))
+#        return z3.And(eval(expression, globals(), z3objects), z3.Not(eval(constraint, globals(), z3objects))

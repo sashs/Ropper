@@ -146,13 +146,13 @@ class Searcher(object):
                     tmp = None
 
                     for inst in slice.expressions:
-                        tmp = inst
-                        if tmp == False:
-                            continue
+                       # tmp = inst
+                       # if tmp == False:
+                       #     continue
                         if expr is None:
-                            expr = tmp
+                            expr = inst
                         else:
-                            expr = 'And(%s, %s)' % (expr, tmp)
+                            expr = 'And(%s, %s)' % (expr, inst)
 
                     expr = ExpressionBuilder().build(semantic_info.regs, semantic_info.mems, expr, constraint_string)
                     solver.add(expr)
@@ -160,6 +160,7 @@ class Searcher(object):
                         found = True
                         found_gadgets.append(gadget)
                         semantic_info.checkedConstraints[constraint_key] = True
+
                         yield gadget
                     else:
                         semantic_info.checkedConstraints[constraint_key] = False

@@ -24,6 +24,10 @@ from ropper.rop import Ropper
 from ropper.arch import x86_64
 from ropper.ropchain.ropchain import *
 from ropper.loaders.loader import Type
+from ropper.loaders.elf import ELF
+from ropper.loaders.pe import PE
+from ropper.loaders.raw import Raw
+from ropper.loaders.mach_o import MachO
 from re import match
 import itertools
 import math
@@ -239,18 +243,15 @@ class RopChainX86_64(RopChain):
                             continue
                         if reg:
                             if gadget.category[2][srcdst] == reg:
-                                if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                    self._usedBinaries.append((gadget.fileName, gadget.section))
+                                self._updateUsedBinaries(gadget)
                                 return gadget
                             elif switchRegs:
                                 other = 'src' if srcdst == 'dst' else 'dst'
                                 if gadget.category[2][other] == reg:
-                                    if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                        self._usedBinaries.append((gadget.fileName, gadget.section))
+                                    self._updateUsedBinaries(gadget)
                                     return gadget
                         else:
-                            if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                self._usedBinaries.append((gadget.fileName, gadget.section))
+                            self._updateUsedBinaries(gadget)
                             return gadget
 
             quali += 1
@@ -617,6 +618,9 @@ class RopChainX86_64(RopChain):
 
 class RopChainSystemX86_64(RopChainX86_64):
 
+    @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
 
     @classmethod
     def name(cls):
@@ -728,6 +732,10 @@ class RopChainMprotectX86_64(RopChainX86_64):
     rdx 0x7 -> RWE
     """
 
+    @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
+    
     @classmethod
     def name(cls):
         return 'mprotect'

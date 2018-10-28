@@ -44,11 +44,11 @@ class ELF_x86_84(unittest.TestCase):
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x400000)
         self.file.imageBase = 0x0
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x400000)
 
@@ -66,11 +66,11 @@ class ELF_x86_84(unittest.TestCase):
 
         self.assertEqual(gadget.imageBase, 0x400000)
         self.file.imageBase = 0x0
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x400000)
 
@@ -98,11 +98,11 @@ class PE_x86_84(unittest.TestCase):
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
         self.file.imageBase = 0x0
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
@@ -119,11 +119,11 @@ class PE_x86_84(unittest.TestCase):
         self.assertEqual(len(gadgets), 15)
         self.assertEqual(gadget.imageBase, 0x4ad00000)
         self.file.imageBase = 0x0
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x4ad00000)
 
@@ -147,11 +147,11 @@ class MACHO_x86_84(unittest.TestCase):
         self.assertEqual(gadget.lines[0][0] + self.file.imageBase, gadget.address)
         self.assertEqual(gadget.imageBase, 0x100000000)
         self.file.imageBase = 0x0
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x100000000)
 
@@ -169,11 +169,11 @@ class MACHO_x86_84(unittest.TestCase):
 
         self.assertEqual(gadget.imageBase, 0x100000000)
         self.file.imageBase = 0x0
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x0)
         self.file.imageBase = None
-        Gadget.IMAGE_BASES[self.file.fileName] = self.file.imageBase
+        Gadget.IMAGE_BASES[self.file.checksum] = self.file.imageBase
 
         self.assertEqual(gadget.imageBase, 0x100000000)
 

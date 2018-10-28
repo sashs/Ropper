@@ -23,6 +23,7 @@ try:
     import pyvex
 except:
     pass
+import ropper.z3helper as z3helper
 from ropper.common.error import RopperError
 from ropper.common.utils import isHex
 from ropper.gadget import Category
@@ -100,8 +101,6 @@ class Searcher(object):
         return False
 
     def semanticSearch(self, gadgets, constraints, maxLen ,stableRegs=[]):
-        if sys.version_info.major > 2:
-            raise RopperError('Semantic Search is only available for python2.')
 
         if 'z3' not in globals():
             raise RopperError('z3 has to be installed in order to use semantic search')
@@ -118,7 +117,6 @@ class Searcher(object):
         found_gadgets = []
         slicer = Slicer()
         constraint_key = " ".join(list(set(constraints)))
-        import z3helper
         for glen in range(1, maxLen+1):
             for gadget in gadgets:
                 if len(gadget) != glen:
@@ -148,13 +146,13 @@ class Searcher(object):
                     tmp = None
 
                     for inst in slice.expressions:
-                        tmp = inst
-                        if tmp == False:
-                            continue
+                       # tmp = inst
+                       # if tmp == False:
+                       #     continue
                         if expr is None:
-                            expr = tmp
+                            expr = inst
                         else:
-                            expr = 'And(%s, %s)' % (expr, tmp)
+                            expr = 'And(%s, %s)' % (expr, inst)
 
                     expr = ExpressionBuilder().build(semantic_info.regs, semantic_info.mems, expr, constraint_string)
                     solver.add(expr)
@@ -162,6 +160,7 @@ class Searcher(object):
                         found = True
                         found_gadgets.append(gadget)
                         semantic_info.checkedConstraints[constraint_key] = True
+
                         yield gadget
                     else:
                         semantic_info.checkedConstraints[constraint_key] = False

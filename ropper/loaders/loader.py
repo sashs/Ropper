@@ -22,6 +22,7 @@ from ropper.common.enum import Enum
 from struct import pack_into
 from ropper.common.error import *
 from ropper.arch import *
+from hashlib import sha256
 import re
 
 class Type(Enum):
@@ -62,17 +63,22 @@ class Loader(Abstract):
         self._bytes_p = None
         self._arch = arch
 
-
         self._gadgets = {}
+        self._checksum = 0x0
 
         self._printer = None
         self._manualImageBase = None
         self.loaded = False
 
         self.__binary = self._loadFile(filename, bytes)
+        self.__calculateChecksum()
         if arch is None:
             self._arch = self._loadDefaultArch()
 
+    @property
+    def checksum(self):
+        return self._checksum
+            
     @property
     def _binary(self):
         return self.__binary
@@ -140,6 +146,11 @@ class Loader(Abstract):
     @property
     def fileName(self):
         return self._fileName
+
+    def __calculateChecksum(self):
+        m = sha256()
+        m.update(self._binary._bytes)
+        self._checksum = m.hexdigest()
 
     @classmethod
     def isSupportedFile(cls, fileName, bytes=None):

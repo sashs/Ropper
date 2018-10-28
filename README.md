@@ -46,10 +46,9 @@ If you don't want to install filebytes, filebytes is a submodule of the ropper r
     $ ./Ropper.py
 
 THIS FEATURE IS STILL UNDER DEVELOPEMENT!
-Ropper has a semantic search command, which offers the possiblity to search for gadgets. Due to a dependency, this command only works with python2 on linux, but I am working
-on porting this dependency to python3. Since python3 is default on some systems, ropper2 can be used to execute ropper with python2.
+Ropper has a semantic search command, which offers the possiblity to search for gadgets.
 
-    $ ropper2 --file <afile> --semantic "<any constraint>"
+    $ ropper --file <afile> --semantic "<any constraint>"
 
 The following optional dependencies are needed to use semantic search:
 

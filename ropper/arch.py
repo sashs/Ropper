@@ -26,8 +26,7 @@ from capstone import *
 from . import gadget
 try:
     import sys
-    if sys.version_info.major < 3:
-        import archinfo
+    import archinfo
 except:
     pass
 

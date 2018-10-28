@@ -20,6 +20,7 @@
 from .coloredstring import *
 import ropper
 import re
+import sys
 
 def getFileNameFromPath(path):
     if '/' in path:
@@ -120,3 +121,5 @@ def printHexFormat(data, addr, nocolor=False):
         print(cstr(toHex(addr + i*16), Color.RED) +': ' + bytes)
     
 
+def isWindows():
+    return sys.platform.lower().startswith('win')

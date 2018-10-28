@@ -112,7 +112,7 @@ class Ropper(object):
 
     def searchJmpReg(self, binary, regs):
         toReturn = []
-        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
+        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         for section in binary.executableSections:
 
             gadgets = self._searchJmpReg(section, binary, regs)
@@ -186,13 +186,13 @@ class Ropper(object):
 
 
     def searchInstructions(self, binary, code):
-        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
+        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         opcode = self.assemble(code, binary.arch)
         return self.searchOpcode(binary, opcode, disass=True)
 
 
     def searchOpcode(self, binary, opcode, disass=False):
-        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
+        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         opcode, size = self._formatOpcodeString(opcode)
         gadgets = []
         for section in binary.executableSections:
@@ -208,7 +208,7 @@ class Ropper(object):
         code = bytearray(section.bytes)
         offset = section.offset
         for match in re.finditer(opcode, code):
-            opcodeGadget = Gadget(binary.fileName, section.name, binary.arch)
+            opcodeGadget = Gadget(binary.checksum, section.name, binary.arch)
 
             if (offset + match.start()) % binary.arch.align == 0:
                 if disass:
@@ -232,7 +232,7 @@ class Ropper(object):
 
 
     def searchPopPopRet(self, binary):
-        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
+        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         toReturn = []
         for section in binary.executableSections:
 
@@ -255,7 +255,7 @@ class Ropper(object):
         for ppr in pprs:
             for match in re.finditer(ppr, code):
                 if (offset + match.start()) % binary.arch.align == 0:
-                    pprg = Gadget(binary.fileName,section.name, binary.arch)
+                    pprg = Gadget(binary.checksum,section.name, binary.arch)
                     for i in disassembler.disasm(bytes(bytearray(code)[match.start():match.end()]), offset + match.start()):
                         pprg.append(i.address, i.mnemonic , i.op_str, bytes=i.bytes)
         
@@ -263,7 +263,7 @@ class Ropper(object):
         return toReturn
 
     def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):
-        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
+        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         gadgets = []
         for section in binary.executableSections:
             vaddr = binary.imageBase
@@ -306,7 +306,7 @@ class Ropper(object):
 
                     for x in range(0, index, arch.align):
                         code_part = tmp_code[index - x-1:index + ending[1]]
-                        gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending,binary.fileName, section.name)
+                        gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending,binary.checksum, section.name)
                         if gadget:
                             if leng > instruction_count:
                                 break
@@ -356,7 +356,7 @@ class Ropper(object):
             ending_queue.put(None)
 
         for cpu in range(process_count):
-            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.fileName, section.name, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.checksum, section.name, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
@@ -459,14 +459,14 @@ class Ropper(object):
 
 
     def __disassembleBackward(self, section, binary, vaddr,offset, count):
-        gadget = Gadget(binary.fileName, section.name, binary.arch)
+        gadget = Gadget(binary.checksum, section.name, binary.arch)
         counter = 0
         toReturn = None
         code = bytes(bytearray(section.bytes))
         disassembler = self.__getCs(binary.arch)
 
         while len(gadget) < count:
-            gadget = Gadget(binary.fileName, section.name, binary.arch)
+            gadget = Gadget(binary.checksum, section.name, binary.arch)
             for i in disassembler.disasm(struct.pack('B' * len(code[offset - counter:]), *bytearray(code[offset - counter:])), vaddr-counter):
                 gadget.append(i.address, i.mnemonic , i.op_str, i.bytes)
                 if i.address == vaddr:
@@ -475,7 +475,7 @@ class Ropper(object):
                 if i.address > vaddr:
                     if len(gadget) > count:
                         return toReturn
-                    gadget = Gadget(binary.fileName, section.name, binary.arch)
+                    gadget = Gadget(binary.checksum, section.name, binary.arch)
                     break
 
 
@@ -484,7 +484,7 @@ class Ropper(object):
                 return toReturn
 
             if not toReturn:
-                toReturn = Gadget(binary.fileName, section.name, binary.arch)
+                toReturn = Gadget(binary.checksum, section.name, binary.arch)
                 toReturn.append(vaddr,'bad instructions')
         return toReturn
 
@@ -492,13 +492,13 @@ class Ropper(object):
     def disassembleAddress(self, section, binary, vaddr, offset, count):
         if vaddr % binary.arch.align != 0:
             raise RopperError('The address doesn\'t have the correct alignment')
-        Gadget.IMAGE_BASES[binary.fileName] = binary.imageBase
+        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         code = bytes(bytearray(section.bytes))
         disassembler = capstone.Cs(binary.arch.arch, binary.arch.mode)
 
         if count < 0:
             return self.__disassembleBackward(section, binary, vaddr, offset, count*-1)
-        gadget  = Gadget(binary.fileName, section.name, binary.arch)
+        gadget  = Gadget(binary.checksum, section.name, binary.arch)
         c = 0
 
         for i in disassembler.disasm(struct.pack('B' * len(code[offset:]), *bytearray(code[offset:])), offset):

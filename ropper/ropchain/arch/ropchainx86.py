@@ -23,6 +23,10 @@ from ropper.rop import Ropper
 from ropper.arch import x86
 from ropper.ropchain.ropchain import *
 from ropper.loaders.loader import Type
+from ropper.loaders.pe import PE
+from ropper.loaders.elf import ELF
+from ropper.loaders.mach_o import MachO
+from ropper.loaders.raw import Raw
 from ropper.gadget import Gadget
 from re import match
 from filebytes.pe import ImageDirectoryEntry
@@ -166,11 +170,13 @@ class RopChainX86(RopChain):
         return regs
 
 
-    def _printRopInstruction(self, gadget, padding=True, number=None):
+    def _printRopInstruction(self, gadget, padding=True, number=None, value=None):
+        value_first = False
         toReturn = ('rop += rebase_%d(%s) # %s\n' % (self._usedBinaries.index((gadget.fileName, gadget.section)),toHex(gadget.lines[0][0],4), gadget.simpleString()))
         if number is not None:
             toReturn +=self._printPaddingInstruction(number)
         if padding:
+            regs = self._paddingNeededFor(gadget)
             if len(regs) > 0:
                 dst = gadget.category[2]['dst']
                 search = '^pop (%s)$' % dst
@@ -242,18 +248,15 @@ class RopChainX86(RopChain):
                             continue
                         if reg:
                             if gadget.category[2][srcdst] == reg:
-                                if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                    self._usedBinaries.append((gadget.fileName, gadget.section))
+                                self._updateUsedBinaries(gadget)
                                 return gadget
                             elif switchRegs:
                                 other = 'src' if srcdst == 'dst' else 'dst'
                                 if gadget.category[2][other] == reg:
-                                    if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                        self._usedBinaries.append((gadget.fileName, gadget.section))
+                                    self._updateUsedBinaries(gadget)
                                     return gadget
                         else:
-                            if (gadget.fileName, gadget.section) not in self._usedBinaries:
-                                self._usedBinaries.append((gadget.fileName, gadget.section))
+                            self._updateUsedBinaries(gadget)
                             return gadget
 
             quali += 1
@@ -615,8 +618,7 @@ class RopChainX86(RopChain):
                 if not gadget:
                     continue
                 if not self.containsBadbytes(gadget.IMAGE_BASES.get(gadget.fileName,0) + gadget.lines[0][0]):
-                    if (gadget.fileName, gadget._section) not in self._usedBinaries:
-                        self._usedBinaries.append((gadget.fileName, gadget._section))
+                    self._updateUsedBinaries(gadget)
                     return gadget
         else:
             raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
@@ -627,6 +629,10 @@ class RopChainX86(RopChain):
 
 class RopChainX86System(RopChainX86):
 
+    
+    @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
 
     @classmethod
     def name(cls):
@@ -743,6 +749,11 @@ class RopChainX86Mprotect(RopChainX86):
     """
 
     @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
+
+    
+    @classmethod
     def name(cls):
         return 'mprotect'
 
@@ -758,8 +769,7 @@ class RopChainX86Mprotect(RopChainX86):
 
 
         if len(gadgets) > 0:
-            if (gadgets[0].fileName, gadgets[0].section) not in self._usedBinaries:
-                self._usedBinaries.append((gadgets[0].fileName, gadgets[0].section))
+            self._updateUsedBinaries(gadget[0])
             return self._printRopInstruction(gadgets[0])
         else:
             return None
@@ -836,7 +846,10 @@ class RopChainX86VirtualProtect(RopChainX86):
     edi ret (rop nop)
     """
 
-
+    @classmethod
+    def usableTypes(self):
+        return (PE, Raw)
+    
     @classmethod
     def name(cls):
         return 'virtualprotect'
@@ -863,8 +876,7 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
         if len(gadgets) > 0:
-            if (gadgets[0].fileName, gadgets[0].section) not in self._usedBinaries:
-                self._usedBinaries.append((gadgets[0].fileName, gadgets[0].section))
+            self._updateUsedBinaries(gadget[0])
             return gadgets[0]
         else:
             return None

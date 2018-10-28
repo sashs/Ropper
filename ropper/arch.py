@@ -407,7 +407,7 @@ class ArchitectureArm64(Architecture):
         if 'archinfo' in globals():
             self._info = archinfo.ArchAArch64()
         if 'keystone' in globals():
-            self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_BIG_ENDIAN)
+            self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_LITTLE_ENDIAN)
 
     def _initGadgets(self):
         super(ArchitectureArm64, self)._initGadgets()

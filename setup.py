@@ -32,7 +32,7 @@ setup(
     author_email="sashs@scoding.de",
     install_requires=install_requires,
     url="http://scoding.de/ropper/",
-    scripts=['script/ropper', 'script/ropper2'],
+    entry_points={'console_scripts': ['ropper = ropper.__main__:main']},
     classifiers=[
         'Topic :: Security',
         'Environment :: Console',

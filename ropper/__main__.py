@@ -18,8 +18,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-sys.path.append("filebytes")
-
 import ropper
-ropper.start(sys.argv[1:])
+import sys
+
+def main():
+    if sys.argv[0].endswith('__main__.py'):
+        sys.argv[0] = 'python -m ropper'
+    ropper.start(sys.argv[1:])
+
+if __name__ == '__main__':
+    main()

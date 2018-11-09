@@ -53,7 +53,7 @@ class Gadget(object):
             arch = ropper.arch.getArchitecture(arch)
         self.__arch = arch
         self.__lines = lines
-        self.__gadget = None
+        self.__gadget = ''
         self.__category = None
         self.__affected_regs = None
         self._fileName = fileName
@@ -132,8 +132,7 @@ class Gadget(object):
 
     @property
     def _gadget(self):
-        if not self.__gadget:
-            self.__gadget = ''
+        if self.__gadget == '':
             for line in self.lines:
                 self.__gadget += line[1] + '; '
         return self.__gadget
@@ -150,10 +149,10 @@ class Gadget(object):
     def append(self, address, mnem, args='', bytes=None):
         if args:
             self._lines.append((address, mnem + ' ' + args, mnem ,args))
-            self._gadget += mnem + ' ' + args + '; '
+            self.__gadget += mnem + ' ' + args + '; '
         else:
             self._lines.append((address, mnem, mnem,args))
-            self._gadget += mnem + '; '
+            self.__gadget += mnem + '; '
 
         if bytes:
             self.bytes += bytes

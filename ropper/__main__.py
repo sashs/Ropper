@@ -20,9 +20,10 @@
 
 import ropper
 import sys
+import re
 
 def main():
-    if sys.argv[0].endswith('__main__.py'):
+    if re.search('__main__.pyc?$', sys.argv[0]):
         sys.argv[0] = 'python -m ropper'
     ropper.start(sys.argv[1:])
 

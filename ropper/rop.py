@@ -304,8 +304,8 @@ class Ropper(object):
                     #for x in range(arch.align, (depth + 1) * arch.align, arch.align): # This can be used if you want to use a bytecount instead of an instruction count per gadget
                     none_count = 0
 
-                    for x in range(0, index, arch.align):
-                        code_part = tmp_code[index - x-1:index + ending[1]]
+                    for x in range(0, index+1, arch.align):
+                        code_part = tmp_code[index - x:index + ending[1]]
                         gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x, ending,binary.checksum, section.name)
                         if gadget:
                             if leng > instruction_count:

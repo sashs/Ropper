@@ -417,8 +417,8 @@ class ArchitectureArm64(Architecture):
 
         self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # br <reg>
                                                 (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # br <reg>
-                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4), # blr <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # blr <reg>
+                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\\?\xd6', 4), # blr <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\\?\xd6', 4)] # blr <reg>
 
 
 

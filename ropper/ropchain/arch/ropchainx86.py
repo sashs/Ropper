@@ -769,7 +769,7 @@ class RopChainX86Mprotect(RopChainX86):
 
 
         if len(gadgets) > 0:
-            self._updateUsedBinaries(gadget[0])
+            self._updateUsedBinaries(gadgets[0])
             return self._printRopInstruction(gadgets[0])
         else:
             return None

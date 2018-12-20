@@ -1,21 +1,30 @@
 # coding=utf-8
+# Copyright 2018 Sascha Schirra
 #
-# Copyright 2014 Sascha Schirra
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This file is part of Ropper.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
-# Ropper is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
-# Ropper is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" A ND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ropper.common.utils import *
 from ropper.common.error import *
@@ -150,7 +159,7 @@ class Ropper(object):
         opcode = opcode.encode('ascii')
         size = int(len(opcode)/2)
         for b in (b'5c',b'5d',b'5b',b'28',b'29',b'2b',b'2a',b'2e',b'3f'):
-           
+
             if opcode.find(b) % 2 == 0:
                 opcode = opcode.replace(b,b'%s%s' % (hexlify(b'\\'),b))
 
@@ -171,14 +180,14 @@ class Ropper(object):
                 high = int(char,16)
                 start = high << 4
                 end  = start + 0xf
-                
+
                 opcode = opcode[:m.start()-1] + hexlify(b'['+pack('B',start)+b'-'+pack('B',end)+b']') + opcode[m.start()+1:]
 
             m = re.search(b'\?', opcode)
         try:
-            
+
             opcode = unhexlify(opcode)
-            
+
         except BaseException as e:
             #raise RopperError(e)
             raise RopperError('Invalid characters in opcode string: %s' % opcode)
@@ -258,7 +267,7 @@ class Ropper(object):
                     pprg = Gadget(binary.checksum,section.name, binary.arch)
                     for i in disassembler.disasm(bytes(bytearray(code)[match.start():match.end()]), offset + match.start()):
                         pprg.append(i.address, i.mnemonic , i.op_str, bytes=i.bytes)
-        
+
                     toReturn.append(pprg)
         return toReturn
 
@@ -275,7 +284,7 @@ class Ropper(object):
                 newGadgets = self._searchGadgetsSingle(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
             else:
                 newGadgets = self._searchGadgetsForked(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
-            
+
             gadgets.extend(newGadgets)
 
         return sorted(gadgets, key=Gadget.simpleInstructionString)
@@ -338,7 +347,7 @@ class Ropper(object):
 
         to_return = []
         code = bytes(bytearray(section.bytes))
-        
+
         processes = []
         arch = binary.arch
 
@@ -360,8 +369,8 @@ class Ropper(object):
             processes[cpu].daemon=True
             processes[cpu].start()
 
-        
-        
+
+
         count = 0
         ending_count = 0
         if self.__callback:
@@ -374,32 +383,32 @@ class Ropper(object):
                 ending_count += 1
                 if self.__callback:
                     self.__callback(section, to_return, float(ending_count) / len(arch.endings[gtype]))
-            
+
         return to_return
 
     def __gatherGadgetsByEndings(self,code, arch, fileName, sectionName, offset, ending_queue, gadget_queue, instruction_count):
-        
+
         #try:
         while True:
             ending = ending_queue.get()
             if ending is None:
                 ending_queue.task_done()
                 break
-            
+
             gadgets = self.__gatherGadgetsByEnding(code, arch, fileName, sectionName, offset, ending, instruction_count)
-            
+
             gadget_queue.put(gadgets)
             ending_queue.task_done()
-            
-            
+
+
         #except BaseException as e:
         #    raise RopperError(e)
-        
+
 
     def __gatherGadgetsByEnding(self, code, arch, fileName, sectionName, offset, ending, instruction_count):
         vaddrs = set()
         offset_tmp = 0
-        
+
         tmp_code = code[:]
         to_return = []
         match = re.search(ending[0], tmp_code)
@@ -442,7 +451,7 @@ class Ropper(object):
         for i in disassembler.disasm(code_str, codeStartAddress):
             if re.match(ending[0], i.bytes):
                 hasret = True
-            
+
             if hasret or i.mnemonic not in arch.badInstructions:
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)

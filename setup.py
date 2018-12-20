@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = '1.11.10'
+version = '1.11.11'
 package_name = "ropper"
 package_dir = "ropper"
 package_description = """Show information about files in different file formats and find gadgets to build rop chains for different architectures.
@@ -27,7 +27,7 @@ setup(
     version=version,
     description=package_description,
     packages=valid_packages,
-    license="GPLv2",
+    license="BSD",
     author="Sascha Schirra",
     author_email="sashs@scoding.de",
     install_requires=install_requires,
@@ -37,7 +37,7 @@ setup(
         'Topic :: Security',
         'Environment :: Console',
         'Operating System :: OS Independent',
-        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        'License :: OSI Approved :: BSD 3 Clause License',
         'Programming Language :: Python',
         'Intended Audience :: Developers'
     ]

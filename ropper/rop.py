@@ -422,7 +422,9 @@ class Ropper(object):
                 none_count = 0
 
                 for x in range(0, index+1, arch.align):
-                    code_part = tmp_code[index - x:index + ending[1]]
+                    start = index - x
+                    end = index + ending[1] + arch.align if (arch.hasBranchDelaySlot and index + ending[1] + arch.align < len(tmp_code)) else index + ending[1]
+                    code_part = tmp_code[start:end]
                     gadget, leng = self.__createGadget(arch, code_part, offset + offset_tmp - x , ending, fileName, sectionName)
                     if gadget:
                         if leng > instruction_count:
@@ -456,7 +458,7 @@ class Ropper(object):
                 gadget.append(
                     i.address, i.mnemonic,i.op_str, bytes=i.bytes)
 
-            if hasret or i.mnemonic in arch.badInstructions:
+            if (hasret and not arch.hasBranchDelaySlot) or i.mnemonic in arch.badInstructions:
                 break
 
 

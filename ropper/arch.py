@@ -50,7 +50,7 @@ class Endianess(Enum):
 
 class Architecture(AbstractSingleton):
 
-    def __init__(self, arch, mode, addressLength, align, endianess=Endianess.LITTLE):
+    def __init__(self, arch, mode, addressLength, align, endianess=Endianess.LITTLE, branch_delay_slot=False):
         super(Architecture, self).__init__()
         self._name = 'raw'
         self._arch = arch
@@ -76,6 +76,7 @@ class Architecture(AbstractSingleton):
         self._initCategories()
 
         self._initEndianess(endianess)
+        self._hasBranchDelaySlot = branch_delay_slot
 
         self._endings[gadget.GadgetType.ALL] = self._endings[
             gadget.GadgetType.ROP] + self._endings[gadget.GadgetType.JOP] + self._endings[gadget.GadgetType.SYS]
@@ -143,6 +144,10 @@ class Architecture(AbstractSingleton):
     @property
     def endianess(self):
         return self._endianess
+
+    @property
+    def hasBranchDelaySlot(self):
+        return self._hasBranchDelaySlot
 
     def getRegisterName(self, reg):
         if self.info is None:
@@ -289,7 +294,7 @@ class ArchitectureX86_64(ArchitectureX86):
 class ArchitectureMips(Architecture):
 
     def __init__(self, endianess=Endianess.LITTLE):
-        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4, endianess)
+        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4, endianess, branch_delay_slot=True)
         self._name = 'MIPS'
 
         if 'keystone' in globals():

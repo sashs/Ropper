@@ -202,16 +202,26 @@ class ArchitectureX86(Architecture):
                                                 (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]
 
         self._endings[gadget.GadgetType.JOP] = [(
-            b'\xff[\x20\x21\x22\x23\x26\x27]', 2),
-            (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),
-            (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),
-            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),
-            (b'\xff[\x14\x24]\x24', 3),
-            (b'\xff[\x55\x65]\x00', 3),
-            (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),
+            b'\xff[\x20\x21\x22\x23\x26\x27]', 2),                                      # jmp [reg]
+            (b'\xf2\xff[\x20\x21\x22\x23\x26\x27]', 3),                                      # bnd jmp [reg]
+            (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),                                 # jmp reg
+            (b'\xf2\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 3),                                 # bnd jmp reg
+            (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),                                     # call [reg]
+            (b'\xf2\xff[\x10\x11\x12\x13\x16\x17]', 3),                                     # bnd call [reg]
+            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),                                 # call reg
+            (b'\xf2\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 3),                                 # bnd call reg
+            (b'\xff[\x14\x24]\x24', 3),                                                 # call/jmp [esp]
+            (b'\xf2\xff[\x14\x24]\x24', 4),                                                 # bnd call/jmp [esp]
+            (b'\xff[\x55\x65]\x00', 3),                                                 # call/jmp [ebp]
+            (b'\xf2\xff[\x55\x65]\x00', 4),                                             # bnd call/jmp [ebp]
+            (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),                      # jmp [reg+value]
+            (b'\xf2\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 7),                  # bnd jmp [reg+value]
             (b'\xff\xa4\x24[\x00-\xff]{4}', 7),
+            (b'\xf2\xff\xa4\x24[\x00-\xff]{4}', 8),
             (b'\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 3),                             # call [reg + value]
+            (b'\xf2\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 4),                             # call [reg + value]
             (b'\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 3),                             # jmp [reg + value]
+            (b'\xf2\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 4),                             # jmp [reg + value]
             #(b'\xe9[\x00-\xff]{4}', 5),                                                 # jmp value
             #(b'\xe8[\x00-\xff]{4}', 5),                                                 # call value
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]

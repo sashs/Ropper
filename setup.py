@@ -37,7 +37,7 @@ setup(
         'Topic :: Security',
         'Environment :: Console',
         'Operating System :: OS Independent',
-        'License :: OSI Approved :: BSD 3 Clause License',
+        'License :: OSI Approved :: BSD License',
         'Programming Language :: Python',
         'Intended Audience :: Developers'
     ]

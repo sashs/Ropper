@@ -217,7 +217,7 @@ class ArchitectureX86(Architecture):
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'ret', 'jmp', 'les', 'lds', 'jle','jl', 'jb','jbe','jg','jge','ja','jae', 'jne', 'je', 'js']
+        self._badInstructions = ['enter','loop','loopne','int3', 'db', 'ret', 'jmp']
 
     def _initCategories(self):
         self._categories = {

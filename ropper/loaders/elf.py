@@ -70,10 +70,17 @@ class ELF(Loader):
     def executableSections(self):
         if not self.__execSections:
             self.__execSections = []
-            for phdr in self._binary.segments:
-                if phdr.header.p_flags & elf.PF.EXEC > 0:
-                    self.__execSections.append(Section(name=str(elf.PT[phdr.header.p_type]), sectionbytes=phdr.raw, virtualAddress=phdr.header.p_vaddr, offset=phdr.header.p_offset))
+            if self._binary.segments:
+                for phdr in self._binary.segments:
+                    if phdr.header.p_flags & elf.PF.EXEC > 0:
+                        self.__execSections.append(Section(name=str(elf.PT[phdr.header.p_type]), sectionbytes=phdr.raw, virtualAddress=phdr.header.p_vaddr, offset=phdr.header.p_offset))
+            elif self._binary.sections:
+                for shdr in self._binary.sections:
+                    print(shdr.header.sh_flags)
+                    if shdr.header.sh_flags & elf.SHF.EXECINSTR:
+                        self.__execSections.append(Section(name=shdr.name, sectionbytes=shdr.raw, virtualAddress=shdr.header.sh_addr, offset=shdr.header.sh_offset))
 
+                
         return self.__execSections
 
     @property

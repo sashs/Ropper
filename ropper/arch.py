@@ -458,7 +458,8 @@ class ArchitecturePPC(Architecture):
     def _initGadgets(self):
         super(ArchitecturePPC, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
-        self._endings[gadget.GadgetType.JOP] = []
+        self._endings[gadget.GadgetType.JOP] = [(b'\x4e\x80\x04[\x20-\x21]', 4)] # bctr, bctrl
+        self._endings[gadget.GadgetType.SYS] = [(b'\x44\x00\x00\x02', 4)] # sc
 
 
 class ArchitecturePPC64(ArchitecturePPC):

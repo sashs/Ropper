@@ -155,4 +155,4 @@ ARCH = {(elf.EM.INTEL_386 , elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB): x86,
         (elf.EM.ARM, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB) : ARM,
         (elf.EM.ARM64, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB) : ARM64,
         (elf.EM.PPC, elf.ELFCLASS.BITS_32, elf.ELFDATA.MSB) : PPC,
-        (elf.EM.PPC, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB) : PPC64}
+        (elf.EM.PPC64, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB) : PPC64}

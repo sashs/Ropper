@@ -2,7 +2,7 @@ Ropper
 ================
 
 You can use ropper to display information about binary files in different file formats
-and you can search for gadgets to build rop chains for different architectures (x86/X86_64, ARM/ARM64, MIPS/MIPS64, PowerPC).
+and you can search for gadgets to build rop chains for different architectures (x86/X86_64, ARM/ARM64, MIPS/MIPS64, PowerPC/PowerPC64, SPARC64).
 For disassembly ropper uses the awesome [Capstone Framework](http://www.capstone-engine.org).
 
 NOTE: I recommend to use the dev version of ropper, because bugfixes are earlier available in dev branch.
@@ -112,6 +112,7 @@ Usage
       ARM/Thumb [ARM, ARMTHUMB]
       ARM64 [ARM64]
       PowerPC [PPC, PPC64]
+      SPARC [SPARC64]
 
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
@@ -284,6 +285,7 @@ rs.setArchitectureFor(name=ls, arch='MIPS')
 rs.setArchitectureFor(name=ls, arch='MIPS64')
 rs.setArchitectureFor(name=ls, arch='PPC')
 rs.setArchitectureFor(name=ls, arch='PPC64')
+rs.setArchitectureFor(name=ls, arch='SPARC64')
 rs.setArchitectureFor(name=ls, arch='x86')
 
 

@@ -66,6 +66,7 @@ supported architectures:
   ARM/Thumb [ARM, ARMTHUMB]
   ARM64 [ARM64]
   PowerPC [PPC, PPC64]
+  SPARC [SPARC64]
 
 available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]

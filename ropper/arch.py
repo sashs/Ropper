@@ -45,6 +45,15 @@ try:
 except:
     pass
 
+def byte_regexp(bitmask, bitvalues):
+    r = b'['
+    for value in range(256):
+        if value & bitmask == bitvalues:
+            # Generates unencoded string (bytes) in both Python 2 and 3.
+            r += bytes(bytearray([value]))
+    r += b']'
+    return r
+
 class Endianess(Enum):
     _enum_ = 'LITTLE BIG'
 
@@ -449,7 +458,7 @@ class ArchitectureArm64(Architecture):
 class ArchitecturePPC(Architecture):
 
     def __init__(self):
-        super(ArchitecturePPC, self).__init__(CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
+        super(ArchitecturePPC, self).__init__(CS_ARCH_PPC, CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
         self._name = 'PPC'
 
         if 'keystone' in globals():
@@ -472,6 +481,42 @@ class ArchitecturePPC64(ArchitecturePPC):
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_64)
 
+class ArchitectureSPARC(Architecture):
+
+    def __init__(self):
+        super(ArchitectureSPARC, self).__init__(CS_ARCH_SPARC, CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4,
+						branch_delay_slot=True)
+        self._name = 'SPARC'
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_SPARC, keystone.KS_MODE_32)
+
+    def _initGadgets(self):
+        super(ArchitectureSPARC, self)._initGadgets()
+        self._endings[gadget.GadgetType.ROP] = []
+        self._endings[gadget.GadgetType.JOP] = []
+        self._endings[gadget.GadgetType.SYS] = []
+
+
+class ArchitectureSPARC64(ArchitectureSPARC):
+
+    def __init__(self):
+
+        Architecture.__init__(self, CS_ARCH_SPARC, CS_MODE_V9 + CS_MODE_BIG_ENDIAN, 4, 4, branch_delay_slot=True)
+        self._name = 'SPARC64'
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_SPARC, keystone.KS_MODE_64)
+
+    def _initGadgets(self):
+        super(ArchitectureSPARC, self)._initGadgets()
+        self._endings[gadget.GadgetType.ROP] = [
+            (byte_regexp(0b11000001, 0b10000001) + b'[\xc8-\xcf][\x00-\xff][\x00-\xff]', 4), # return
+            (byte_regexp(0b11000001, 0b10000001) + b'[\xe8-\xef][\x00-\xff][\x00-\xff]', 4)] # restore
+        self._endings[gadget.GadgetType.JOP] = [
+            (byte_regexp(0b11000001, 0b10000001) + b'[\xc0-\xc7][\x00-\xff][\x00-\xff]', 4)] # jmpl (ret, retl)
+        self._endings[gadget.GadgetType.SYS] = [(b'\x91\xd0\x20\x6d', 4)] # ta 0x6d
+
 
 
 x86 = ArchitectureX86()
@@ -486,6 +531,7 @@ ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
 PPC = ArchitecturePPC()
 PPC64 = ArchitecturePPC64()
+SPARC64 = ArchitectureSPARC64()
 
 def getArchitecture(archString):
     arch = globals().get(archString, None)
@@ -493,4 +539,4 @@ def getArchitecture(archString):
     if isinstance(arch, Architecture):
         return arch
 
-    raise NotSupportedError('Architecture is not supported: ' + archString + '\nSupported architectures are: x86, x86_64, MIPS, MIPS64, ARM, ARMTHUMB, ARM64, PPC, PPC64')
+    raise NotSupportedError('Architecture is not supported: ' + archString + '\nSupported architectures are: x86, x86_64, MIPS, MIPS64, ARM, ARMTHUMB, ARM64, PPC, PPC64, SPARC64')

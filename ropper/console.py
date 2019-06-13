@@ -1,21 +1,30 @@
 # coding=utf-8
+# Copyright 2018 Sascha Schirra
 #
-# Copyright 2015 Sascha Schirra
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This file is part of Ropper.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
-# Ropper is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
-# Ropper is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" A ND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import print_function
 from ropper.loaders.loader import Loader, Type
 from ropper.printer.printer import FileDataPrinter
@@ -56,7 +65,7 @@ def safe_cmd(func):
         except KeyboardInterrupt:
             cp.println()
         except:
-            cp.printError('Please report this error on https://github.com/sashs/ropper')            
+            cp.printError('Please report this error on https://github.com/sashs/ropper')
             cp.printError( traceback.format_exc())
     return cmd
 
@@ -94,7 +103,7 @@ class CallbackClass(object):
         self.__console.cprinter.printProgress('analyse gadgets...', progress)
         if progress == 1.0:
             self.__console.cprinter.finishProgress()
-            
+
 
     def __ropchainMessages__(self, message):
         if message.startswith('[*]'):
@@ -113,7 +122,7 @@ class Console(cmd.Cmd):
         self.__options = options
         if not options.isWindows():
             import readline
-            old_delims = readline.get_completer_delims() 
+            old_delims = readline.get_completer_delims()
             old_delims = old_delims.replace('-', '')
             old_delims = old_delims.replace('/', '')
             readline.set_completer_delims(old_delims)
@@ -133,7 +142,7 @@ class Console(cmd.Cmd):
     @property
     def cprinter(self):
         return self.__cprinter
-    
+
     @property
     def currentFileName(self):
         if not self.__currentFileName:
@@ -178,7 +187,7 @@ class Console(cmd.Cmd):
 
         if self.__options.console:
             self.cmdloop()
-        
+
         self.__handleOptions(self.__options)
 
     def __updatePrompt(self):
@@ -189,18 +198,18 @@ class Console(cmd.Cmd):
             self.prompt = cstr('(ropper)> ', Color.RED)
 
     def __loadFile(self, file):
-            
+
         self.__rs.addFile(file, raw=self.__options.raw,
                           arch=self.__options.arch)
         self.__options.arch = None
-        
+
         self.__currentFileName = file
         self.__updatePrompt()
         if self.__options.I is not None:
             self.__rs.setImageBaseFor(file, self.__options.I)
         if not self.__options.no_load and self.__options.console:
             self.__loadGadgets()
-        
+
         #self.__binary.printer = FileDataPrinter.create(self.__binary.type)
 
     def __printGadget(self, gadget, detailed=False):
@@ -285,7 +294,7 @@ class Console(cmd.Cmd):
 
     def __loadGadgetsForAllFiles(self):
         self.__rs.loadGadgetsFor()
-        
+
     def __loadGadgets(self):
         self.__searchGadgetsFor(self.currentFileName)
 
@@ -346,7 +355,7 @@ class Console(cmd.Cmd):
                     key, value = option.split('=')
                     options[key] = value
             try:
-                
+
                 self.__rs.options.color = False
                 chain = self.__rs.createRopChain(generator, str(self.currentFile.arch) ,options)
 
@@ -776,7 +785,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                         self.__rs.options[splits[0]] = int(splits[1])
                     else:
                         self.__rs.options[splits[0]] = splits[1]
-                        
+
                 else:
                     raise RopperError('Invalid setting')
             except TypeError as e:
@@ -999,7 +1008,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
             self.__rs.analyseGadgets(self.currentFile)
         constraint = None
         constraints = text.split(';')
-        
+
         split = constraints[-1].split(' ')
         stableRegs = []
         for s in split:
@@ -1056,8 +1065,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     #                     if expr == False:
     #                         continue
     #                     solver.add(expr)
-                    
-                        
+
+
     #                 c = None
     #                 c2 = None
     #                 constraint = self.currentFile.arch.searcher._createConstraint(["rsp=rbx"], g.info)
@@ -1073,7 +1082,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
     #     else:
     #         self.__printInfo('No such gadget')
 
-        
+
 
     # @safe_cmd
     # def do_edit(self, text):

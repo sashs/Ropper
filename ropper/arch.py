@@ -1,21 +1,30 @@
 # coding=utf-8
+# Copyright 2018 Sascha Schirra
 #
-# Copyright 2014 Sascha Schirra
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This file is part of Ropper.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
-# Ropper is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
-# Ropper is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" A ND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ropper.common.abstract import *
 from ropper.common.enum import Enum
@@ -36,12 +45,21 @@ try:
 except:
     pass
 
+def byte_regexp(bitmask, bitvalues):
+    r = b'['
+    for value in range(256):
+        if value & bitmask == bitvalues:
+            # Generates unencoded string (bytes) in both Python 2 and 3.
+            r += bytes(bytearray([value]))
+    r += b']'
+    return r
+
 class Endianess(Enum):
     _enum_ = 'LITTLE BIG'
 
 class Architecture(AbstractSingleton):
 
-    def __init__(self, arch, mode, addressLength, align, endianess=Endianess.LITTLE):
+    def __init__(self, arch, mode, addressLength, align, endianess=Endianess.LITTLE, branch_delay_slot=False):
         super(Architecture, self).__init__()
         self._name = 'raw'
         self._arch = arch
@@ -65,8 +83,9 @@ class Architecture(AbstractSingleton):
         self._initGadgets()
         self._initBadInstructions()
         self._initCategories()
-        
+
         self._initEndianess(endianess)
+        self._hasBranchDelaySlot = branch_delay_slot
 
         self._endings[gadget.GadgetType.ALL] = self._endings[
             gadget.GadgetType.ROP] + self._endings[gadget.GadgetType.JOP] + self._endings[gadget.GadgetType.SYS]
@@ -88,12 +107,12 @@ class Architecture(AbstractSingleton):
                 tmp = []
                 for pattern, size in self.endings[key]:
                     tmp.append((pattern[::-1], size))
-                self.endings[key] = tmp 
+                self.endings[key] = tmp
 
     @property
     def info(self):
         return self._info
-    
+
 
     @property
     def ksarch(self):
@@ -135,6 +154,10 @@ class Architecture(AbstractSingleton):
     def endianess(self):
         return self._endianess
 
+    @property
+    def hasBranchDelaySlot(self):
+        return self._hasBranchDelaySlot
+
     def getRegisterName(self, reg):
         if self.info is None:
             return reg
@@ -168,7 +191,7 @@ class ArchitectureX86(Architecture):
                         b'\x83\xc4\x04[\x58-\x5f]\xc3', # add esp, 4; pop reg; ret
                         b'[\x58-\x5f]\x83\xc4\x04\xc3', # pop reg; add esp, 4; ret
                         b'\x83\xc4\x08\xc3',            # add esp, 8; ret;
-                        b'\xff\x54\x24[\x08\x14\x1c\x2c\x44\x50]',            # call [esp+n] 
+                        b'\xff\x54\x24[\x08\x14\x1c\x2c\x44\x50]',            # call [esp+n]
                         b'\xff\x64\x24[\x08\x14\x1c\x2c\x44\x50]',            # jmp [esp+n]
                         b'\xff\x65[\x0c\x24\x30\xfc\xf4\xe8]',                            # jmp [ebp+n]
                         b'\xff\x55[\x0c\x24\x30\xfc\xf4\xe8]'                             # call [ebp+n]
@@ -189,22 +212,32 @@ class ArchitectureX86(Architecture):
                                                 (b'\x65\xff\x15\x10\x00\x00\x00', 7)]       # call gs:[10]
 
         self._endings[gadget.GadgetType.JOP] = [(
-            b'\xff[\x20\x21\x22\x23\x26\x27]', 2),
-            (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),
-            (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),
-            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),
-            (b'\xff[\x14\x24]\x24', 3),
-            (b'\xff[\x55\x65]\x00', 3),
-            (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),
+            b'\xff[\x20\x21\x22\x23\x26\x27]', 2),                                      # jmp [reg]
+            (b'\xf2\xff[\x20\x21\x22\x23\x26\x27]', 3),                                      # bnd jmp [reg]
+            (b'\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 2),                                 # jmp reg
+            (b'\xf2\xff[\xe0\xe1\xe2\xe3\xe4\xe6\xe7]', 3),                                 # bnd jmp reg
+            (b'\xff[\x10\x11\x12\x13\x16\x17]', 2),                                     # call [reg]
+            (b'\xf2\xff[\x10\x11\x12\x13\x16\x17]', 3),                                     # bnd call [reg]
+            (b'\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 2),                                 # call reg
+            (b'\xf2\xff[\xd0\xd1\xd2\xd3\xd4\xd6\xd7]', 3),                                 # bnd call reg
+            (b'\xff[\x14\x24]\x24', 3),                                                 # call/jmp [esp]
+            (b'\xf2\xff[\x14\x24]\x24', 4),                                                 # bnd call/jmp [esp]
+            (b'\xff[\x55\x65]\x00', 3),                                                 # call/jmp [ebp]
+            (b'\xf2\xff[\x55\x65]\x00', 4),                                             # bnd call/jmp [ebp]
+            (b'\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 6),                      # jmp [reg+value]
+            (b'\xf2\xff[\xa0\xa1\xa2\xa3\xa6\xa7][\x00-\x0ff]{4}', 7),                  # bnd jmp [reg+value]
             (b'\xff\xa4\x24[\x00-\xff]{4}', 7),
+            (b'\xf2\xff\xa4\x24[\x00-\xff]{4}', 8),
             (b'\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 3),                             # call [reg + value]
+            (b'\xf2\xff[\x50-\x53\x55-\x57][\x00-\xff]{1}', 4),                             # call [reg + value]
             (b'\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 3),                             # jmp [reg + value]
+            (b'\xf2\xff[\x60-\x63\x65-\x67][\x00-\xff]{1}', 4),                             # jmp [reg + value]
             #(b'\xe9[\x00-\xff]{4}', 5),                                                 # jmp value
             #(b'\xe8[\x00-\xff]{4}', 5),                                                 # call value
             (b'\xff[\x90\x91\x92\x93\x94\x96\x97][\x00-\x0ff]{4}', 6)]
 
     def _initBadInstructions(self):
-        self._badInstructions = ['retf','enter','loop','loopne','int3', 'db', 'ret', 'jmp', 'les', 'lds', 'jle','jl', 'jb','jbe','jg','jge','ja','jae', 'jne', 'je', 'js']
+        self._badInstructions = ['enter','loop','loopne','int3', 'db', 'ret', 'jmp']
 
     def _initCategories(self):
         self._categories = {
@@ -282,7 +315,7 @@ class ArchitectureX86_64(ArchitectureX86):
 class ArchitectureMips(Architecture):
 
     def __init__(self, endianess=Endianess.LITTLE):
-        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4, endianess)
+        super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4, endianess, branch_delay_slot=True)
         self._name = 'MIPS'
         self.miasm_arch = 'mips32l'
         if 'keystone' in globals():
@@ -362,7 +395,7 @@ class ArchitectureArm(Architecture):
 
 
 class ArchitectureArmBE(ArchitectureArm):
-    
+
     def __init__(self):
         super(ArchitectureArmBE, self).__init__(Endianess.BIG)
         self._name = 'ARMBE'
@@ -372,7 +405,7 @@ class ArchitectureArmBE(ArchitectureArm):
             self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
 
     def _initEndianess(self, endianess):
-        super(ArchitectureArmBE, self)._initEndianess(endianess)    
+        super(ArchitectureArmBE, self)._initEndianess(endianess)
         self._endings[gadget.GadgetType.ROP] = [(b'\xe8\xbd\x80[\x01-\xff]', 4)] # pop {[reg]*,pc}
         self._endings[gadget.GadgetType.JOP] = [(b'\xe1\x2f\xff[\x10-\x1e]', 4), # bx <reg>
                                                 (b'\xe1\x2f\xff[\x30-\x3e]', 4), # blx <reg>
@@ -422,15 +455,15 @@ class ArchitectureArm64(Architecture):
 
         self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x1f\xd6', 4), # br <reg>
                                                 (b'[\x00\x20\x40\x60\x80]\x03\x1f\xd6', 4), # br <reg>
-                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\x3f\xd6', 4), # blr <reg>
-                                                (b'[\x00\x20\x40\x60\x80]\x03\x3f\xd6', 4)] # blr <reg>
+                                                (b'[\x00\x20\x40\x60\x80\xa0\xc0\xe0][\x00-\x02]\\?\xd6', 4), # blr <reg>
+                                                (b'[\x00\x20\x40\x60\x80]\x03\\?\xd6', 4)] # blr <reg>
 
 
 
 class ArchitecturePPC(Architecture):
 
     def __init__(self):
-        super(ArchitecturePPC, self).__init__(CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
+        super(ArchitecturePPC, self).__init__(CS_ARCH_PPC, CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
         self._name = 'PPC'
         self.miasm_arch = 'ppc32b'
         if 'keystone' in globals():
@@ -439,7 +472,8 @@ class ArchitecturePPC(Architecture):
     def _initGadgets(self):
         super(ArchitecturePPC, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'\x4e\x80\x00\x20', 4)] # blr
-        self._endings[gadget.GadgetType.JOP] = []
+        self._endings[gadget.GadgetType.JOP] = [(b'\x4e\x80\x04[\x20-\x21]', 4)] # bctr, bctrl
+        self._endings[gadget.GadgetType.SYS] = [(b'\x44\x00\x00\x02', 4)] # sc
 
 
 class ArchitecturePPC64(ArchitecturePPC):
@@ -451,6 +485,42 @@ class ArchitecturePPC64(ArchitecturePPC):
         self.miasm_arch = None
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_64)
+
+class ArchitectureSPARC(Architecture):
+
+    def __init__(self):
+        super(ArchitectureSPARC, self).__init__(CS_ARCH_SPARC, CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4,
+						branch_delay_slot=True)
+        self._name = 'SPARC'
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_SPARC, keystone.KS_MODE_32)
+
+    def _initGadgets(self):
+        super(ArchitectureSPARC, self)._initGadgets()
+        self._endings[gadget.GadgetType.ROP] = []
+        self._endings[gadget.GadgetType.JOP] = []
+        self._endings[gadget.GadgetType.SYS] = []
+
+
+class ArchitectureSPARC64(ArchitectureSPARC):
+
+    def __init__(self):
+
+        Architecture.__init__(self, CS_ARCH_SPARC, CS_MODE_V9 + CS_MODE_BIG_ENDIAN, 4, 4, branch_delay_slot=True)
+        self._name = 'SPARC64'
+
+        if 'keystone' in globals():
+            self._ksarch = (keystone.KS_ARCH_SPARC, keystone.KS_MODE_64)
+
+    def _initGadgets(self):
+        super(ArchitectureSPARC, self)._initGadgets()
+        self._endings[gadget.GadgetType.ROP] = [
+            (byte_regexp(0b11000001, 0b10000001) + b'[\xc8-\xcf][\x00-\xff][\x00-\xff]', 4), # return
+            (byte_regexp(0b11000001, 0b10000001) + b'[\xe8-\xef][\x00-\xff][\x00-\xff]', 4)] # restore
+        self._endings[gadget.GadgetType.JOP] = [
+            (byte_regexp(0b11000001, 0b10000001) + b'[\xc0-\xc7][\x00-\xff][\x00-\xff]', 4)] # jmpl (ret, retl)
+        self._endings[gadget.GadgetType.SYS] = [(b'\x91\xd0\x20\x6d', 4)] # ta 0x6d
 
 
 
@@ -466,6 +536,7 @@ ARMTHUMB = ArchitectureArmThumb()
 ARM64 = ArchitectureArm64()
 PPC = ArchitecturePPC()
 PPC64 = ArchitecturePPC64()
+SPARC64 = ArchitectureSPARC64()
 
 def getArchitecture(archString):
     arch = globals().get(archString, None)
@@ -473,4 +544,4 @@ def getArchitecture(archString):
     if isinstance(arch, Architecture):
         return arch
 
-    raise NotSupportedError('Architecture is not supported: ' + archString + '\nSupported architectures are: x86, x86_64, MIPS, MIPS64, ARM, ARMTHUMB, ARM64, PPC, PPC64')
+    raise NotSupportedError('Architecture is not supported: ' + archString + '\nSupported architectures are: x86, x86_64, MIPS, MIPS64, ARM, ARMTHUMB, ARM64, PPC, PPC64, SPARC64')

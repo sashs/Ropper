@@ -26,25 +26,14 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ropper.printer.printer import *
-from ropper.loaders.elf import *
+import ropper
+import sys
+import re
 
+def main():
+    if re.search('__main__.pyc?$', sys.argv[0]):
+        sys.argv[0] = 'python -m ropper'
+    ropper.start(sys.argv[1:])
 
-class RAWPrinter(FileDataPrinter):
-
-    @classmethod
-    def validType(cls):
-        return Type.RAW
-
-    def printEntryPoint(self, binary):
-        self._printLine(self._toHex(binary.entryPoint, binary.arch.addressLength))
-
-    def printImageBase(self, binary):
-        self._printLine(
-            self._toHex(binary.imageBase, binary.arch.addressLength))
-
-    def printArchitecture(self, binary):
-        self._printLine(str(binary.arch))
-
-    def printFileType(self, binary):
-        self._printLine(str(binary.type))
+if __name__ == '__main__':
+    main()

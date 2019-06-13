@@ -42,6 +42,7 @@ rs.setArchitectureFor(name=ls, arch='MIPS')
 rs.setArchitectureFor(name=ls, arch='MIPS64')
 rs.setArchitectureFor(name=ls, arch='PPC')
 rs.setArchitectureFor(name=ls, arch='PPC64')
+rs.setArchitectureFor(name=ls, arch='SPARC64')
 rs.setArchitectureFor(name=ls, arch='x86')
 
 

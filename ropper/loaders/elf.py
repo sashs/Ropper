@@ -1,21 +1,30 @@
 # coding=utf-8
+# Copyright 2018 Sascha Schirra
 #
-# Copyright 2014 Sascha Schirra
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This file is part of Ropper.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
-# Ropper is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
-# Ropper is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" A ND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ctypes import *
 from ropper.loaders.loader import *
@@ -39,7 +48,7 @@ class ELF(Loader):
     def entryPoint(self):
         return self._binary.entryPoint
 
-    
+
     def _getImageBase(self):
         return self._binary.imageBase
 
@@ -61,10 +70,17 @@ class ELF(Loader):
     def executableSections(self):
         if not self.__execSections:
             self.__execSections = []
-            for phdr in self._binary.segments:
-                if phdr.header.p_flags & elf.PF.EXEC > 0:
-                    self.__execSections.append(Section(name=str(elf.PT[phdr.header.p_type]), sectionbytes=phdr.raw, virtualAddress=phdr.header.p_vaddr, offset=phdr.header.p_offset))
+            if self._binary.segments:
+                for phdr in self._binary.segments:
+                    if phdr.header.p_flags & elf.PF.EXEC > 0:
+                        self.__execSections.append(Section(name=str(elf.PT[phdr.header.p_type]), sectionbytes=phdr.raw, virtualAddress=phdr.header.p_vaddr, offset=phdr.header.p_offset))
+            elif self._binary.sections:
+                for shdr in self._binary.sections:
+                    print(shdr.header.sh_flags)
+                    if shdr.header.sh_flags & elf.SHF.EXECINSTR:
+                        self.__execSections.append(Section(name=shdr.name, sectionbytes=shdr.raw, virtualAddress=shdr.header.sh_addr, offset=shdr.header.sh_offset))
 
+                
         return self.__execSections
 
     @property
@@ -104,7 +120,7 @@ class ELF(Loader):
     def getSection(self, name):
         for shdr in self._binary.sections:
             if shdr.name == name:
-                
+
                 return Section(shdr.name, shdr.raw, shdr.header.sh_addr, shdr.header.sh_addr - self._binary.imageBase)
         raise RopperError('No such section: %s' % name)
 
@@ -139,4 +155,5 @@ ARCH = {(elf.EM.INTEL_386 , elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB): x86,
         (elf.EM.ARM, elf.ELFCLASS.BITS_32, elf.ELFDATA.LSB) : ARM,
         (elf.EM.ARM64, elf.ELFCLASS.BITS_64, elf.ELFDATA.LSB) : ARM64,
         (elf.EM.PPC, elf.ELFCLASS.BITS_32, elf.ELFDATA.MSB) : PPC,
-        (elf.EM.PPC, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB) : PPC64}
+        (elf.EM.PPC64, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB) : PPC64,
+        (elf.EM.SPARCV9, elf.ELFCLASS.BITS_64, elf.ELFDATA.MSB) : SPARC64}

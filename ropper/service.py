@@ -1,21 +1,30 @@
 # coding=utf-8
+# Copyright 2018 Sascha Schirra
 #
-# Copyright 2016 Sascha Schirra
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This file is part of Ropper.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
-# Ropper is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
-# Ropper is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" A ND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import print_function
 from filebytes.pe import ImageDirectoryEntry
 from ropper.common.utils import isWindows, isHex, toHex, getFileNameFromPath
@@ -71,7 +80,7 @@ def filterBadBytes(gadgets, badbytes, callback=None):
     badbytes = formatBadBytes(badbytes)
     if isinstance(gadgets, dict):
         toReturn = {}
-        
+
         gadget_count = 0
         for file, gadget in gadgets.items():
             gadget_count += len(gadget)
@@ -85,8 +94,8 @@ def filterBadBytes(gadgets, badbytes, callback=None):
                     callback(gadget, added, float(i)/(gadget_count-1))
                     added = False
             toReturn[file] = t
-    elif isinstance(gadgets, list): 
-        toReturn = []  
+    elif isinstance(gadgets, list):
+        toReturn = []
         for i, gadget in enumerate(gadgets):
             if not badbytes or not gadget.addressesContainsBytes(badbytes):
                 toReturn.append(gadget)
@@ -99,7 +108,7 @@ def filterBadBytes(gadgets, badbytes, callback=None):
 
 
 def cfgFilterGadgets(binary, gadgets, callback=None):
-    
+
     def intern(gadgets, callback=None,current=0, length=0):
         result = []
         added = False
@@ -127,7 +136,7 @@ def cfgFilterGadgets(binary, gadgets, callback=None):
                 added = False
             current += 1
         return result
-    
+
     if isinstance(gadgets,  list):
         gadgetLen = len(gadgets)-1
         return intern(gadgets, callback, length=gadgetLen)
@@ -262,7 +271,7 @@ class RopperService(object):
     @property
     def ropper(self):
         return self.__ropper
-    
+
     @property
     def options(self):
         return self.__options
@@ -270,16 +279,16 @@ class RopperService(object):
     @property
     def files(self):
         return list(self.__files)
-    
+
     def __optionChanged(self, option, oldvalue, newvalue):
         if hasattr(self, '_%s_changed' % option):
             func = getattr(self, '_%s_changed' % option)
             func(newvalue)
 
     def __prepareGadgets(self, file, gadgets, type=None):
-        
+
         gadgets = self.__filterBadBytes(gadgets)
-        gadgets = self.__filterCfg(file, gadgets, type) 
+        gadgets = self.__filterCfg(file, gadgets, type)
         if not self.__options.all:
             callback = None
             if self.__callbacks and hasattr(self.__callbacks, '__deleteDoubleGadgetsProgress__'):
@@ -320,7 +329,7 @@ class RopperService(object):
                     os.remove(cache_file)
 
                 length = len(file.allGadgets)
-                
+
                 step = int(length / count)
                 for i in range(count-1):
                     gadgets = file.allGadgets[i*step: (i+1)*step]
@@ -375,7 +384,7 @@ class RopperService(object):
                     if isWindows():
                         raise RopperError('Cache has to be cleared.')
                     mp = True and multiprocessing.cpu_count()>1
-            else: 
+            else:
                 single = True
             if self.__callbacks and hasattr(self.__callbacks, '__message__'):
                 self.__callbacks.__message__('Load gadgets from cache')
@@ -398,7 +407,7 @@ class RopperService(object):
                                 if self.__callbacks and hasattr(self.__callbacks, '__gadgetSearchProgress__'):
                                     self.__callbacks.__gadgetSearchProgress__(None, all_gadgets, float(i)/RopperService.CACHE_FILE_COUNT)
                 return all_gadgets
-                
+
             else:
                 count = min(multiprocessing.cpu_count(),RopperService.CACHE_FILE_COUNT)
 
@@ -485,7 +494,7 @@ class RopperService(object):
 
     def getFileFor(self, name):
         return self._getFileFor(name)
-        
+
     def addFile(self, name, bytes=None, arch=None, raw=False):
         if self._getFileFor(name):
             raise RopperError('file is already added: %s' % name)
@@ -588,7 +597,7 @@ class RopperService(object):
         fileObject.analysed = True
 
     def loadGadgetsFor(self, name=None):
-        
+
         def load_gadgets(f):
             gtype = None
             cache = False
@@ -600,19 +609,19 @@ class RopperService(object):
             elif self.options.type == 'sys':
                 gtype = GadgetType.SYS
             elif self.options.type == 'all':
-                gtype = GadgetType.ALL    
+                gtype = GadgetType.ALL
             f.allGadgets = self.__loadCache(f)
             if f.allGadgets == None:
                 cache = True
                 f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
-            
+
             if cache:
                 self.__saveCache(f)
             f.gadgets = self.__prepareGadgets(f, f.allGadgets, f.type)
             f.analysed = f.gadgets[0].info is not None if len(f.gadgets) > 0 else False
             #self._analyseGadgets(f.gadgets)
 
-         
+
         if name is None:
             for fc in self.__files:
                 load_gadgets(fc)
@@ -620,7 +629,7 @@ class RopperService(object):
             for fc in self.__files:
                 if fc.loader.fileName == name:
                     load_gadgets(fc)
-                
+
     def printGadgetsFor(self, name=None):
         def print_gadgets(f):
             print(f.loader.fileName)
@@ -672,11 +681,11 @@ class RopperService(object):
             fc = self._getFileFor(name)
             if not fc:
                 raise RopperError('No such file opened: %s' % name)
-            
+
             s = fc.loader.arch.searcher
             for gadget in s.search(fc.gadgets, search, quality):
                     yield(fc.name, gadget)
-        else:        
+        else:
             for fc in self.__files:
                 s = fc.loader.arch.searcher
                 for gadget in s.search(fc.gadgets, search, quality):
@@ -688,7 +697,7 @@ class RopperService(object):
             fc = self._getFileFor(name)
             if not fc:
                 raise RopperError('No such file opened: %s' % name)
-            
+
             s = fc.loader.arch.searcher
             for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
                 if self.options.count_of_findings == 0 or self.options.count_of_findings > count:
@@ -697,7 +706,7 @@ class RopperService(object):
                     break
                 count += 1
             self.__saveCache(fc)
-        else:        
+        else:
             for fc in self.__files:
                 s = fc.loader.arch.searcher
                 for gadget in s.semanticSearch(fc.gadgets, search, self.options.inst_count, stableRegs):
@@ -732,12 +741,12 @@ class RopperService(object):
                 g = ropper.disassembleAddress(section, fc.loader, address, address - (fc.loader.imageBase+section.offset), length)
                 if not g:
                     raise RopperError('Cannot disassemble address: %s' % toHex(address))
-                    
+
                 if length < 0:
                     length = length * -1
                 return g.disassemblyString()
         return ''
-        
+
     def createRopChain(self, chain, arch, options={}):
         callback = None
         if self.__callbacks and hasattr(self.__callbacks, '__ropchainMessages__'):
@@ -795,7 +804,7 @@ class FileContainer(object):
     @property
     def name(self):
         return self.loader.fileName
-    
+
     @property
     def arch(self):
         return self.loader.arch
@@ -803,7 +812,7 @@ class FileContainer(object):
     @property
     def type(self):
         return self.loader.type
-    
+
     @property
     def loaded(self):
         return self.__loaded
@@ -811,7 +820,7 @@ class FileContainer(object):
     @property
     def loader(self):
         return self.__loader
-    
+
     @property
     def gadgets(self):
         return self.__gadgets
@@ -819,7 +828,7 @@ class FileContainer(object):
     @gadgets.setter
     def gadgets(self, gadgets):
         self.__gadgets = gadgets
-    
+
     @property
     def allGadgets(self):
         return self.__all_gadgets

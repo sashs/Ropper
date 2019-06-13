@@ -1,21 +1,30 @@
 # coding=utf-8
+# Copyright 2018 Sascha Schirra
 #
-# Copyright 2016 Sascha Schirra
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This file is part of Ropper.
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
 #
-# Ropper is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 #
-# Ropper is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" A ND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 from ropper.common.error import RopperError
 try:
@@ -94,13 +103,13 @@ class Analyser(object):
         slice_instructions = []
         slice = slicer.slice(anal.expressions, [sp])
         solver = z3.Solver()
-        
+
         expr_len = len(anal.expressions)
         expr = None
         tmp = None
 
         for inst in anal.expressions:
-            
+
             if not inst:
                 continue
             if expr is None:
@@ -124,8 +133,8 @@ class Analyser(object):
             if solver.check() == z3.unsat:
                 return 'Undef'
             return spOffset
-            
-                
+
+
 class InstructionAnalysis(object):
 
     MEM_COUNTER = 0
@@ -144,7 +153,7 @@ class InstructionAnalysis(object):
 
     def addRegister(self, reg):
         self.__usedRegs.update([reg])
-        
+
     @property
     def expressions(self):
         return self.__expressions
@@ -206,7 +215,7 @@ class Analysis(object):
     @property
     def instructions(self):
         return self.__instructions
-    
+
     @property
     def currentInstruction(self):
         if not len(self.instructions):
@@ -264,10 +273,10 @@ class Analysis(object):
         old = self._memory
         for i in range(int(size)):
             #old = z3.Store(old, addr+i, z3.Extract((i+1)*8-1,i*8,data))
-            
+
             value = 'Extract(%d, %d, %s)' % ((i+1)*8-1, i*8, data)
             old = 'Store(%s, %s + %d, %s)' % (old, addr, i, value)
-        
+
         self.__mem = None
         return '%s == %s' % (old, self._memory)
 
@@ -289,7 +298,7 @@ class Analysis(object):
             self.__registerAccessors[(reg)] = reg_list
 
         self.register_assignments[reg] = value
-        
+
         reg_list.append('%s_%d_%d' % (reg, count, real_size))
 
         if size < real_size:
@@ -327,7 +336,7 @@ class Analysis(object):
 class SemanticInformation(object):
 
     def __init__(self, regs, usedRegs, clobberedRegs, mems, expressions, spOffset, checked_constraints=None, irsb=None):
-        
+
         self.regs = regs
         self.usedRegs = usedRegs
         self.clobberedRegisters = clobberedRegs
@@ -336,7 +345,7 @@ class SemanticInformation(object):
         self.spOffset = spOffset
         self._checkedConstraints = {} if checked_constraints is None else checked_constraints
         self.irsb = irsb
-    @property    
+    @property
     def checkedConstraints(self):
         return self._checkedConstraints
 
@@ -399,7 +408,7 @@ class ZExpressions(CommandClass):
     def unop(dest, data, analysis):
         arg1 = ZExpressions.use(data.args[0])(dest, data.args[0], analysis)
         return (ZOperations.use(data.op)(arg1[0], analysis), arg1[1])
-    
+
     @staticmethod
     def triop(dest, data, analysis):
         # TODO used for floating point operations, should be implemented in a future version
@@ -417,7 +426,7 @@ class ZExpressions(CommandClass):
         #print(analysis.irsb)
         #print(dest, data, analysis)
         return None
-      
+
     @staticmethod
     def dummy(dest, data, analysis):
         pass
@@ -603,15 +612,15 @@ class ZStatements(CommandClass):
 
         if stmt.offset == analysis.arch.sp_offset:
             analysis.currentInstruction.spOffset = analysis.currentInstruction.getValueForTmp(str(stmt.data))
-        
+
         if value is not None:
             analysis.register_assignments[dest] = value[1][0] if len(value[1]) == 1 else value[0]
         else:
             analysis.register_assignments[dest] = None
-            
+
 
         return (analysis.writeRegister(stmt.offset, stmt.data.result_size(analysis.irsb.tyenv), value[0]),dest, value[1])
-   
+
     @staticmethod
     def wrtmp(stmt, analysis):
         tmp = 't'+str(stmt.tmp)
@@ -624,14 +633,14 @@ class ZStatements(CommandClass):
             analysis.register_assignments[tmp] = None
         if value is None or value[0] is None:
             return False
-      
+
         return ('%s == %s' % (tmp, value[0]), tmp, value[1])
 
     @staticmethod
     def store(stmt, analysis):
         addr = ZExpressions.use(stmt.addr)(None, stmt.addr, analysis)[0]
         value = ZExpressions.use(stmt.data)(str(addr), stmt.data, analysis)
-        
+
         return (analysis.writeMemory(addr, stmt.data.result_size(analysis.irsb.tyenv), value[0]),addr[0],value[1])
 
     @staticmethod
@@ -659,11 +668,11 @@ class IRSBAnalyser(object):
                 elif analysis.arch.registers.get(tmp) is not None:
                     to_return[orig] = tmp
                     break
-                
+
                 reg = tmp
 
         return to_return
-            
+
 
     def analyse(self, irsb):
         anal = Analysis(irsb.arch, irsb)
@@ -688,14 +697,14 @@ class Slice(object):
         self.instructions = []
         self.expressions = []
         self.regs = []
-        self.regs.extend(regs) 
+        self.regs.extend(regs)
 
 
 class Slicer(object):
 
     def slice(self, irsb, reg):
         slice = Slice(reg)
-        
+
         for expr in irsb[::-1]:
             if expr and expr[1] in slice.regs:
                 if expr[2][0] and type(expr[2][0]) is str and not expr[2][0].isdigit():
@@ -737,7 +746,7 @@ class ExpressionBuilder(object):
         f = True
         f = z3.And(f,eval(expression, globals(), z3objects))
         g = eval(constraint, globals(), z3objects)
-        
+
         return z3.And(f, z3.Not(g))
 #        return z3.Not(eval(expression, globals(), z3objects) == eval(constraint, globals(), z3objects))
 #        return z3.And(eval(expression, globals(), z3objects), z3.Not(eval(constraint, globals(), z3objects))

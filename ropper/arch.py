@@ -155,6 +155,7 @@ class ArchitectureX86(Architecture):
     def __init__(self):
         super(ArchitectureX86, self).__init__( CS_ARCH_X86, CS_MODE_32, 4, 1)
         self._name = 'x86'
+        self.miasm_arch = 'x86_32'
         self._maxInvalid = 6
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_32)
@@ -230,6 +231,7 @@ class ArchitectureX86_64(ArchitectureX86):
         super(ArchitectureX86_64, self).__init__()
         self._name = 'x86_64'
         self._maxInvalid = 8
+        self.miasm_arch = 'x86_64'
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_X86, keystone.KS_MODE_64)
 
@@ -282,7 +284,7 @@ class ArchitectureMips(Architecture):
     def __init__(self, endianess=Endianess.LITTLE):
         super(ArchitectureMips,self).__init__(CS_ARCH_MIPS, CS_MODE_32, 4, 4, endianess)
         self._name = 'MIPS'
-
+        self.miasm_arch = 'mips32l'
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_MIPS32)
 
@@ -304,6 +306,7 @@ class ArchitectureMipsBE(ArchitectureMips):
     def __init__(self):
         super(ArchitectureMipsBE, self).__init__(Endianess.BIG)
         self._name = 'MIPSBE'
+        self.miasm_arch = 'mips32b'
         self._mode |= CS_MODE_BIG_ENDIAN
         if 'keystone' in globals():
             self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
@@ -313,7 +316,7 @@ class ArchitectureMips64(ArchitectureMips):
     def __init__(self, endianess=Endianess.LITTLE):
         super(ArchitectureMips64, self).__init__(endianess)
         self._name = 'MIPS64'
-
+        self.miasm_arch = None
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_MIPS, keystone.KS_MODE_64)
 
@@ -332,6 +335,7 @@ class ArchitectureMips64BE(ArchitectureMips64):
     def __init__(self):
         super(ArchitectureMips64BE, self).__init__(Endianess.BIG)
         self._name = 'MIPS64BE'
+        self.miasm_arch = None
         self._mode |= CS_MODE_BIG_ENDIAN
         if 'keystone' in globals():
             self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
@@ -342,7 +346,7 @@ class ArchitectureArm(Architecture):
         super(ArchitectureArm,self).__init__(CS_ARCH_ARM, CS_MODE_ARM, 4, 4, endianess)
         self._searcher = SearcherARM()
         self._name = 'ARM'
-
+        self.miasm_arch = 'arml'
         if 'archinfo' in globals():
             self._info = archinfo.ArchARM()
         if 'keystone' in globals():
@@ -362,6 +366,7 @@ class ArchitectureArmBE(ArchitectureArm):
     def __init__(self):
         super(ArchitectureArmBE, self).__init__(Endianess.BIG)
         self._name = 'ARMBE'
+        self.miasm_arch = 'armb'
         self._mode |= CS_MODE_BIG_ENDIAN
         if 'keystone' in globals():
             self._ksarch = (self._ksarch[0], self._ksarch[1] + keystone.KS_MODE_BIG_ENDIAN)
@@ -381,7 +386,7 @@ class ArchitectureArmThumb(Architecture):
         self._searcher = SearcherARM()
         self._name = 'ARMTHUMB'
         self._maxInvalid = 2
-
+        self.miasm_arch = 'armtl'
         if 'archinfo' in globals():
             self._info = archinfo.ArchARM()
 
@@ -401,13 +406,13 @@ class ArchitectureArmThumb(Architecture):
 class ArchitectureArm64(Architecture):
 
     def __init__(self):
-        super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
+        super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN, 4, 4)
         self._name = 'ARM64'
-
+        self.miasm_arch = 'aarch64l'
         if 'archinfo' in globals():
             self._info = archinfo.ArchAArch64()
         if 'keystone' in globals():
-            self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_BIG_ENDIAN)
+            self._ksarch = (keystone.KS_ARCH_ARM64, keystone.KS_MODE_LITTLE_ENDIAN)
 
     def _initGadgets(self):
         super(ArchitectureArm64, self)._initGadgets()
@@ -427,7 +432,7 @@ class ArchitecturePPC(Architecture):
     def __init__(self):
         super(ArchitecturePPC, self).__init__(CS_ARCH_PPC , CS_MODE_32 + CS_MODE_BIG_ENDIAN, 4, 4)
         self._name = 'PPC'
-
+        self.miasm_arch = 'ppc32b'
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_32)
 
@@ -443,7 +448,7 @@ class ArchitecturePPC64(ArchitecturePPC):
 
         Architecture.__init__(self, CS_ARCH_PPC, CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
         self._name = 'PPC64'
-
+        self.miasm_arch = None
         if 'keystone' in globals():
             self._ksarch = (keystone.KS_ARCH_PPC, keystone.KS_MODE_64)
 

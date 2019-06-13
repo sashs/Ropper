@@ -26,6 +26,10 @@ try:
     import archinfo
 except ImportError as e:
     pass
+from miasm2.analysis.machine import Machine
+from miasm2.core.locationdb import LocationDB
+from miasm2.analysis.binary import Container
+from miasm2.ir.symbexec import SymbolicExecutionEngine
 
 from ropper.common.utils import toHex, isHex
 from ropper.z3helper import create_number_expression, create_register_expression, create_read_memory_expression
@@ -53,6 +57,22 @@ class Analyser(object):
         if not self.__work:
             return False
         try:
+            #code = "4889f05d5c5d5ec3".decode('hex') #x86_64
+            container = Container.from_string(bytes(gadget.bytes))
+            loc_db = LocationDB()
+            
+            machine = Machine(gadget.arch.miasm_arch)
+            mdis = machine.dis_engine(container.bin_stream)
+            asmcfg = mdis.dis_multiblock(0)
+            
+            ira = machine.ira(mdis.loc_db)
+            ircfg = ira.new_ircfg_from_asmcfg(asmcfg)
+            
+            #sb = SymbolicExecutionEngine(ira)
+            sb = SymbolicExecutionEngine(ira)
+            symbolic_pc = sb.run_at(ircfg,ircfg.blocks.keys()[0])
+
+           # print(gadget)
             thumb = 1 if isinstance(gadget.arch, ropper.arch.ArchitectureArmThumb) else 0
             irsb = pyvex.IRSB(bytes(gadget.bytes), gadget.address+thumb, gadget.arch.info, bytes_offset=thumb, num_bytes=len(gadget.bytes), opt_level=0)
             irsb_anal = IRSBAnalyser()
@@ -63,9 +83,10 @@ class Analyser(object):
 
         except pyvex.PyVEXError as e:
             pass
-        except:
+        except Exception as e:
+            print(gadget)
             pass
-
+        
     def findSpOffset(self, g, anal, sp ):
         if sp not in anal.regs:
             return 0
@@ -393,6 +414,8 @@ class ZExpressions(CommandClass):
     def ccall(dest, data, analysis):
         # TODO should be implemented in a future version
         #analysis.printable=True
+        #print(analysis.irsb)
+        #print(dest, data, analysis)
         return None
       
     @staticmethod

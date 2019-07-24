@@ -79,7 +79,7 @@ pprs = rs.searchPopPopRet(name=ls) # looks for ppr only in 'test-binaries/ls-x86
 pprs = rs.searchPopPopRet()        # looks for ppr in all opened files
 for file, ppr in pprs.items():
     for p in ppr:
-        print p
+        print(p)
 
 ##### load jmp reg ######
 jmp_regs = rs.searchJmpReg(name=ls, regs=['esp', 'eax']) # looks for jmp reg only in 'test-binaries/ls-x86'
@@ -87,7 +87,7 @@ jmp_regs = rs.searchJmpReg(regs=['esp', 'eax'])
 jmp_regs = rs.searchJmpReg()                             # looks for jmp esp in all opened files
 for file, jmp_reg in jmp_regs.items():
     for j in jmp_reg:
-        print j
+        print(j)
 
 
 ##### search opcode ######
@@ -98,35 +98,35 @@ gadgets_dict = rs.searchOpcode(opcode='??e4')
 
 for file, gadgets in gadgets_dict.items():
     for g in gadgets:
-        print g
+        print(g)
 
 ##### search instructions ######
 ls = 'test-binaries/ls-x86'
 for file, gadget in rs.search(search='mov e?x', name=ls):
-    print file, gadget
+    print(file, gadget)
 
 for file, gadget in rs.search(search='mov [e?x%]'):
-    print file, gadget    
+    print(file, gadget)
 
 result_dict = rs.searchdict(search='mov eax')
 for file, gadgets in result_dict.items():
-    print file
+    print(file)
     for gadget in gadgets:
-        print gadget
+        print(gadget)
 
 ##### assemble instructions ######
 hex_string = rs.asm('jmp esp')
-print '"jmp esp" assembled to hex string =', hex_string
+print('"jmp esp" assembled to hex string =', hex_string)
 raw_bytes = rs.asm('jmp esp', format='raw')
-print '"jmp esp" assembled to raw bytes =', raw_bytes
+print('"jmp esp" assembled to raw bytes =', raw_bytes)
 string = rs.asm('jmp esp', format='string')
-print '"jmp esp" assembled to string =',string
+print('"jmp esp" assembled to string =', string)
 arm_bytes = rs.asm('bx sp', arch='ARM')
-print '"bx sp" assembled to hex string =', arm_bytes
+print('"bx sp" assembled to hex string =', arm_bytes)
 
 ##### disassemble bytes #######
 arm_instructions = rs.disasm(arm_bytes, arch='ARM')
-print arm_bytes, 'disassembled to "%s"' % arm_instructions
+print(arm_bytes, 'disassembled to "%s"' % arm_instructions)
 
 # Change the imagebase, this also change the imagebase for all loaded gadgets of this binary
 rs.setImageBaseFor(name=ls, imagebase=0x0)
@@ -137,10 +137,10 @@ rs.setImageBaseFor(name=ls, imagebase=None)
 gadgets = rs.getFileFor(name=ls).gadgets
 
 # gadget address
-print hex(gadgets[0].address)
+print(hex(gadgets[0].address))
 
 # get instruction bytes of gadget
-print bytes(gadgets[0].bytes).encode('hex')
+print(bytes(gadgets[0].bytes).encode('hex'))
 
 # remove all gadgets containing bad bytes in address
 rs.options.badbytes = '000a0d'  # gadgets are filtered automatically

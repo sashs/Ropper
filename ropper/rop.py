@@ -293,7 +293,9 @@ class Ropper(object):
 
         toReturn = []
         code = bytes(bytearray(section.bytes))
-        offset = section.offset
+        # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
+        offset = section.offset - (binary.imageBase - (section.virtualAddress - section.offset))
+        #offset = section.offset
 
         arch = binary.arch
 
@@ -364,8 +366,11 @@ class Ropper(object):
         for cpu in range(process_count):
             ending_queue.put(None)
 
+        # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
+        offset = section.offset - (binary.imageBase - (section.virtualAddress - section.offset))
+
         for cpu in range(process_count):
-            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.checksum, section.name, section.offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
+            processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.checksum, section.name, offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))
             processes[cpu].daemon=True
             processes[cpu].start()
 
@@ -447,7 +452,8 @@ class Ropper(object):
     def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
         gadget = Gadget(binary, section, arch)
         hasret = False
-
+        if codeStartAddress == 0x0000000001b34d74:
+            print("found")
         disassembler = self.__getCs(arch)
 
         for i in disassembler.disasm(code_str, codeStartAddress):

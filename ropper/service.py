@@ -217,9 +217,18 @@ class Options(object):
 
         count_of_findings = options.get('count_of_findings')
         if count_of_findings != None and not isinstance(count_of_findings, int):
-            raise TypeError('cfg_only has to be an instance of bool')
+            raise TypeError('cfg_only has to be an instance of int')
         elif count_of_findings == None:
             options['count_of_findings'] = 5
+
+        multiprocessing = options.get('multiprocessing')
+        if multiprocessing != None and not isinstance(multiprocessing, bool):
+            raise TypeError('count_of_processes has to be an instance of bool')
+        elif multiprocessing and sys.platform.startswith('win'):
+            raise AttributeError('multiprocessing cannot be used on windows.')
+        elif multiprocessing == None:
+            options['multiprocessing'] = not sys.platform.startswith('win')
+
 
     def items(self):
         for key, value in self.__options_dict.items():
@@ -613,7 +622,7 @@ class RopperService(object):
             f.allGadgets = self.__loadCache(f)
             if f.allGadgets == None:
                 cache = True
-                f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype)
+                f.allGadgets = self.__ropper.searchGadgets(f.loader, instructionCount=self.options.inst_count, gtype=gtype,multiprocessing=self.options.multiprocessing)
 
             if cache:
                 self.__saveCache(f)

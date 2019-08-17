@@ -801,7 +801,8 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
                     'type':'The file is scanned for this type of gadgets. (rop, jop, sys, all)',
                     'detailed':'If on the gadgets will be printed with more detailed information',
                     'inst_count':'The max count of instructions in a gadgets',
-                    'count_of_findings':'The max count of findings which will be printed with semantic search (0 = undefined, default: 5'}
+                    'count_of_findings':'The max count of findings which will be printed with semantic search (0 = undefined, default: 5)',
+                    'multiprocessing':'If on multiple processes will be used for gadget scanning (not supported on Windows.)'}
             for key, value in self.__rs.options.items():
                 if isinstance(value, bool):
                     data.append((cstr(key), cstr('on' if value else 'off'), cstr(desc.get(key,''))))

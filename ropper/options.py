@@ -214,6 +214,8 @@ epilog="""example uses:
             '--semantic', help='semantic search for gadgets', metavar='constraint')
         parser.add_argument(
             '--count-of-findings', help='Max count of gadgets which will be printed with semantic search (0 = undefined, default: 5)', metavar='<count of gadgets>', type=int, default=5)
+        parser.add_argument(
+            '--single', help='No multiple processes are used for gadget scanning', action='store_true', default=self.isWindows())
         return parser
 
     def _analyseArguments(self):
@@ -245,6 +247,7 @@ epilog="""example uses:
         ropper_options['type'] = self.__args.type
         ropper_options['cfg_only'] = self.__args.cfg_only
         ropper_options['count_of_findings'] = self.__args.count_of_findings
+        ropper_options['multiprocessing'] = not self.__args.single
         self.ropper_options = ropper_options
 
 
@@ -319,6 +322,12 @@ epilog="""example uses:
             return (True,True)
         return False
 
+    def _setMultiprocessing(self, value):
+        if value.lower() in ('on', 'off'):
+            self.multiprocessing = bool(value == 'on')
+            return (True,False)
+        return False
+
     def _setBadbytes(self, value):
         if len(value) == 0 or isHex('0x'+value):
             self.badbytes = value
@@ -349,4 +358,5 @@ VALID_OPTIONS = {'all' : Options._setAll,
                      'detailed' : Options._setDetailed,
                      'type' : Options._setType,
                      'color' : Options._setColor,
+                     'multiprocessing' : Options._setMultiprocessing,
                      'count_of_findings' : Options._setCountOfFindings}

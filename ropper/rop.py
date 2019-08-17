@@ -271,7 +271,7 @@ class Ropper(object):
                     toReturn.append(pprg)
         return toReturn
 
-    def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL):
+    def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL, multiprocessing=False):
         Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
         gadgets = []
         for section in binary.executableSections:
@@ -280,7 +280,7 @@ class Ropper(object):
             if self.__callback:
                 self.__callback(section, None, 0)
 
-            if sys.platform.startswith('win'):
+            if not multiprocessing:
                 newGadgets = self._searchGadgetsSingle(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
             else:
                 newGadgets = self._searchGadgetsForked(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)

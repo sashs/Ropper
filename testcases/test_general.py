@@ -53,9 +53,6 @@ class GeneralTests(unittest.TestCase):
         found_gadgets = self.rs.searchdict('mov [rax]')[FILE]
         self.assertEqual(len(found_gadgets), 2)
 
-        found_gadgets = self.rs.searchdict('mov [r?x]')[FILE]
-        self.assertEqual(len(found_gadgets), 7)
-
         found_gadgets = self.rs.searchdict('mov [r?x%]')[FILE]
         self.assertGreater(len(found_gadgets), 12)
 

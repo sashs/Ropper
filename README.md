@@ -1,11 +1,10 @@
 Ropper
 ================
+[![Build Status](https://travis-ci.org/sashs/Ropper.svg?branch=master)](https://travis-ci.org/sashs/Ropper)
 
 You can use ropper to display information about binary files in different file formats
 and you can search for gadgets to build rop chains for different architectures (x86/X86_64, ARM/ARM64, MIPS/MIPS64, PowerPC/PowerPC64, SPARC64).
 For disassembly ropper uses the awesome [Capstone Framework](http://www.capstone-engine.org).
-
-NOTE: I recommend to use the dev version of ropper, because bugfixes are earlier available in dev branch.
 
 Install
 -------

@@ -681,14 +681,14 @@ class RopChainX86System(RopChainX86):
                 self._printMessage('Use 0x41414141 as command address. Please replace that value.')
                 cmdaddress = 0x41414141
             if can_create_command:
-
                 badregs = []
                 while True:
-
+                    c = ''
                     ret = self._createNumber(0x0, badRegs=badregs)
-                    chain_tmp += ret[0]
+                    c += ret[0]
                     try:
-                        chain_tmp += self._createWriteRegValueWhere(ret[1], nulladdress)[0]
+                        c += self._createWriteRegValueWhere(ret[1], nulladdress)[0]
+                        chain_tmp += c
                         break
                     except BaseException as e:
                         #raise e

@@ -263,7 +263,7 @@ class Console(cmd.Cmd):
         elif format == 'S':
             f = 'string'
         else:
-            raise RopperError('wrong format: %s' % f)
+            raise RopperError('wrong format: %s' % format)
 
         self.__cprinter.println(self.__rs.asm(code, arch, f))
 

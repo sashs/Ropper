@@ -98,7 +98,15 @@ class MachO(Loader):
         return {}
 
     def _loadFile(self, fileName, bytes=None):
-        return macho.MachO(fileName, bytes)
+        mf = macho.MachO(fileName, bytes)
+        if mf.isFat:
+            if not self._arch:
+                return mf.fatArches[0]
+            for arch in mf.fatArches:
+                if ARCH[arch.machHeader.header.cputype] == self._arch:
+                    return arch
+        return mf
+
 
     @classmethod
     def isSupportedFile(cls, fileName, bytes=None):

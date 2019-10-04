@@ -12,3 +12,4 @@ Contributers:
 - Matthias Ganz (--cfg-only option)
 - Lorenzo Santina (bgufixes)
 - Andrey Konovalov
+- Robert Sesek (MachO Fat binary support)

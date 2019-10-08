@@ -605,7 +605,10 @@ class RopChainX86_64(RopChain):
 
     def _createOpcode(self, opcode):
         gadget = self._searchOpcode(opcode)
+         
         if gadget:
+            if (gadget.fileName, gadget.section) not in self._usedBinaries:
+                self._usedBinaries.append((gadget.fileName, gadget.section))
             return self._printRopInstruction(gadget)
 
 

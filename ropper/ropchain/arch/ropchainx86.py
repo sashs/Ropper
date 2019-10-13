@@ -927,9 +927,9 @@ class RopChainX86VirtualProtect(RopChainX86):
 
                 address, image_base = virtual_protect
 
-                if not address:
-                    self._printMessage('No IAT-Entry for VirtualProtect found!')
-                    raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
+            if not address:
+                self._printMessage('No IAT-Entry for VirtualProtect found!')
+                raise RopChainError('No IAT-Entry for VirtualProtect found and no address is given')
         else:
             if address:
                 if not match('0x[0-9a-fA-F]{1,8}', address):

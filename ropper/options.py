@@ -175,7 +175,7 @@ epilog="""example uses:
             '--unset', help='Unsets options. Available options: aslr nx', metavar='<option>')
         parser.add_argument('-I', metavar='<imagebase>', help='Uses this imagebase for gadgets')
         parser.add_argument(
-            '-p', '--ppr', help='Searches for \'pop reg; pop reg; ret\' instructions [only x86/x86_64]', action='store_true')
+            '-p', '--ppr', help='Searches for \'pop reg; pop reg; ret\' instructions [only x86]', action='store_true')
         parser.add_argument(
             '-j', '--jmp', help='Searches for \'jmp reg\' instructions (-j reg[,reg...]) [only x86/x86_64]', metavar='<reg>')
         parser.add_argument(

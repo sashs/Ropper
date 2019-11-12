@@ -252,7 +252,7 @@ class Ropper(object):
         return toReturn
 
     def _searchPopPopRet(self, section, binary):
-        if binary.arch != x86:
+        if not isinstance(binary.arch, x86.__class__ ):
             raise NotSupportedError(
                 'Wrong architecture, \'pop pop ret\' is only supported on x86')
 

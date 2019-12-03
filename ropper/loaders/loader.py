@@ -142,6 +142,10 @@ class Loader(Abstract):
         pass
 
     @property
+    def originalImageBase(self):
+        return self._getImageBase()
+
+    @property
     def imageBase(self):
         if self._manualImageBase == None:
             return self._getImageBase()

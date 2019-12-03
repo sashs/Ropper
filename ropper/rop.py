@@ -272,10 +272,10 @@ class Ropper(object):
         return toReturn
 
     def searchGadgets(self, binary, instructionCount=5, gtype=GadgetType.ALL, multiprocessing=False):
-        Gadget.IMAGE_BASES[binary.checksum] = binary.imageBase
+        if Gadget.IMAGE_BASES.get(binary.checksum) == None:
+            Gadget.IMAGE_BASES[binary.checksum] = binary.originalImageBase
         gadgets = []
         for section in binary.executableSections:
-            vaddr = binary.imageBase
 
             if self.__callback:
                 self.__callback(section, None, 0)
@@ -294,7 +294,7 @@ class Ropper(object):
         toReturn = []
         code = bytes(bytearray(section.bytes))
         # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
-        offset = section.offset - (binary.imageBase - (section.virtualAddress - section.offset))
+        offset = section.offset - (binary.originalImageBase - (section.virtualAddress - section.offset))
         #offset = section.offset
 
         arch = binary.arch
@@ -367,7 +367,7 @@ class Ropper(object):
             ending_queue.put(None)
 
         # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
-        offset = section.offset - (binary.imageBase - (section.virtualAddress - section.offset))
+        offset = section.offset - (binary.originalImageBase - (section.virtualAddress - section.offset))
 
         for cpu in range(process_count):
             processes.append(Process(target=self.__gatherGadgetsByEndings, args=(tmp_code, arch, binary.checksum, section.name, offset, ending_queue, gadget_queue, instruction_count), name="GadgetSearch%d"%cpu))

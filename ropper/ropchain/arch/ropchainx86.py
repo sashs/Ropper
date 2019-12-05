@@ -543,11 +543,9 @@ class RopChainX86(RopChain):
         if not pop:
             raise RopChainError('Cannot build number gadget with neg!')
 
-        toReturn = self._printRopInstruction(pop)
-
-
         value = self._printPaddingInstruction(toHex((~number)+1)) # two's complement
-        toReturn += self._printRopInstruction(neg, value=value)
+        toReturn = self._printRopInstruction(pop, value=value)
+        toReturn += self._printRopInstruction(neg)
         return (toReturn, reg,)
 
     def _createNumber(self, number, reg=None, badRegs=None, dontModify=None, xchg=True):

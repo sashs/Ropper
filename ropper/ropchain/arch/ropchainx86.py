@@ -883,7 +883,7 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
         if len(gadgets) > 0:
-            self._updateUsedBinaries(gadget[0])
+            self._updateUsedBinaries(gadgets[0])
             return gadgets[0]
         else:
             return None

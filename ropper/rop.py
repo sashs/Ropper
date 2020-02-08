@@ -215,7 +215,8 @@ class Ropper(object):
         disassembler = self.__getCs(binary.arch)
         toReturn = []
         code = bytearray(section.bytes)
-        offset = section.offset
+        # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
+        offset = section.offset - (binary.originalImageBase - (section.virtualAddress - section.offset))
         for match in re.finditer(opcode, code):
             opcodeGadget = Gadget(binary.checksum, section.name, binary.arch)
 
@@ -258,7 +259,8 @@ class Ropper(object):
 
         disassembler = self.__getCs(binary.arch)
         code = section.bytes
-        offset = section.offset
+        # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
+        offset = section.offset - (binary.originalImageBase - (section.virtualAddress - section.offset))
         toReturn = []
         pprs = binary.arch.pprs
         for ppr in pprs:

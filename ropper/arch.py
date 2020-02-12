@@ -434,7 +434,7 @@ class ArchitectureArmThumb(Architecture):
 class ArchitectureArm64(Architecture):
 
     def __init__(self):
-        super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_ARM, 4, 4)
+        super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_ARM, 8, 4)
         self._name = 'ARM64'
 
         if 'archinfo' in globals():
@@ -475,7 +475,7 @@ class ArchitecturePPC64(ArchitecturePPC):
 
     def __init__(self):
 
-        Architecture.__init__(self, CS_ARCH_PPC, CS_MODE_64 + CS_MODE_BIG_ENDIAN, 4, 4)
+        Architecture.__init__(self, CS_ARCH_PPC, CS_MODE_64 + CS_MODE_BIG_ENDIAN, 8, 4)
         self._name = 'PPC64'
 
         if 'keystone' in globals():
@@ -502,7 +502,7 @@ class ArchitectureSPARC64(ArchitectureSPARC):
 
     def __init__(self):
 
-        Architecture.__init__(self, CS_ARCH_SPARC, CS_MODE_V9 + CS_MODE_BIG_ENDIAN, 4, 4, branch_delay_slot=True)
+        Architecture.__init__(self, CS_ARCH_SPARC, CS_MODE_V9 + CS_MODE_BIG_ENDIAN, 8, 4, branch_delay_slot=True)
         self._name = 'SPARC64'
 
         if 'keystone' in globals():

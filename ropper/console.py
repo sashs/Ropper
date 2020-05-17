@@ -234,6 +234,9 @@ class Console(cmd.Cmd):
     def __printError(self, error):
         self.__cprinter.printError(error)
 
+    def __printWarning(self, warning):
+        self.__cprinter.printWarning(warning)
+
     def __printInfo(self, info):
         self.__cprinter.printInfo(cstr(info))
 
@@ -344,6 +347,8 @@ class Console(cmd.Cmd):
 
     def __generateChain(self, command):
         split = command.split(' ')
+        badbytes = self.__options.badbytes if self.__options.badbytes is not None else ''
+        value_with_badbytes = None
         try:
             old = self.__rs.options.color
             generator = split[0]
@@ -354,6 +359,8 @@ class Console(cmd.Cmd):
                         raise RopperError('Wrong option format. An option has to be set in the following format: option=value')
                     key, value = option.split('=')
                     options[key] = value
+                    if any(badbyte in value for badbyte in unhexlify(badbytes)):
+                        value_with_badbytes = value
             try:
 
                 self.__rs.options.color = False
@@ -366,6 +373,8 @@ class Console(cmd.Cmd):
 
                 self.__cprinter.println(chain)
                 # self.__printSeparator(before='\n\n')
+                if value_with_badbytes is not None:
+                    self.__printWarning("The input value {} contains badbytes!".format(value_with_badbytes))
                 self.__printInfo('rop chain generated!')
             except RopperError as e:
                 self.__rs.options.color = old
@@ -1145,6 +1154,9 @@ class ConsolePrinter(object):
 
     def printError(self, message):
         self.printMessage(cstr('[ERROR]', Color.RED), message)
+
+    def printWarning(self, message):
+        self.printMessage(cstr('[WARNING]', Color.YELLOW), message)
 
     def printInfo(self, message):
         self.printMessage(cstr('[INFO]', Color.GREEN), message)

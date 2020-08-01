@@ -713,7 +713,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_inst(self):
         self.__printHelpText(
-            'inst <instructions>', 'searchs instructions in executable sections')
+            'inst <instructions>', 'searches instructions in executable sections')
 
     @safe_cmd
     def do_opcode(self, text):
@@ -725,7 +725,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_opcode(self):
         self.__printHelpText(
-            'opcode <opcode>', 'searchs opcode in executable sections\nExample:\nopcode ffe4\nopcode ff4?\nopcode ff??\n\nNot allowed:\nopcode ff?4')
+            'opcode <opcode>', 'searches opcode in executable sections\nExample:\nopcode ffe4\nopcode ff4?\nopcode ff??\n\nNot allowed:\nopcode ff?4')
 
     @safe_cmd
     def do_imagebase(self, text):
@@ -764,7 +764,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_jmp(self):
         self.__printHelpText(
-            'jmp <reg[,reg...]>', 'searchs jmp reg instructions')
+            'jmp <reg[,reg...]>', 'searches jmp reg instructions')
 
     @safe_cmd
     def do_detailed(self, text):
@@ -1049,7 +1049,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__cprinter.println()
 
     def help_semantic(self):
-        self.__printHelpText('semantic', 'Searchs gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax==ebx; ecx==1 !edx !esi\n\nValid constraints:\nreg==reg\nreg==number\nreg==[reg]\nreg<+|-|*|/>=<reg|number|[reg]>')
+        self.__printHelpText('semantic', 'Searches gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax==ebx; ecx==1 !edx !esi\n\nValid constraints:\nreg==reg\nreg==number\nreg==[reg]\nreg<+|-|*|/>=<reg|number|[reg]>')
 
     # @safe_cmd
     # def do_analyse(self, text):

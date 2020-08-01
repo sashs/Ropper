@@ -187,9 +187,9 @@ epilog="""example uses:
         parser.add_argument(
             '--quality', help='The quality for gadgets which are found by search (1 = best)', metavar='<quality>', type=int)
         parser.add_argument(
-            '--opcode', help='Searchs for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
+            '--opcode', help='Searches for opcodes (e.g. ffe4 or ffe? or ff??)', metavar='<opcode>')
         parser.add_argument(
-            '--instructions', help='Searchs for instructions (e.g. "jmp esp", "pop eax; ret")', metavar='<instructions>')
+            '--instructions', help='Searches for instructions (e.g. "jmp esp", "pop eax; ret")', metavar='<instructions>')
         parser.add_argument(
             '--type', help='Sets the type of gadgets [rop, jop, sys, all] (default: all)', metavar='<type>', default='all')
         parser.add_argument(

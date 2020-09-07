@@ -162,9 +162,9 @@ Usage
       --search <regex>      Searches for gadgets
       --quality <quality>   The quality for gadgets which are found by search (1 =
                             best)
-      --opcode <opcode>     Searchs for opcodes (e.g. ffe4 or ffe? or ff??)
+      --opcode <opcode>     Searches for opcodes (e.g. ffe4 or ffe? or ff??)
       --instructions <instructions>
-                            Searchs for instructions (e.g. "jmp esp", "pop eax;
+                            Searches for instructions (e.g. "jmp esp", "pop eax;
                             ret")
       --type <type>         Sets the type of gadgets [rop, jop, sys, all]
                             (default: all)

@@ -112,18 +112,28 @@ def cfgFilterGadgets(binary, gadgets, callback=None):
     def intern(gadgets, callback=None,current=0, length=0):
         result = []
         added = False
-        for gadget in gadgets:
-            loadConfig = binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
-            if not loadConfig:
-                return gadgets
 
+        loadConfig = binary._binary.dataDirectory[ImageDirectoryEntry.LOAD_CONFIG]
+        if not loadConfig:
+            return gadgets
+        alignedCFGFunctions = [func for func in loadConfig.cfGuardedFunctions if func % 16 == 0]
+
+        # For unaligned functions we can use all the 16-bytes in their aligned space, so we align the unaligned functions
+        unalignedCFGFunctions = [(func - func % 16) for func in loadConfig.cfGuardedFunctions if func % 16 != 0]
+        
+        for gadget in gadgets:
             # calculate relative address of the gadget when loaded to memory
             gadgetRVA = gadget.address - binary.imageBase
 
-            # consider Microsoft CFG implementation imprecision - chop off 3 lsbits
-            gadgetRVA8ByteAligend = gadgetRVA - (gadgetRVA % 8)
-
-            inList = gadgetRVA8ByteAligend in loadConfig.cfGuardedFunctions
+            # consider Microsoft CFG implementation imprecision - chop off 4 lsbits
+            gadgetRVA16ByteAligend = gadgetRVA - (gadgetRVA % 16)
+            
+            # If a guarded function is 16-byte aligned then it's only possible to jump directly to that function.
+            # If a guarded function is not 16-byte aligned, then it's possible to jump to anywhere in the 16-bytes of the aligned function's address
+            if gadgetRVA % 16 == 0:
+                inList = gadgetRVA16ByteAligend in alignedCFGFunctions + unalignedCFGFunctions
+            else:
+                inList = gadgetRVA16ByteAligend in unalignedCFGFunctions
 
             if inList:
                 # this is a gadget which passes CFG checks

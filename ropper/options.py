@@ -72,65 +72,11 @@ available rop chain generators:
   execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
   mprotect  (mprotect address=0xdeadbeef size=0x10000) [Linux x86, x86_64]
   virtualprotect (virtualprotect address=0xdeadbeef) [Windows x86]
-""",
-epilog="""example uses:
-  [Generic]
-  {0}
-  {0} --file /bin/ls --console
+""")
 
-  [Information]
-  {0} --file /bin/ls --info
-  {0} --file /bin/ls --imports
-  {0} --file /bin/ls --sections
-  {0} --file /bin/ls --segments
-  {0} --file /bin/ls --set nx
-  {0} --file /bin/ls --unset nx
-  {0} --file /bin/ls --inst-count 5
-  {0} --file /bin/ls --search "sub eax" --badbytes 000a0d
-  {0} --file /bin/ls --search "sub eax" --detail
-  {0} --file /bin/ls --filter "sub eax"
-  {0} --file /bin/ls --opcode ffe4
-  {0} --file /bin/ls --opcode ffe?
-  {0} --file /bin/ls --opcode ??e4
-  {0} --file /bin/ls --detailed
-  {0} --file /bin/ls --ppr --nocolor
-  {0} --file /bin/ls --jmp esp,eax
-  {0} --file /bin/ls --type jop
-  {0} --file /bin/ls --chain execve
-  {0} --file /bin/ls --chain "execve cmd=/bin/sh" --badbytes 000a0d
-  {0} --file /bin/ls --chain "mprotect address=0xbfdff000 size=0x21000"
-  {0} --file /bin/ls /lib/libc.so.6 --console
-
-
-  [Assemble/Disassemble]
-  {0} --asm "jmp esp"
-  {0} --asm "mov eax, ecx; ret"
-  {0} --disasm ffe4
-
-  [Search]
-  {0} --file /bin/ls --search <searchstring>
-  ?\t\tany character
-  %\t\tany string
-
-  Example:
-
-  {0} --file /bin/ls --search "mov e?x"
-  0x000067f1: mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax
-  0x00006d03: mov eax, esi; pop ebx; pop esi; pop edi; pop ebp; ret ;
-  0x00006d6f: mov ebx, esi; mov esi, dword ptr [esp + 0x18]; add esp, 0x1c; ret ;
-  0x000076f8: mov eax, dword ptr [eax]; mov byte ptr [eax + edx], 0; add esp, 0x18; pop ebx; ret ;
-
-  {0} --file /bin/ls --search "mov [%], edx"
-  0x000067ed: mov dword ptr [esp + 4], edx; mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;
-  0x00006f4e: mov dword ptr [ecx + 0x14], edx; add esp, 0x2c; pop ebx; pop esi; pop edi; pop ebp; ret ;
-  0x000084b8: mov dword ptr [eax], edx; ret ;
-  0x00008d9b: mov dword ptr [eax], edx; add esp, 0x18; pop ebx; ret ;
-
-  {0} --file /bin/ls --search "mov [%], edx" --quality 1
-  0x000084b8: mov dword ptr [eax], edx; ret ;
-  \n""".format(sys.argv[0]))
-
-
+        parser.add_argument(
+            '--help-examples', help="Print examples", action='store_true')
+        
         parser.add_argument(
             '-v', '--version', help="Print version", action='store_true')
         parser.add_argument(
@@ -229,7 +175,7 @@ epilog="""example uses:
 
         self.nocolor = self.__args.nocolor or self.isWindows()
 
-        if not self.__args.clear_cache and not self.__args.asm and not self.disasm and not self.__args.console and not self.__args.file and not self.__args.version:
+        if not self.__args.clear_cache and not self.__args.help_examples and not self.__args.asm and not self.disasm and not self.__args.console and not self.__args.file and not self.__args.version:
             self.__missingArgument('[-f|--file]')
 
         if self.__args.I:

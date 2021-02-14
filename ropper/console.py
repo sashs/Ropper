@@ -359,7 +359,8 @@ class Console(cmd.Cmd):
                         raise RopperError('Wrong option format. An option has to be set in the following format: option=value')
                     key, value = option.split('=')
                     options[key] = value
-                    if any(badbyte in value for badbyte in unhexlify(badbytes)):
+                    badbytes_value = value.encode('ASCII')
+                    if any(badbyte in badbytes_value for badbyte in unhexlify(badbytes)):
                         value_with_badbytes = value
             try:
 

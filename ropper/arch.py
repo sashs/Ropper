@@ -30,7 +30,7 @@ from ropper.common.abstract import *
 from ropper.common.enum import Enum
 from ropper.common.error import NotSupportedError
 from ropper.search import Searcher, Searcherx86, SearcherARM, SearcherMIPS
-from re import compile
+import re
 from capstone import *
 from . import gadget
 try:
@@ -72,6 +72,7 @@ class Architecture(AbstractSingleton):
         self._align = align
 
         self._endings = {}
+        self._endings_re = None
         self._badInstructions = []
         self._categories = {}
         self._maxInvalid = 1
@@ -137,7 +138,13 @@ class Architecture(AbstractSingleton):
     @property
     def endings(self):
         return self._endings
-
+    
+    @property
+    def endings_re(self):
+        if not self._endings_re:
+            self._endings_re = {key: [(re.compile(x), y)  for x, y in value] for key, value in self.endings.items()}
+        return self._endings_re
+            
     @property
     def badInstructions(self):
         return self._badInstructions
@@ -202,8 +209,8 @@ class ArchitectureX86(Architecture):
 
     def _initGadgets(self):
         super(ArchitectureX86, self)._initGadgets()
-        self._endings[gadget.GadgetType.ROP] = [(b'\xc3', 1),                           # ret
-                                                (b'\xc2[\x00-\xff]{2}', 3)]             # ret xxx
+        self._endings[gadget.GadgetType.ROP] = [(b'[\xc3|\xcb]', 1),                           # ret
+                                                (b'[\xc2|\xca][\x00-\xff]{2}', 3)]             # ret xxx
 
         self._endings[gadget.GadgetType.SYS] = [(b'\xcd\x80', 2),                           # int 0x80
                                                 (b'\x0f\x05',2),                            # syscall
@@ -383,9 +390,9 @@ class ArchitectureArm(Architecture):
 
     def _initGadgets(self):
         super(ArchitectureArm, self)._initGadgets()
-        self._endings[gadget.GadgetType.ROP] = [(b'[\x01-\xff]\x80\xbd\xe8', 4)] # pop {[reg]*,pc}
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x1e]\xff\x2f\xe1', 4), # bx <reg>
-                                                (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
+        self._endings[gadget.GadgetType.ROP] = [(b'[\x00-\xff][\x80-\xff][\x10-\x1e\x30-\x3e\x50-\x5e\x70-\x7e\x90-\x9e\xb0-\xbe\xd0-\xde\xf0-\xfe][\xe8\xe9]', 4)]
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x19\x1e]{1}\xff\x2f\xe1', 4), # bx <reg>
+                                                (b'[\x30-\x39\x3e]{1}\xff\x2f\xe1', 4), # blx <reg>
                                                 (b'[\x00-\x0f]\xf0\xa0\xe1', 4), # mov pc, <reg>
                                                 (b'\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
@@ -401,9 +408,9 @@ class ArchitectureArmBE(ArchitectureArm):
 
     def _initEndianess(self, endianess):
         super(ArchitectureArmBE, self)._initEndianess(endianess)
-        self._endings[gadget.GadgetType.ROP] = [(b'\xe8\xbd\x80[\x01-\xff]', 4)] # pop {[reg]*,pc}
-        self._endings[gadget.GadgetType.JOP] = [(b'\xe1\x2f\xff[\x10-\x1e]', 4), # bx <reg>
-                                                (b'\xe1\x2f\xff[\x30-\x3e]', 4), # blx <reg>
+        self._endings[gadget.GadgetType.ROP] = [(b'[\xe8\xe9][\x10-\x1e\x30-\x3e\x50-\x5e\x70-\x7e\x90-\x9e\xb0-\xbe\xd0-\xde\xf0-\xfe][\x80-\xff][\x00-\xff]', 4)] # pop {[reg]*,pc}
+        self._endings[gadget.GadgetType.JOP] = [(b'\xe1\x2f\xff[\x10-\x19\x1e]{1}', 4), # bx <reg>
+                                                (b'\xe1\x2f\xff[\x30-\x39\x3e]{1}', 4), # blx <reg>
                                                 (b'\xe1\xa0\xf0[\x00-\x0f]', 4), # mov pc, <reg>
                                                 (b'\xe8\xdb\x80\x01', 4)] # ldm sp! ,{pc}
 
@@ -424,7 +431,7 @@ class ArchitectureArmThumb(Architecture):
     def _initGadgets(self):
         super(ArchitectureArmThumb, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00-\xff]\xbd', 2)] # pop {[regs]*,pc}
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x00-\x7f]\x47', 2), # bx <reg>
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x70]{1}\x47', 2), # bx <reg>
                                                 (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xd0\xd8\xe0\xe8\xf0\xf8]\x47', 2) # blx <reg>
                                                 ]
 

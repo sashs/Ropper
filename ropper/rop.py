@@ -455,7 +455,7 @@ class Ropper(object):
         gadget = Gadget(binary, section, arch)
         hasret = False
         disassembler = self.__getCs(arch)
-        instrs = list(disassembler.disasm(code_str, codeStartAddress))
+        instrs = list(disassembler.disasm(code_str, codeStartAddress+gadget.imageBase))
         for i, inst in enumerate(instrs):
             
             if re.match(ending[0], inst.bytes):

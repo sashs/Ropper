@@ -414,6 +414,7 @@ class ArchitectureArmBE(ArchitectureArm):
                                                 (b'\xe1\xa0\xf0[\x00-\x0f]', 4), # mov pc, <reg>
                                                 (b'\xe8\xdb\x80\x01', 4)] # ldm sp! ,{pc}
 
+
 class ArchitectureArmThumb(Architecture):
 
     def __init__(self):
@@ -431,11 +432,9 @@ class ArchitectureArmThumb(Architecture):
     def _initGadgets(self):
         super(ArchitectureArmThumb, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b'[\x00-\xff]\xbd', 2)] # pop {[regs]*,pc}
-        self._endings[gadget.GadgetType.JOP] = [(b'[\x00\x08\x10\x18\x20\x28\x30\x38\x40\x48\x70]{1}\x47', 2), # bx <reg>
+        self._endings[gadget.GadgetType.JOP] = [(b'[\x00-\x7f]\x47', 2), # bx <reg>
                                                 (b'[\x80\x88\x90\x98\xa0\xa8\xb0\xb8\xc0\xc8\xd0\xd8\xe0\xe8\xf0\xf8]\x47', 2) # blx <reg>
                                                 ]
-
-
 
 
 class ArchitectureArm64(Architecture):

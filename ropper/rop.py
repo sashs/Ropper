@@ -473,7 +473,7 @@ class Ropper(object):
                 continue
 
             if hasret or inst.mnemonic not in arch.badInstructions:
-                gadget.append(inst.address, inst.mnemonic,inst.op_str, bytes=inst.bytes)
+                gadget.append(inst.address-gadget.imageBase, inst.mnemonic,inst.op_str, bytes=inst.bytes)
 
             if (hasret and not arch.hasBranchDelaySlot) or inst.mnemonic in arch.badInstructions:
                 break

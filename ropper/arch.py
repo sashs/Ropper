@@ -413,14 +413,14 @@ class ArchitectureArmBE(ArchitectureArm):
 
     def _initEndianess(self, endianess):
         super(ArchitectureArmBE, self)._initEndianess(endianess)
-        self._endings[gadget.GadgetType.ROP] = [((b'[\xe8\xe9]' +  # e=undconditional, 8/9=opcode+pre/post indexing bit set to anything
+        self._endings[gadget.GadgetType.ROP] = [((b'[\xe8\xe9]' +  # e=unconditional, 8/9=opcode+pre/post indexing bit set to anything
                                                   b'[\xbd\xfd]' + # u=1, s=0/1, w=1, l=1, Rn=1101 (sp)
                                                   b'[\x80-\xff][\x00-\xff]'), 4)] # pc + any reg
         self._endings[gadget.GadgetType.JOP] = [(b'\xe1\x2f\xff[\x10-\x19\x1e]{1}', 4), # bx <reg>
                                                 (b'\xe1\x2f\xff[\x30-\x39\x3e]{1}', 4), # blx <reg>
                                                 (b'\xe1\xa0\xf0[\x00-\x0f]', 4), # mov pc, <reg>
                                                 # ldm anything not sp into pc
-                                                ((b'[\xe8\xe9]' +  # e=undconditional, 8/9=opcode+pre/post indexing bit set to anything
+                                                ((b'[\xe8\xe9]' +  # e=unconditional, 8/9=opcode+pre/post indexing bit set to anything
                                                   b'[\x10-\x1c\x1e\x30-\x3c\x3e\x50-\x5c\x5e\x70-\x7c\x7e\x90-\x9c\x9e\xb0-\xbc\xbe\xd0-\xdc\xde\xf0-\xfc\xfe]' + # u=0/1, s=0/1, w=0/1, l=1, Rn=anything but sp or pc
                                                   b'[\x80-\xff][\x00-\xff]'), 4)] # pc + any reg  
 

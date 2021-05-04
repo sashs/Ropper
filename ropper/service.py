@@ -270,8 +270,8 @@ class Options(object):
 
 class RopperService(object):
 
-    ROPPER_FOLDER = os.path.expanduser('~') + os.path.sep + ".ropper/"
-    CACHE_FOLDER = os.path.expanduser('~') + os.path.sep + ".ropper/cache/"
+    ROPPER_FOLDER = os.environ.get("ROPPER_FOLDER") or os.path.join(os.path.expanduser('~'), ".ropper/")
+    CACHE_FOLDER = os.environ.get("ROPPER_CACHE") or os.path.join(ROPPER_FOLDER, "cache/")
     CACHE_FILE_COUNT = 16
 
     def __init__(self, options={}, callbacks=None):

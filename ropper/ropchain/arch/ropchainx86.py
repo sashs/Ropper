@@ -742,7 +742,7 @@ class RopChainX86System(RopChainX86):
         chain += 'rop = \'\'\n'
 
         chain += chain_tmp
-        chain += 'print rop'
+        chain += 'print(rop)'
         return chain
 
 

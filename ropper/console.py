@@ -489,10 +489,10 @@ class Console(cmd.Cmd):
         elif options.help_examples:
             self.__printExamples();
         elif options.analyse:
-            self.__loadGadgets()
+            self.__loadGadgetsForAllFiles()
             #self.do_analyse(options.analyse)
         elif options.semantic:
-            self.__loadGadgets()
+            self.__loadGadgetsForAllFiles()
             self.do_semantic(options.semantic)
         elif options.symbols:
             self.__printData('symbols')
@@ -568,7 +568,7 @@ class Console(cmd.Cmd):
             self.__loadGadgetsForAllFiles()
             self.__generateChain(options.chain)
         elif self.__options.file:
-            self.__loadGadgets()
+            self.__loadGadgetsForAllFiles()
             if options.search:
                 self.__search(options.search, options.quality)
             else:

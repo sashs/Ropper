@@ -231,12 +231,12 @@ class Options(object):
         elif count_of_findings == None:
             options['count_of_findings'] = 5
 
-        multiprocessing = options.get('multiprocessing')
-        if multiprocessing != None and not isinstance(multiprocessing, bool):
+        multip = options.get('multiprocessing')
+        if multip != None and not isinstance(multip, bool):
             raise TypeError('count_of_processes has to be an instance of bool')
-        elif multiprocessing and sys.platform.startswith('win'):
+        elif multip and sys.platform.startswith('win'):
             raise AttributeError('multiprocessing cannot be used on windows.')
-        elif multiprocessing == None:
+        elif multip == None:
             options['multiprocessing'] = not sys.platform.startswith('win')
 
 

@@ -35,7 +35,7 @@ from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
 from struct import pack
 import re
-import multiprocessing
+import multiprocessing as mp
 import struct
 import sys
 import capstone
@@ -286,8 +286,8 @@ class Ropper(object):
             if not multiprocessing:
                 newGadgets = self._searchGadgetsSingle(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
             else:
-                if multiprocessing.get_start_method() != 'fork':
-                    multiprocessing.set_start_method('fork')
+                if mp.get_start_method() != 'fork':
+                    mp.set_start_method('fork')
                 newGadgets = self._searchGadgetsForked(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
 
             gadgets.extend(newGadgets)

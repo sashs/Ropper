@@ -457,19 +457,28 @@ class Ropper(object):
     def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
         gadget = Gadget(binary, section, arch)
         hasret = False
-        if codeStartAddress == 0x0000000001b34d74:
-            print("found")
         disassembler = self.__getCs(arch)
-
-        for i in disassembler.disasm(code_str, codeStartAddress):
-            if re.match(ending[0], i.bytes):
+        instrs = list(disassembler.disasm(code_str, codeStartAddress))
+        for i, inst in enumerate(instrs):
+            
+            if re.match(ending[0], inst.bytes):
                 hasret = True
 
-            if hasret or i.mnemonic not in arch.badInstructions:
-                gadget.append(
-                    i.address, i.mnemonic,i.op_str, bytes=i.bytes)
+            reset_gadget = False
+            if i != len(instrs)-1:
+                for ending2 in arch.endings_re[GadgetType.ROP]:
+                    if ending2[0].match(inst.bytes):
+                        # anything before this (including this instr) isn't part of this gadget
+                        reset_gadget = True
+                        break
+            if reset_gadget:
+                gadget = Gadget(binary, section, arch)
+                continue
 
-            if (hasret and not arch.hasBranchDelaySlot) or i.mnemonic in arch.badInstructions:
+            if hasret or inst.mnemonic not in arch.badInstructions:
+                gadget.append(inst.address, inst.mnemonic,inst.op_str, bytes=inst.bytes)
+
+            if (hasret and not arch.hasBranchDelaySlot) or inst.mnemonic in arch.badInstructions:
                 break
 
 

@@ -457,22 +457,33 @@ class Ropper(object):
     def __createGadget(self, arch, code_str, codeStartAddress, ending, binary=None, section=None):
         gadget = Gadget(binary, section, arch)
         hasret = False
-        if codeStartAddress == 0x0000000001b34d74:
-            print("found")
         disassembler = self.__getCs(arch)
-
-        for i in disassembler.disasm(code_str, codeStartAddress):
-            if re.match(ending[0], i.bytes):
-                hasret = True
-
-            if hasret or i.mnemonic not in arch.badInstructions:
-                gadget.append(
-                    i.address, i.mnemonic,i.op_str, bytes=i.bytes)
-
-            if (hasret and not arch.hasBranchDelaySlot) or i.mnemonic in arch.badInstructions:
+        on_delay_slot = False
+        for inst in disassembler.disasm(code_str, codeStartAddress+gadget.imageBase):
+            if on_delay_slot:
+                gadget.append(inst.address-gadget.imageBase, inst.mnemonic,inst.op_str, bytes=inst.bytes)
                 break
 
+            if re.match(ending[0], inst.bytes):
+                hasret = True
+            
+            if hasret or inst.mnemonic not in arch.badInstructions:
+                gadget.append(inst.address-gadget.imageBase, inst.mnemonic,inst.op_str, bytes=inst.bytes)
 
+            if hasret:
+                if arch.hasBranchDelaySlot: 
+                    on_delay_slot = True
+                    continue
+                else:
+                    break
+
+            if i.mnemonic in arch.badInstructions:
+                break
+            
+            for rop_endings in arch.endings_re[GadgetType.ROP]:
+                if rop_endings[0].match(inst.bytes):
+                    # anything before this (including this instr) isn't part of this gadget, go back and try again
+                    return None, -1
 
         leng = len(gadget)
         if hasret and leng > 0:

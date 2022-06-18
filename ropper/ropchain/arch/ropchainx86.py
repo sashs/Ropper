@@ -208,7 +208,7 @@ class RopChainX86(RopChain):
         return toReturn
 
     def _printAddString(self, string):
-        return ('rop += \'%s\'\n' % string)
+        return ('rop += b\'%s\'\n' % string)
 
     def _printRebasedAddress(self, addr, comment='', idx=0):
         return ('rop += rebase_%d(%s)\n' % (idx,addr))
@@ -309,6 +309,7 @@ class RopChainX86(RopChain):
             for i in range(len(regs)):
                 toReturn +=self._printPaddingInstruction()
             toReturn += self._printRopInstruction(write4)
+        
         return (toReturn,popReg.category[2]['dst'], popReg2.category[2]['dst'])
 
 
@@ -739,7 +740,7 @@ class RopChainX86System(RopChainX86):
 
 
         chain += self._printRebase()
-        chain += 'rop = \'\'\n'
+        chain += 'rop = b\'\'\n'
 
         chain += chain_tmp
         chain += 'print(rop)'
@@ -833,7 +834,7 @@ class RopChainX86Mprotect(RopChainX86):
             chain_tmp += '\n# ADD HERE JMP ESP\n\n'
 
         chain += self._printRebase()
-        chain += '\nrop = \'\'\n'
+        chain += '\nrop = b\'\'\n'
         chain += chain_tmp
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'
@@ -994,7 +995,7 @@ class RopChainX86VirtualProtect(RopChainX86):
 
 
         chain += self._printRebase()
-        chain += 'rop = \'\'\n'
+        chain += 'rop = b\'\'\n'
         chain += chain_tmp
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'

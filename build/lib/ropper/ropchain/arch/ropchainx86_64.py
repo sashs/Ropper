@@ -202,7 +202,7 @@ class RopChainX86_64(RopChain):
         return toReturn
 
     def _printAddString(self, string):
-        return ('rop += \'%s\'\n' % string)
+        return ('rop += b\'%s\'\n' % string)
 
     def _printRebasedAddress(self, addr, comment='', idx=0):
         return ('rop += rebase_%d(%s)\n' % (idx,addr))
@@ -728,7 +728,7 @@ class RopChainSystemX86_64(RopChainX86_64):
 
 
         chain += self._printRebase()
-        chain += 'rop = \'\'\n'
+        chain += 'rop = b\'\'\n'
 
         chain += chain_tmp
         chain += 'print(rop)'

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = '2.0.0'
+version = '2.0.5'
 package_name = "ropper2"
 package_dir = "ropper"
 package_description = """Show information about files in different file formats and find gadgets to build rop chains for different architectures.

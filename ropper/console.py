@@ -226,7 +226,7 @@ class Console(cmd.Cmd):
         self.__cprinter.println("Version: Ropper %s" %
                                 '.'.join([str(x) for x in ropper.VERSION]))
         self.__cprinter.println("Author: Sascha Schirra with serfend")
-        self.__cprinter.println("Website: http://https://pypi.org/project/ropper2//ropper\n")
+        self.__cprinter.println("Website: http://https://pypi.org/project/ropper2/\n")
 
     def __printHelpText(self, cmd, desc):
         self.__cprinter.println('{}  -  {}\n'.format(cmd, desc))

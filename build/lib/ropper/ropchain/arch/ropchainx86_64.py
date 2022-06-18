@@ -830,7 +830,7 @@ class RopChainMprotectX86_64(RopChainX86_64):
             chain_tmp += '\n# ADD HERE JMP ESP\n\n'
 
         chain += self._printRebase()
-        chain += '\nrop = \'\'\n'
+        chain += '\nrop = b\'\'\n'
         chain += chain_tmp
         chain += 'rop += shellcode\n\n'
         chain += 'print(rop)\n'

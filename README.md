@@ -1,36 +1,15 @@
-Ropper
+Ropper2
 ================
-[![Build Status](https://travis-ci.org/sashs/Ropper.svg?branch=master)](https://travis-ci.org/sashs/Ropper)
 
-You can use ropper to display information about binary files in different file formats
+
+You can use ropper2 to display information about binary files in different file formats
 and you can search for gadgets to build rop chains for different architectures (x86/X86_64, ARM/ARM64, MIPS/MIPS64, PowerPC/PowerPC64, SPARC64).
 For disassembly ropper uses the awesome [Capstone Framework](http://www.capstone-engine.org).
 
 Install
 -------
 
-Install [Capstone](http://www.capstone-engine.org) with PyPi:
-
-    $ sudo pip install capstone
-
-Install [filebytes](https://github.com/sashs/filebytes) with PyPi:
-
-    $ sudo pip install filebytes
-
-Optional (not needed to run ropper just to look for gadgets):
-
-Install [Keystone](http://www.keystone-engine.org):
-
-    $ sudo pip install keystone-engine
-
-Install and execute Ropper
-
-    $ python setup.py install
-    $ ropper
-
-You can also install Ropper with pip
-
-    $ pip install ropper
+    $ pip install ropper2
 
 If you want, you can use Ropper without installation
 
@@ -38,7 +17,7 @@ If you want, you can use Ropper without installation
 
 If you don't want to install filebytes, filebytes is a submodule of the ropper repository. This means you don't need to install filebytes and ropper.
 
-    $ git clone https://github.com/sashs/ropper.git
+    $ git clone https://github.com/serfend/ropper2.git
     $ cd ropper
     $ git submodule init
     $ git submodule update
@@ -71,14 +50,13 @@ Currently Possible Constraints
     reg -= number/reg/[reg]
     reg *= number/reg/[reg]
     reg /= number/reg/[reg]
-    
+
 Constraint Example
 ------------------
 
     eax==1 !ebx    - set eax to 1 and look for gadgets which does not clobber ebx
 
-
-<img src="https://scoding.de/uploads/semantic_search.png" alt="semantic_search"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/semantic_search.png" alt="semantic_search"></img>
 
 Usage
 -----
@@ -94,16 +72,16 @@ Usage
                      [--instructions <instructions>] [--type <type>] [--detailed]
                      [--all] [--cfg-only] [--chain <generator>] [-b <badbytes>]
                      [--nocolor] [--clear-cache]
-
+    
     You can use ropper to display information about binary files in different file formats
         and you can search for gadgets to build rop chains for different architectures
-
+    
     supported filetypes:
       ELF
       PE
       Mach-O
       Raw
-
+    
     supported architectures:
       x86 [x86]
       x86_64 [x86_64]
@@ -112,12 +90,12 @@ Usage
       ARM64 [ARM64]
       PowerPC [PPC, PPC64]
       SPARC [SPARC64]
-
+    
     available rop chain generators:
       execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
       mprotect  (mprotect=<address>:<size>) [Linux x86, x86_64]
       virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
-
+    
     optional arguments:
       -h, --help            show this help message and exit
       -v, --version         Print version
@@ -179,12 +157,12 @@ Usage
                             Set bytes which should not contains in gadgets
       --nocolor             Disables colored output
       --clear-cache         Clears the cache
-
+    
     example uses:
       [Generic]
       ./Ropper.py
       ./Ropper.py --file /bin/ls --console
-
+    
       [Informations]
       ./Ropper.py --file /bin/ls --info
       ./Ropper.py --file /bin/ls --imports
@@ -208,31 +186,31 @@ Usage
       ./Ropper.py --file /bin/ls --chain "execve cmd=/bin/sh" --badbytes 000a0d
       ./Ropper.py --file /bin/ls --chain "mprotect address=0xbfdff000 size=0x21000"
       ./Ropper.py --file /bin/ls /lib/libc.so.6 --console
-
+    
       [Assemble/Disassemble]
       ./Ropper.py --asm "jmp esp"
       ./Ropper.py --asm "mov eax, ecx; ret"
       ./Ropper.py --disasm ffe4
-
+    
       [Search]
       ./Ropper.py --file /bin/ls --search <searchstring>
       ?     any character
       %     any string
-
+    
       Example:
-
+    
       ./Ropper.py --file /bin/ls --search "mov e?x"
       0x000067f1: mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax
       0x00006d03: mov eax, esi; pop ebx; pop esi; pop edi; pop ebp; ret ;
       0x00006d6f: mov ebx, esi; mov esi, dword ptr [esp + 0x18]; add esp, 0x1c; ret ;
       0x000076f8: mov eax, dword ptr [eax]; mov byte ptr [eax + edx], 0; add esp, 0x18; pop ebx; ret ;
-
+    
       ./Ropper.py --file /bin/ls --search "mov [%], edx"
       0x000067ed: mov dword ptr [esp + 4], edx; mov edx, dword ptr [ebp + 0x14]; mov dword ptr [esp], edx; call eax;
       0x00006f4e: mov dword ptr [ecx + 0x14], edx; add esp, 0x2c; pop ebx; pop esi; pop edi; pop ebp; ret ;
       0x000084b8: mov dword ptr [eax], edx; ret ;
       0x00008d9b: mov dword ptr [eax], edx; add esp, 0x18; pop ebx; ret ;
-
+    
       ./Ropper.py --file /bin/ls --search "mov [%], edx" --quality 1
       0x000084b8: mov dword ptr [eax], edx; ret ;; ret ;
 
@@ -396,17 +374,17 @@ http://scoding.de/ropper
 Screenshots
 ------------------------------------
 
-<img src="https://scoding.de/uploads/load.jpg" alt="load"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/load.jpg" alt="load"></img>
 
-<img src="https://scoding.de/uploads/x86.jpg" alt="x86"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/x86.jpg" alt="x86"></img>
 
-<img src="https://scoding.de/uploads/arm.jpg" alt="arm"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/arm.jpg" alt="arm"></img>
 
-<img src="https://scoding.de/uploads/mips.jpg" alt="mips"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/mips.jpg" alt="mips"></img>
 
-<img src="https://scoding.de/uploads/ppc.jpg" alt="ppc"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/ppc.jpg" alt="ppc"></img>
 
-<img src="https://scoding.de/uploads/ropchain.jpg" alt="ropchain"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/ropchain.jpg" alt="ropchain"></img>
 
-<img src="https://scoding.de/uploads/header.jpg" alt="header"></img>
+<img src="https://raw.githubusercontent.com/serfend/res.image.reference/main/header.jpg" alt="header"></img>
 

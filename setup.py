@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 
 
@@ -22,6 +23,16 @@ try:
 except:
     install_requires.append('capstone')
 
+
+def load_requirements():
+    if os.path.exists('requirements.txt'):
+        install_requires = open('requirements.txt').read().splitlines()
+    else:
+        install_requires = []
+    return install_requires
+
+
+print('install_requires', install_requires)
 setup(
     name=package_name,
     version=version,
@@ -40,5 +51,6 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python',
         'Intended Audience :: Developers'
-    ]
+    ],
+    install_requires=install_requires,
 )

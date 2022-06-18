@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 
-version = '1.13.7'
-package_name = "ropper"
+version = '2.0.0'
+package_name = "ropper2"
 package_dir = "ropper"
 package_description = """Show information about files in different file formats and find gadgets to build rop chains for different architectures.
 """.strip()
@@ -28,10 +28,10 @@ setup(
     description=package_description,
     packages=valid_packages,
     license="BSD",
-    author="Sascha Schirra",
-    author_email="sashs@scoding.de",
+    author="Sascha Schirra with serfend with serfend",
+    author_email="serfend@foxmail.com",
     install_requires=install_requires,
-    url="http://scoding.de/ropper/",
+    url="https://pypi.org/project/ropper2/",
     entry_points={'console_scripts': ['ropper = ropper.__main__:main']},
     classifiers=[
         'Topic :: Security',

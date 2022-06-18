@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 #
-# Copyright 2014 Sascha Schirra
+# Copyright 2014 Sascha Schirra with serfend
 #
 # This file is part of Ropper.
 #

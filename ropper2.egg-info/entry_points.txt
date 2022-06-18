@@ -1,0 +1,3 @@
+[console_scripts]
+ropper = ropper.__main__:main
+

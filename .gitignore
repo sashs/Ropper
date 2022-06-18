@@ -4,3 +4,4 @@ __pycache__
 .tox/
 ropper2.egg-info/
 dist/*
+build/*

@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ropper2
-Version: 2.0.7
+Version: 2.0.8
 Summary: Show information about files in different file formats and find gadgets to build rop chains for different architectures.
 Home-page: https://pypi.org/project/ropper2/
 Author: Sascha Schirra with serfend with serfend

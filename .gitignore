@@ -2,6 +2,6 @@
 __pycache__
 .idea
 .tox/
-ropper2.egg-info/
+ropper2.egg-info/*
 dist/*
 build/*

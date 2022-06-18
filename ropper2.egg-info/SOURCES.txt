@@ -17,7 +17,6 @@ ropper2.egg-info/PKG-INFO
 ropper2.egg-info/SOURCES.txt
 ropper2.egg-info/dependency_links.txt
 ropper2.egg-info/entry_points.txt
-ropper2.egg-info/requires.txt
 ropper2.egg-info/top_level.txt
 ropper/common/__init__.py
 ropper/common/abstract.py

@@ -387,7 +387,7 @@ class ArchitectureArm(Architecture):
         self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x1e]\xff\x2f\xe1', 4), # bx <reg>
                                                 (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
                                                 (b'[\x00-\x0f]\xf0\xa0\xe1', 4), # mov pc, <reg>
-                                                (b'\x01\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
+                                                (b'\x00\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
 
 
 class ArchitectureArmBE(ArchitectureArm):

@@ -287,7 +287,7 @@ class Ropper(object):
                 newGadgets = self._searchGadgetsSingle(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
             else:
                 if mp.get_start_method() != 'fork':
-                    mp.set_start_method('fork')
+                    mp.set_start_method('fork', force=True)
                 newGadgets = self._searchGadgetsForked(section=section, binary=binary, instruction_count=instructionCount, gtype=gtype)
 
             gadgets.extend(newGadgets)

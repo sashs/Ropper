@@ -18,4 +18,4 @@ RUN apt-get update \
 
 ENTRYPOINT ["python", "/app/Ropper/Ropper.py"]
 
-CMD ["--help"]
+CMD ["--console"]

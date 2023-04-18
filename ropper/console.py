@@ -587,7 +587,7 @@ class Console(cmd.Cmd):
     def help_show(self):
         desc = 'shows informations about the loaded file'
         if self.__getDataPrinter(self.currentFile.type):
-            desc += ('Available informations:\n' +
+            desc += ('\n\nAvailable informations:\n' +
                      ('\n'.join(self.__getDataPrinter(self.currentFile.type).availableInformations)))
         self.__printHelpText(
             'show <info>', desc)
@@ -1110,7 +1110,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
         self.__cprinter.println()
 
     def help_semantic(self):
-        self.__printHelpText('semantic', 'Searches gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantc eax==ebx; ecx==1 !edx !esi\n\nValid constraints:\nreg==reg\nreg==number\nreg==[reg]\nreg<+|-|*|/>=<reg|number|[reg]>')
+        self.__printHelpText('semantic', 'Searches gadgets\nsemantic <constraint>[; <constraint>][ !<stable reg>*]\n\nExample:\nsemantic eax==ebx; ecx==1 !edx !esi\n\nValid constraints:\nreg==reg\nreg==number\nreg==[reg]\nreg<+|-|*|/>=<reg|number|[reg]>')
 
     # @safe_cmd
     # def do_analyse(self, text):

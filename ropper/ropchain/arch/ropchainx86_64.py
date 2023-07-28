@@ -652,7 +652,7 @@ class RopChainSystemX86_64(RopChainX86_64):
             raise RopChainError('No argument support for execve commands')
 
         self._printMessage('ROPchain Generator for syscall execve:\n')
-        self._printMessage('\nwrite command into data section\nrax 0xb\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
+        self._printMessage('\nwrite command into data section\nrax 0x3b\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
         chain = self._printHeader()
         gadgets = []
         can_create_command = False

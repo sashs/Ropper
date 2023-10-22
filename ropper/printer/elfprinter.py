@@ -150,4 +150,4 @@ class ELFPrinter(FileDataPrinter):
                 printed = True
 
         if not printed:
-            self._printLine('no imorts!')
+            self._printLine('no imports!')

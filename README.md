@@ -127,7 +127,7 @@ Usage
       -r, --raw             Loads the file as raw file
       -a <arch>, --arch <arch>
                             The architecture of the loaded file
-      --section <section>   The data of the this section should be printed
+      --section <section>   The data of this section should be printed
       --string [<string>]   Looks for the string <string> in all data sections
       --hex                 Prints the selected sections in a hex format
       --asm <asm> [H|S|R] [<asm> [H|S|R] ...]
@@ -149,7 +149,7 @@ Usage
       --symbols             Shows symbols [ELF]
       --set <option>        Sets options. Available options: aslr nx
       --unset <option>      Unsets options. Available options: aslr nx
-      -I <imagebase>        Uses this imagebase for gadgets
+      -I <imagebase>        Use this imagebase for gadgets
       -p, --ppr             Searches for 'pop reg; pop reg; ret' instructions
                             [only x86/x86_64]
       -j <reg>, --jmp <reg>
@@ -176,7 +176,7 @@ Usage
       --chain <generator>   Generates a ropchain [generator parameter=value[
                             parameter=value]]
       -b <badbytes>, --badbytes <badbytes>
-                            Set bytes which should not contains in gadgets
+                            Set bytes which should not be contained in gadgets
       --nocolor             Disables colored output
       --clear-cache         Clears the cache
 

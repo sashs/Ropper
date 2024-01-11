@@ -88,7 +88,7 @@ available rop chain generators:
         parser.add_argument(
             '-a', '--arch', metavar="<arch>", help='The architecture of the loaded file')
         parser.add_argument(
-            '--section', help='The data of the this section should be printed', metavar='<section>')
+            '--section', help='The data of this section should be printed', metavar='<section>')
         parser.add_argument(
             '--string', help='Looks for the string <string> in all data sections', metavar='<string>',nargs='?', const='[ -~]{2}[ -~]*')
         parser.add_argument(
@@ -119,7 +119,7 @@ available rop chain generators:
             '--set', help='Sets options. Available options: aslr nx', metavar='<option>')
         parser.add_argument(
             '--unset', help='Unsets options. Available options: aslr nx', metavar='<option>')
-        parser.add_argument('-I', metavar='<imagebase>', help='Uses this imagebase for gadgets')
+        parser.add_argument('-I', metavar='<imagebase>', help='Use this imagebase for gadgets')
         parser.add_argument(
             '-p', '--ppr', help='Searches for \'pop reg; pop reg; ret\' instructions [only x86/x86_64]', action='store_true')
         parser.add_argument(
@@ -147,13 +147,13 @@ available rop chain generators:
         parser.add_argument(
             '--chain', help='Generates a ropchain [generator parameter=value[ parameter=value]]', metavar='<generator>')
         parser.add_argument(
-            '-b', '--badbytes', help='Set bytes which should not contains in gadgets', metavar='<badbytes>', default='')
+            '-b', '--badbytes', help='Set bytes which should not be contained in gadgets', metavar='<badbytes>', default='')
         parser.add_argument(
             '--nocolor', help='Disables colored output', action='store_true')
         parser.add_argument(
             '--clear-cache', help='Clears the cache', action='store_true')
         parser.add_argument(
-            '--no-load', help='Don\'t load the gadgets automatically when start the console (--console)', action='store_true', default=False)
+            '--no-load', help='Don\'t load the gadgets automatically when starting the console (--console)', action='store_true', default=False)
         parser.add_argument(
             '--analyse', help='just used for the implementation of semantic search', metavar='<quality>')
         parser.add_argument(

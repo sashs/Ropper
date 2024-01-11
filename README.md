@@ -83,17 +83,20 @@ Constraint Example
 Usage
 -----
 
-    usage: Ropper.py [-h] [-v] [--console] [-f <file>] [-r] [-a <arch>]
-                     [--section <section>] [--string [<string>]] [--hex]
-                     [--asm <asm> [H|S|R] [<asm> [H|S|R] ...]] [--disasm <opcode>]
-                     [--disassemble-address <address:length>] [-i] [-e]
-                     [--imagebase] [-c] [-s] [-S] [--imports] [--symbols]
-                     [--set <option>] [--unset <option>] [-I <imagebase>] [-p]
-                     [-j <reg>] [--stack-pivot] [--inst-count <n bytes>]
-                     [--search <regex>] [--quality <quality>] [--opcode <opcode>]
-                     [--instructions <instructions>] [--type <type>] [--detailed]
-                     [--all] [--cfg-only] [--chain <generator>] [-b <badbytes>]
-                     [--nocolor] [--clear-cache]
+    usage: Ropper.py [-h] [--help-examples] [-v] [--console]
+                 [-f <file> [<file> ...]] [-r] [-a <arch>]
+                 [--section <section>] [--string [<string>]] [--hex]
+                 [--asm [<asm> [H|S|R] ...]] [--disasm <opcode>]
+                 [--disassemble-address <address:length>] [-i] [-e]
+                 [--imagebase] [-c] [-s] [-S] [--imports] [--symbols]
+                 [--set <option>] [--unset <option>] [-I <imagebase>] [-p]
+                 [-j <reg>] [--stack-pivot] [--inst-count <n bytes>]
+                 [--search <regex>] [--quality <quality>] [--opcode <opcode>]
+                 [--instructions <instructions>] [--type <type>] [--detailed]
+                 [--all] [--cfg-only] [--chain <generator>] [-b <badbytes>]
+                 [--nocolor] [--clear-cache] [--no-load] [--analyse <quality>]
+                 [--semantic constraint]
+                 [--count-of-findings <count of gadgets>] [--single]
 
     You can use ropper to display information about binary files in different file formats
         and you can search for gadgets to build rop chains for different architectures
@@ -118,11 +121,12 @@ Usage
       mprotect  (mprotect=<address>:<size>) [Linux x86, x86_64]
       virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
+      --help-examples       Print examples
       -v, --version         Print version
       --console             Starts interactive commandline
-      -f <file>, --file <file>
+      -f <file> [<file> ...], --file <file> [<file> ...]
                             The file to load
       -r, --raw             Loads the file as raw file
       -a <arch>, --arch <arch>
@@ -130,7 +134,7 @@ Usage
       --section <section>   The data of this section should be printed
       --string [<string>]   Looks for the string <string> in all data sections
       --hex                 Prints the selected sections in a hex format
-      --asm <asm> [H|S|R] [<asm> [H|S|R] ...]
+      --asm [<asm> [H|S|R] ...]
                             A string to assemble and a format of the output
                             (H=HEX, S=STRING, R=RAW, default: H)
       --disasm <opcode>     Opcode to disassemble (e.g. ffe4, 89c8c3, ...)
@@ -179,6 +183,15 @@ Usage
                             Set bytes which should not be contained in gadgets
       --nocolor             Disables colored output
       --clear-cache         Clears the cache
+      --no-load             Don't load the gadgets automatically when starting the
+                            console (--console)
+      --analyse <quality>   just used for the implementation of semantic search
+      --semantic constraint
+                            semantic search for gadgets
+      --count-of-findings <count of gadgets>
+                            Max count of gadgets which will be printed with
+                            semantic search (0 = undefined, default: 5)
+      --single              No multiple processes are used for gadget scanning
 
     example uses:
       [Generic]

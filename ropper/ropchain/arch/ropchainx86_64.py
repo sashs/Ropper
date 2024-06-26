@@ -652,7 +652,7 @@ class RopChainSystemX86_64(RopChainX86_64):
             raise RopChainError('No argument support for execve commands')
 
         self._printMessage('ROPchain Generator for syscall execve:\n')
-        self._printMessage('\nwrite command into data section\nrax 0xb\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
+        self._printMessage('\nwrite command into data section\nrax 0x3b\nrdi address to cmd\nrsi address to null\nrdx address to null\n')
         chain = self._printHeader()
         gadgets = []
         can_create_command = False
@@ -689,7 +689,7 @@ class RopChainSystemX86_64(RopChainX86_64):
                 gadgets.append((self._createAddress, [cmdaddress],{'reg':'rdi'},['rdi','edi', 'di']))
                 gadgets.append((self._createAddress, [nulladdress],{'reg':'rsi'},['rsi','esi', 'si']))
                 gadgets.append((self._createAddress, [nulladdress],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
-                gadgets.append((self._createNumber, [59],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
+                gadgets.append((self._createNumber, [0x3b],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
         if address is not None and not can_create_command:
             if type(address) is str:
                 cmdaddress = int(address, 16)
@@ -704,7 +704,7 @@ class RopChainSystemX86_64(RopChainX86_64):
             gadgets.append((self._createNumber, [cmdaddress],{'reg':'rdi'},['rdi','edi', 'di']))
             gadgets.append((self._createNumber, [nulladdress],{'reg':'rsi'},['rsi','esi', 'si']))
             gadgets.append((self._createNumber, [nulladdress],{'reg':'rdx'},['rdx','edx', 'dx', 'dl', 'dh']))
-            gadgets.append((self._createNumber, [59],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
+            gadgets.append((self._createNumber, [0x3b],{'reg':'rax'},['rax','eax', 'ax', 'al', 'ah']))
 
         self._printMessage('Try to create chain which fills registers without delete content of previous filled registers')
         chain_tmp += self._createDependenceChain(gadgets)

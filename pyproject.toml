@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+version = "1.13.10"
+name = "ropper"
+description = "Show information about files in different file formats and find gadgets to build rop chains for different architectures."
+dependencies = [
+    "filebytes>=0.10.0",
+    "capstone>=3"
+]
+requires-python = ">=3"
+authors = [
+    {name = "Sascha Schirra", email = "sashs@scoding.de"},
+]
+maintainers = [
+    {name = "Sascha Schirra", email = "sashs@scoding.de"},
+]
+readme = "README.md"
+license = {text = "BSD"}
+classifiers = [
+    "Topic :: Security",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Intended Audience :: Developers",
+]
+
+[project.optional-dependencies]
+ropchain = ["keystone-engine"]
+
+[project.urls]
+Homepage = "http://scoding.de/ropper/"
+Repository = "https://github.com/sashs/Ropper.git"
+
+[project.scripts]
+ropper = "ropper.__main__:main"
+
+[tool.setuptools]
+packages = ["ropper"]

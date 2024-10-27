@@ -45,6 +45,10 @@ try:
 except:
     pass
 
+
+if CS_ARCH_ARM64 not in globals():
+    CS_ARCH_ARM64 = CS_ARCH_AARCH64
+
 def byte_regexp(bitmask, bitvalues):
     r = b'['
     for value in range(256):
@@ -440,7 +444,7 @@ class ArchitectureArmThumb(Architecture):
 class ArchitectureArm64(Architecture):
 
     def __init__(self):
-        super(ArchitectureArm64, self).__init__(CS_ARCH_AARCH64, CS_MODE_ARM, 8, 4)
+        super(ArchitectureArm64, self).__init__(CS_ARCH_ARM64, CS_MODE_ARM, 8, 4)
         self._name = 'ARM64'
 
         if 'archinfo' in globals():

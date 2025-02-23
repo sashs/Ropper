@@ -46,7 +46,7 @@ except:
     pass
 
 
-if CS_ARCH_ARM64 not in globals():
+if 'CS_ARCH_ARM64' not in globals():
     CS_ARCH_ARM64 = CS_ARCH_AARCH64
 
 def byte_regexp(bitmask, bitvalues):

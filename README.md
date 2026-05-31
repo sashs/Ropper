@@ -117,7 +117,8 @@ Usage
       SPARC [SPARC64]
 
     available rop chain generators:
-      execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64]
+      execve (execve[=<cmd>], default /bin/sh) [Linux x86, x86_64, ARM]
+      spawn_shell (spawn_shell[ address=0xdeadbeef], ret2libc system) [Linux x86, x86_64, ARM]
       mprotect  (mprotect=<address>:<size>) [Linux x86, x86_64]
       virtualprotect (virtualprotect=<address iat vp>:<size>) [Windows x86]
 

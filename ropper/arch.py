@@ -389,11 +389,33 @@ class ArchitectureArm(Architecture):
         super(ArchitectureArm, self)._initGadgets()
         self._endings[gadget.GadgetType.ROP] = [(b"[\x00-\xff][\x80-\xff][\x10-\x1e\x30-\x3e\x50-\x5e\x70-\x7e\x90-\x9e\xb0-\xbe\xd0-\xde\xf0-\xfe][\xe8\xe9]", 4), # pop {[reg]*,pc}, ldm [reg], {*,pc}
             (b"\x04\xf0\x9d\xe4", 4) # pop {pc}
-        ] 
+        ]
         self._endings[gadget.GadgetType.JOP] = [(b'[\x10-\x1e]\xff\x2f\xe1', 4), # bx <reg>
                                                 (b'[\x30-\x3e]\xff\x2f\xe1', 4), # blx <reg>
                                                 (b'[\x00-\x0f]\xf0\xa0\xe1', 4), # mov pc, <reg>
                                                 (b'\x00\x80\xbd\xe8', 4)] # ldm sp! ,{pc}
+        self._endings[gadget.GadgetType.SYS] = [(b'\x00\x00\x00\xef', 4)] # svc 0
+
+    def _initCategories(self):
+        # Minimal categories needed for the execve ropchain generator.
+        # LOAD_REG matches only single-instruction multi-register pops that
+        # write pc (the gadget's own dispatch). `dst` captures the entire
+        # register list as text; the chain generator parses it.
+        self._categories = {
+            gadget.Category.LOAD_REG : (
+                (r'^pop \{(?P<dst>[^}]*\bpc)\}$',
+                 r'^ldm(?:ia|fd)? sp!, \{(?P<dst>[^}]*\bpc)\}$'),
+                ('push','bl','blx','b ','bx','svc','str')),
+            gadget.Category.WRITE_MEM : (
+                (r'^str (?P<src>\w{2,4}), \[(?P<dst>\w{2,4})\]$',),
+                ('push','bl','blx','b ','bx','svc')),
+            gadget.Category.LOAD_MEM : (
+                (r'^ldr (?P<dst>\w{2,4}), \[(?P<src>\w{2,4})\]$',),
+                ('push','bl','blx','b ','bx','svc','str')),
+            gadget.Category.SYSCALL : (
+                (r'^svc #?0(?:x0+)?$',),
+                ('push','bl','blx','b ','bx')),
+        }
 
 
 class ArchitectureArmBE(ArchitectureArm):
@@ -414,6 +436,7 @@ class ArchitectureArmBE(ArchitectureArm):
                                                 (b'\xe1\x2f\xff[\x30-\x3e]', 4), # blx <reg>
                                                 (b'\xe1\xa0\xf0[\x00-\x0f]', 4), # mov pc, <reg>
                                                 (b'\xe8\xdb\x80\x01', 4)] # ldm sp! ,{pc}
+        self._endings[gadget.GadgetType.SYS] = [(b'\xef\x00\x00\x00', 4)] # svc 0
 
 class ArchitectureArmThumb(Architecture):
 

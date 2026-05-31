@@ -450,6 +450,8 @@ class Console(cmd.Cmd):
   {0} --file /bin/ls --type jop
   {0} --file /bin/ls --chain execve
   {0} --file /bin/ls --chain "execve cmd=/bin/sh" --badbytes 000a0d
+  {0} --file /bin/ls --chain spawn_shell
+  {0} --file /bin/ls --chain "spawn_shell address=0xf7c4d3e0"
   {0} --file /bin/ls --chain "mprotect address=0xbfdff000 size=0x21000"
   {0} --file /bin/ls /lib/libc.so.6 --console
 
@@ -932,7 +934,7 @@ nx\t- Clears the NX-Flag (ELF|PE)"""
 
     def help_ropchain(self):
         self.__printHelpText('ropchain <generator>[ argname=arg[ argname=arg...]]',
-                             'uses the given generator and create a ropchain with args\n\nAvailable generators:\nexecve\nargs: cmd (optional)\navailable: x86, x86_64\nOS: linux\n\nmprotect\nargs: address, size\navailable: x86, x86_64\nOS: linux\n\nvirtualprotect\nargs: address (IAT)(optional)\navailable: x86\nOS: Windows\n\nExamples:\nropchain execve\nropchain mprotect address=0xbfff0000 size=0x21000')
+                             'uses the given generator and create a ropchain with args\n\nAvailable generators:\nexecve\nargs: cmd (optional), address (optional)\navailable: x86, x86_64, ARM\nOS: linux\n\nspawn_shell\ncalls libc system(cmd) (ret2libc); args: cmd (optional), address (libc system, optional), string (&cmd, optional)\navailable: x86, x86_64, ARM\nOS: linux\n\nmprotect\nargs: address, size\navailable: x86, x86_64\nOS: linux\n\nvirtualprotect\nargs: address (IAT)(optional)\navailable: x86\nOS: Windows\n\nExamples:\nropchain execve\nropchain spawn_shell\nropchain spawn_shell address=0xf7c4d3e0\nropchain mprotect address=0xbfff0000 size=0x21000')
 
     def do_quit(self, text):
         exit(0)

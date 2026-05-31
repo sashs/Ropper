@@ -27,3 +27,4 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from ropper.ropchain.arch.ropchainx86 import *
 from ropper.ropchain.arch.ropchainx86_64 import *
+from ropper.ropchain.arch.ropchainarm import *

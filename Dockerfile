@@ -1,7 +1,7 @@
 # Once built, simply execute "docker container run -v /:/app/mnt -it <IMAGE ID>" to run the container and expose your host filesystem
 # Or you can execute it non-interactively / directly on a file with "docker container run -v /:/app/mnt -it <IMAGE ID> -f /app/mnt/bin/bash"
 
-FROM python
+FROM python:3.11
 
 LABEL MAINTAINER="oddrabbit"
 

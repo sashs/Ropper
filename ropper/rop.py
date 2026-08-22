@@ -297,7 +297,7 @@ class Ropper(object):
     def _searchGadgetsSingle(self, section, binary, instruction_count=5, gtype=GadgetType.ALL):
 
         toReturn = []
-        code = bytes(bytearray(section.bytes))
+        code = memoryview(section.bytes)
         # TODO: Another solution should be used here. This is a hack for compatibility reasons. to resolve the gadget address calculation of segments of elf files have a different base address if calculated segment.virtualAddress - segment.offset 
         offset = section.offset - (binary.originalImageBase - (section.virtualAddress - section.offset))
         #offset = section.offset

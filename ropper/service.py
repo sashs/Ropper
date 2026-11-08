@@ -33,7 +33,7 @@ from ropper.common.error import RopperError
 from ropper.loaders.loader import Loader, Type
 from ropper.ropchain.ropchain import RopChain
 from ropper.arch import getArchitecture
-from ropper.rop import Ropper, Format
+from ropper.rop import Ropper, Format, create_gadget_queue
 from ropper.gadget import Gadget, GadgetType
 from binascii import unhexlify
 from codecs import encode, decode
@@ -432,7 +432,9 @@ class RopperService(object):
             else:
                 count = min(multiprocessing.cpu_count(),RopperService.CACHE_FILE_COUNT)
 
-                gqueue = multiprocessing.Queue()
+                # Avoid the feeder thread that Queue starts on first put();
+                # it can fail with "can't start new thread" under pwndbg.
+                gqueue = create_gadget_queue()
                 fqueue = multiprocessing.JoinableQueue()
                 for i in range(1,RopperService.CACHE_FILE_COUNT+1):
                     fqueue.put(cache_file+'_%d' % i)

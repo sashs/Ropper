@@ -30,7 +30,7 @@ from ropper.common.utils import *
 from ropper.common.error import *
 from ropper.common.enum import Enum
 from ropper.arch import x86
-from multiprocessing import Process, Pool, Queue, cpu_count, current_process, JoinableQueue
+from multiprocessing import Process, Pool, SimpleQueue, cpu_count, current_process, JoinableQueue
 from .gadget import Gadget, GadgetType
 from binascii import hexlify, unhexlify
 from struct import pack
@@ -45,6 +45,17 @@ try:
     import keystone
 except:
     pass
+
+
+def create_gadget_queue():
+    """Create a queue that does not need a feeder thread.
+
+    multiprocessing.Queue starts a feeder thread on the first put(). In
+    processes that cannot create threads (for example pwndbg), that raises
+    "RuntimeError: can't start new thread". SimpleQueue writes directly to
+    the pipe instead, so it works in those environments.
+    """
+    return SimpleQueue()
 
 
 class Format(Enum):
@@ -361,7 +372,7 @@ class Ropper(object):
         max_progress = len(code) * len(arch.endings[gtype])
 
         ending_queue = JoinableQueue()
-        gadget_queue = Queue()
+        gadget_queue = create_gadget_queue()
         tmp_code = code[:]
 
         process_count = min(cpu_count()+1, len(arch.endings[gtype]))

@@ -57,7 +57,7 @@ class ConstraintCompiler(object):
         for constraint in constraints:
             match = re.match(ConstraintCompiler.CONSTRAINT_REGEX, constraint)
             if match is None:
-                raise Exception('Invalid syntax: %s' % constraint)
+                raise ConstraintError('Invalid syntax: %s' % constraint)
             reg_dst = match.group('reg_dst_1')
             if reg_dst is not None:
                 reg_src = match.group('reg_src_1')
@@ -136,7 +136,7 @@ class ConstraintCompiler(object):
 
             register_name = self.__architecture.getRegisterName(register)
             if not register_name:
-                raise ConstraintError('Invalid register: %s' & register)
+                raise ConstraintError('Invalid register: %s' % register)
             value = self._readMemory(register_name)
             tokens.pop()
         elif re.match(ConstraintCompiler.NUMBER_REGEX, value):
@@ -147,7 +147,6 @@ class ConstraintCompiler(object):
             value = self.__semantic_info.regs[value][0]
             value = create_register_expression(value, int(value.split('_')[-1]))
         else:
-            print(re.match(ConstraintCompiler.NUMBER_REGEX, value))
             raise ConstraintError('Invalid Assignment: %s%s%s' % (register, op, value))
         reg1_last = create_register_expression(reg1_last, int(reg1_last.split('_')[-1]))
         reg1_init = create_register_expression(reg1_init, int(reg1_init.split('_')[-1]))
